@@ -118,7 +118,7 @@ export default function PatientHeader() {
           Dr 医師 太郎
         </Typography>
         <Typography sx={{ fontSize: '11px', color: '#e65100' }}>
-          Ns {currentPatient.doctor}
+          Ns {currentPatient.nurse}
         </Typography>
         <Typography sx={{ fontSize: '11px', color: '#2e7d32' }}>
           ♦ デイケア 大地

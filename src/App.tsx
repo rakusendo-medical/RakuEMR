@@ -1,16 +1,6 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import KartePage from './components/karte/KartePage';
-import FlowsheetPage from './components/flowsheet/FlowsheetPage';
+import React from 'react';
+import AppRoutes from './routes';
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<KartePage />} />
-        <Route path="/flowsheet" element={<FlowsheetPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
+const App: React.FC = () => <AppRoutes />;
 
 export default App;
