@@ -70,7 +70,7 @@ const PatientMain: React.FC = () => {
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Tab label="サマリ" />
         <Tab label="オーダ一覧" />
-        <Tab label="看護録" />
+        <Tab label="看護記録" />
         <Tab label="フローシート" />
       </Tabs>
 
@@ -106,9 +106,9 @@ const PatientMain: React.FC = () => {
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>最新看護録</Typography>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>最新看護記録</Typography>
                   {patientNursingRecords.length === 0 ? (
-                    <Typography variant="body2" color="text.disabled">看護録なし</Typography>
+                    <Typography variant="body2" color="text.disabled">看護記録なし</Typography>
                   ) : (
                     patientNursingRecords.slice(0, 4).map((r) => (
                       <Box key={r.id} sx={{ py: 1, borderBottom: '1px solid #f1f5f9' }}>
@@ -123,7 +123,7 @@ const PatientMain: React.FC = () => {
           </Grid>
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
             <Button variant="contained" onClick={() => setTab(3)}>フローシート表示</Button>
-            <Button variant="contained" color="secondary" startIcon={<NoteAdd />}>看護録作成</Button>
+            <Button variant="contained" color="secondary" startIcon={<NoteAdd />}>看護記録作成</Button>
             <Button variant="contained" sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }} startIcon={<Receipt />}>オーダ入力</Button>
             <Button variant="contained" color="error" startIcon={<MeetingRoom />} onClick={() => navigate('/admission')}>入退院管理</Button>
           </Stack>

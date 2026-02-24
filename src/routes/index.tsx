@@ -4,9 +4,10 @@ import MainLayout from '../layouts/MainLayout';
 import WardMap from '../components/wardMap/WardMap';
 import PatientList from '../components/patientList/PatientList';
 import PatientMain from '../components/patientMain/PatientMain';
-import BatchInput from '../components/batchInput/BatchInput';
-import BatchOrder from '../components/batchOrder/BatchOrder';
 import AdmissionDischarge from '../components/admission/AdmissionDischarge';
+import BatchInput from '../components/batchInput/BatchInput';
+import OutpatientList from '../components/outpatient/OutpatientList';
+import PatientSearch from '../components/patientSearch/PatientSearch';
 import NursingRecordView from '../components/nursing/NursingRecord';
 import FlowsheetView from '../components/flowsheet/Flowsheet';
 import IsolationRestraint from '../components/isolation/IsolationRestraint';
@@ -26,8 +27,9 @@ const AppRoutes: React.FC = () => (
       <Route path="/" element={<WardMap />} />
       <Route path="/patients" element={<PatientList />} />
       <Route path="/patients/:patientId" element={<PatientMain />} />
+      <Route path="/outpatient" element={<OutpatientList />} />
+      <Route path="/patient-search" element={<PatientSearch />} />
       <Route path="/batch-input" element={<BatchInput />} />
-      <Route path="/batch-order" element={<BatchOrder />} />
       <Route path="/admission" element={<AdmissionDischarge />} />
       <Route path="/nursing" element={<NursingRecordView />} />
       <Route path="/flowsheet" element={<FlowsheetView />} />

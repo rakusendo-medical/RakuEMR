@@ -51,7 +51,7 @@ const WardMap: React.FC = () => {
         {rooms.map((room) => {
           const isSelected = selectedRooms.has(room.roomNumber);
           return (
-            <Grid item xs={12} sm={6} md={4} key={room.roomNumber}>
+            <Grid item xs={12} sm={6} md={3} key={room.roomNumber}>
               <Card
                 sx={{
                   border: isSelected ? '2px solid' : '1px solid',
