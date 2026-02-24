@@ -8,8 +8,8 @@ import {
 import {
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
-  LocalHospital, People, EditNote, Medication, MeetingRoom,
-  Description, Assessment, Lock, Home, CalendarMonth, Receipt,
+  LocalHospital, People, MeetingRoom, Search, Groups,
+  Description, Assessment, Lock, Home, Receipt,
   FitnessCenter, Favorite, FolderOpen, Business, PersonAdd,
 } from '@mui/icons-material';
 import { useAppStore } from '../stores/useAppStore';
@@ -27,15 +27,14 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { key: 'ward-map',       label: '病棟マップ',       icon: <LocalHospital />,  path: '/' },
   { key: 'patient-list',   label: '入院患者一覧',     icon: <People />,         path: '/patients' },
-  { key: 'batch-input',    label: '一括入力',         icon: <EditNote />,       path: '/batch-input' },
-  { key: 'batch-order',    label: '一括オーダ',       icon: <Medication />,     path: '/batch-order' },
+  { key: 'outpatient',     label: '外来一覧',         icon: <Groups />,         path: '/outpatient' },
+  { key: 'patient-search', label: '患者検索',         icon: <Search />,         path: '/patient-search' },
   { key: 'admission',      label: '入退院管理',       icon: <MeetingRoom />,    path: '/admission' },
-  { key: 'nursing',        label: '看護録',           icon: <Description />,    path: '/nursing' },
+  { key: 'nursing',        label: '看護記録',         icon: <Description />,    path: '/nursing' },
   { key: 'flowsheet',      label: 'フローシート',     icon: <Assessment />,     path: '/flowsheet' },
   { key: 'isolation',      label: '隔離拘束',         icon: <Lock />,           path: '/isolation' },
   { key: 'behavior',       label: '行動範囲',         icon: <Lock />,           path: '/behavior' },
   { key: 'outing',         label: '外出外泊',         icon: <Home />,           path: '/outing' },
-  { key: 'schedule',       label: '患者スケジュール', icon: <CalendarMonth />,  path: '/schedule' },
   { key: 'ward-mgmt',      label: '病棟管理',         icon: <Business />,       path: '/ward-management' },
   { key: 'documents',      label: '書類管理',         icon: <FolderOpen />,     path: '/documents' },
   { key: 'orders',         label: 'オーダ管理',       icon: <Receipt />,        path: '/orders' },

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Button, TextField, Select, MenuItem, Checkbox, Typography, Stack,
+  Paper, Button, TextField, NativeSelect, Checkbox, Typography, Stack,
 } from '@mui/material';
 import type { WardId } from '../../types';
 import { PATIENTS } from '../../data/mockData';
@@ -42,14 +42,14 @@ const BatchInput: React.FC = () => {
                 {ITEMS.map((item) => (
                   <TableCell key={item} sx={{ p: 0.5 }}>
                     {item.includes('食事') ? (
-                      <Select size="small" defaultValue="" fullWidth sx={{ fontSize: '0.6875rem' }}>
-                        <MenuItem value="">—</MenuItem>
-                        <MenuItem value="全量">全量</MenuItem>
-                        <MenuItem value="8割">8割</MenuItem>
-                        <MenuItem value="5割">5割</MenuItem>
-                        <MenuItem value="3割">3割</MenuItem>
-                        <MenuItem value="0割">0割</MenuItem>
-                      </Select>
+                      <NativeSelect defaultValue="" fullWidth sx={{ fontSize: '0.6875rem' }}>
+                        <option value="">—</option>
+                        <option value="全量">全量</option>
+                        <option value="8割">8割</option>
+                        <option value="5割">5割</option>
+                        <option value="3割">3割</option>
+                        <option value="0割">0割</option>
+                      </NativeSelect>
                     ) : item === '服薬確認' ? (
                       <Box sx={{ textAlign: 'center' }}><Checkbox size="small" /></Box>
                     ) : (

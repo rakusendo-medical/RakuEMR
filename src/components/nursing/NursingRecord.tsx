@@ -22,7 +22,7 @@ const NursingRecordView: React.FC<Props> = ({ patientId }) => {
       <Grid item xs={12} md={4}>
         <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
           <Box sx={{ px: 1.5, py: 1, bgcolor: '#f8fafc', borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" color="text.secondary">看護録リスト</Typography>
+            <Typography variant="subtitle2" color="text.secondary">看護記録リスト</Typography>
           </Box>
           <List disablePadding sx={{ maxHeight: 500, overflow: 'auto' }}>
             {records.map((r) => (
@@ -47,7 +47,7 @@ const NursingRecordView: React.FC<Props> = ({ patientId }) => {
             ))}
             {records.length === 0 && (
               <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.disabled">看護録がありません</Typography>
+                <Typography variant="body2" color="text.disabled">看護記録がありません</Typography>
               </Box>
             )}
           </List>
@@ -78,7 +78,7 @@ const NursingRecordView: React.FC<Props> = ({ patientId }) => {
             </>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 250 }}>
-              <Typography color="text.disabled">左のリストから看護録を選択してください</Typography>
+              <Typography color="text.disabled">左のリストから看護記録を選択してください</Typography>
             </Box>
           )}
         </Paper>

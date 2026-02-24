@@ -78,7 +78,7 @@ export interface Order {
   confirmedAt?: string;
 }
 
-/** 看護録 */
+/** 看護記録 */
 export interface NursingRecord {
   id: string;
   patientId: string;
@@ -323,6 +323,25 @@ export interface WardDiaryEntry {
   author: string;
   content: string;
   editHistory?: { editedAt: string; editedBy: string }[];
+}
+
+/** 外来受診ステータス */
+export type OutpatientStatus = '待機中' | '診察中' | '会計待ち' | '完了';
+
+/** 外来受診 */
+export interface OutpatientVisit {
+  id: string;
+  patientId: string;
+  patientName: string;
+  age: number;
+  gender: Gender;
+  department: string;
+  doctorName: string;
+  visitType: '初診' | '再診';
+  appointmentTime: string;
+  receptionTime?: string;
+  status: OutpatientStatus;
+  notes?: string;
 }
 
 // ===== ナビゲーション =====
