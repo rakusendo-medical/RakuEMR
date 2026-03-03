@@ -1,6 +1,7 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
+import LoginPage from '../components/login/LoginPage';
 import WardMap from '../components/wardMap/WardMap';
 import PatientList from '../components/patientList/PatientList';
 import PatientMain from '../components/patientMain/PatientMain';
@@ -23,6 +24,7 @@ import PatientRegistration from '../components/patientRegistration/PatientRegist
 
 const AppRoutes: React.FC = () => (
   <Routes>
+    <Route path="/login" element={<LoginPage />} />
     <Route element={<MainLayout />}>
       <Route path="/" element={<WardMap />} />
       <Route path="/patients" element={<PatientList />} />
