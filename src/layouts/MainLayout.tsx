@@ -81,15 +81,30 @@ const MainLayout: React.FC = () => {
       >
         {/* Logo */}
         <Box sx={{ p: sidebarOpen ? '12px 16px' : '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1e293b' }}>
-          {sidebarOpen && (
-            <Box>
-              <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800, letterSpacing: '0.05em', fontSize: '0.875rem' }}>
-                EMR
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.625rem' }}>
-                電子カルテシステム
-              </Typography>
+          {sidebarOpen ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                component="img"
+                src="https://rakusendo-hp.jp/shared/images/logo-s.png"
+                alt="楽仙堂病院"
+                sx={{ height: 28, width: 'auto', borderRadius: '4px' }}
+              />
+              <Box>
+                <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800, letterSpacing: '0.05em', fontSize: '0.875rem', lineHeight: 1.2 }}>
+                  EMR
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.625rem' }}>
+                  電子カルテシステム
+                </Typography>
+              </Box>
             </Box>
+          ) : (
+            <Box
+              component="img"
+              src="https://rakusendo-hp.jp/shared/images/logo-s.png"
+              alt="楽仙堂病院"
+              sx={{ height: 24, width: 'auto', borderRadius: '4px', mx: 'auto' }}
+            />
           )}
           <IconButton onClick={toggleSidebar} size="small" sx={{ color: '#64748b' }}>
             {sidebarOpen ? <ChevronLeftIcon /> : <MenuIcon />}
