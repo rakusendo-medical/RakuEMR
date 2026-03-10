@@ -9,7 +9,6 @@ import {
   Tabs,
   Tab,
   Stack,
-  Avatar,
   Chip,
   Grid,
   Divider,
@@ -225,19 +224,19 @@ const KarteAlphaPage: React.FC = () => {
       <Box sx={{
         display: 'flex',
         alignItems: 'stretch',
-        bgcolor: '#4a7c2e',
+        bgcolor: '#1e3a5f',
         borderRadius: '6px 6px 0 0',
         overflow: 'hidden',
-        mb: 0.5,
+        flexShrink: 0,
       }}>
         <Box
           onClick={() => { setSelectedPatient(null); navigate("/patients"); }}
           sx={{
             display: 'flex', alignItems: 'center', gap: 0.5,
             px: 1.5, cursor: 'pointer',
-            bgcolor: '#1b5e20',
+            bgcolor: '#142b47',
             borderRight: '2px solid rgba(255,255,255,0.3)',
-            '&:hover': { bgcolor: '#144d19' },
+            '&:hover': { bgcolor: '#0f2035' },
           }}
         >
           <ArrowBack sx={{ fontSize: 18, color: '#fff' }} />
@@ -255,33 +254,46 @@ const KarteAlphaPage: React.FC = () => {
               py: 0.8,
               cursor: 'pointer',
               bgcolor: mainTab === i ? '#fff' : 'transparent',
-              borderRight: i < 5 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+              borderRight: i < 5 ? '1px solid rgba(255,255,255,0.15)' : 'none',
               borderRadius: mainTab === i ? '4px 4px 0 0' : 0,
               '&:hover': { bgcolor: mainTab === i ? '#fff' : 'rgba(255,255,255,0.15)' },
               transition: 'all 0.15s',
             }}
           >
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: mainTab === i ? '#2e7d32' : 'rgba(255,255,255,0.7)' }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: mainTab === i ? '#1e3a5f' : 'rgba(255,255,255,0.7)' }}>
               {label}
             </Typography>
           </Box>
         ))}
       </Box>
 
-      {/* Patient Header - Dense */}
-      <PatientHeaderDense patient={patient} />
+      {/* Tab content area - visually connected to active tab */}
+      <Box sx={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        border: '1px solid #d0d7e2',
+        borderTop: 'none',
+        borderRadius: '0 0 6px 6px',
+        bgcolor: '#fff',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}>
+        {/* Patient Header - Dense */}
+        <PatientHeaderDense patient={patient} />
 
-      {/* Main content - scrollable */}
-      <Box
-        sx={{
-          flex: 1,
-          overflow: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 0.5,
-          minHeight: 0,
-        }}
-      >
+        {/* Main content - scrollable */}
+        <Box
+          sx={{
+            flex: 1,
+            overflow: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.5,
+            minHeight: 0,
+            p: 0.5,
+          }}
+        >
         {/* 生活歴 Timeline */}
         <LifeTimelineCompact />
 
@@ -336,6 +348,7 @@ const KarteAlphaPage: React.FC = () => {
           </Button>
         </Stack>
       </Paper>
+      </Box>
     </Box>
   );
 };
@@ -352,19 +365,6 @@ function PatientHeaderDense({ patient }: { patient: any }) {
             color="error"
             sx={{ fontWeight: 700 }}
           />
-          <Avatar
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 1.5,
-              bgcolor: patient.gender === "M" ? "#dbeafe" : "#fce7f3",
-              color: patient.gender === "M" ? "primary.main" : "#be185d",
-              fontSize: "1rem",
-              fontWeight: 700,
-            }}
-          >
-            {patient.name[0]}
-          </Avatar>
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="baseline">
               <Typography
@@ -456,7 +456,7 @@ function LifeTimelineCompact() {
 
   return (
     <Card sx={{ overflow: 'visible', flexShrink: 0 }}>
-      <SectionHeader title="生活歴" color="#2e7d32" open={open} onToggle={() => setOpen(!open)} />
+      <SectionHeader title="生活歴" color="#1e3a5f" open={open} onToggle={() => setOpen(!open)} />
       {open && (
         <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
           <Box sx={{ overflowX: "auto" }}>
@@ -513,7 +513,7 @@ function MedicalInfoDense({ patient }: { patient: any }) {
   const [open, setOpen] = useState(true);
   return (
     <Card sx={{ overflow: 'visible', flexShrink: 0 }}>
-      <SectionHeader title="診療情報" color="#1565c0" open={open} onToggle={() => setOpen(!open)} />
+      <SectionHeader title="診療情報" color="#1e3a5f" open={open} onToggle={() => setOpen(!open)} />
       {open && (
       <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
         <Table
@@ -631,7 +631,7 @@ function MedicalRecordsDense() {
     <Card
       sx={{ overflow: 'visible', flexShrink: 0, display: "flex", flexDirection: "column" }}
     >
-      <SectionHeader title="診療録" color="#c62828" open={open} onToggle={() => setOpen(!open)} />
+      <SectionHeader title="診療録" color="#1e3a5f" open={open} onToggle={() => setOpen(!open)} />
       {open && (
       <CardContent
         sx={{
