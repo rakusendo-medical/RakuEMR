@@ -126,6 +126,7 @@ const PatientMain: React.FC = () => {
             <Button variant="contained" color="secondary" startIcon={<NoteAdd />}>看護記録作成</Button>
             <Button variant="contained" sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }} startIcon={<Receipt />}>オーダ入力</Button>
             <Button variant="contained" color="error" startIcon={<MeetingRoom />} onClick={() => navigate('/admission')}>入退院管理</Button>
+            <Button variant="outlined" onClick={() => navigate(`/karte-alpha/${patient.id}`)}>カルテ(α)を開く</Button>
           </Stack>
         </Box>
       )}

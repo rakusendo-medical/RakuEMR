@@ -21,6 +21,7 @@ import NursingCarePlan from '../components/nursingCare/NursingCarePlan';
 import DocumentManagement from '../components/documents/DocumentManagement';
 import WardManagement from '../components/wardManagement/WardManagement';
 import PatientRegistration from '../components/patientRegistration/PatientRegistration';
+import KarteAlphaPage from '../components/karteAlpha/KarteAlphaPage';
 
 const AppRoutes: React.FC = () => (
   <Routes>
@@ -29,6 +30,7 @@ const AppRoutes: React.FC = () => (
       <Route path="/" element={<WardMap />} />
       <Route path="/patients" element={<PatientList />} />
       <Route path="/patients/:patientId" element={<PatientMain />} />
+      <Route path="/karte-alpha/:patientId" element={<KarteAlphaPage />} />
       <Route path="/outpatient" element={<OutpatientList />} />
       <Route path="/patient-search" element={<PatientSearch />} />
       <Route path="/batch-input" element={<BatchInput />} />
