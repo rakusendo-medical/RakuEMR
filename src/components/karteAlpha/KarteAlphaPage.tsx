@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -32,9 +32,6 @@ import {
   Print,
   ThumbUpAltOutlined,
   ChatBubbleOutline,
-  AttachFile,
-  LocalPharmacy,
-  FolderShared,
   ExpandMore,
   ExpandLess,
 } from "@mui/icons-material";
@@ -127,98 +124,48 @@ const MOCK_ADL: KarteAdl = {
 };
 
 const MOCK_RECORDS: KarteRecord[] = [
-  {
-    id: "kr1",
-    date: "2026/03/10",
-    dayOfWeek: "月",
-    category: "医師記録",
-    categoryColor: "#1e40af",
-    author: "田村 医師",
-    authorRole: "医師D",
-    content: "定期回診。状態安定。処方継続。",
-    tags: [],
-    timestamp: "2026/03/10 10:30",
-  },
-  {
-    id: "kr2",
-    date: "2026/03/10",
-    dayOfWeek: "月",
-    category: "看護記録",
-    categoryColor: "#c2410c",
-    author: "山本 看護師",
-    authorRole: "",
-    content:
-      "朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。",
-    tags: ["看護記録"],
-    timestamp: "2026/03/10 09:00",
-  },
-  {
-    id: "kr3",
-    date: "2026/03/09",
-    dayOfWeek: "日",
-    category: "看護記録",
-    categoryColor: "#c2410c",
-    author: "中田 看護師",
-    authorRole: "",
-    content:
-      "午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。",
-    tags: ["看護記録", "クリニカルパス"],
-    orderNumber: "NO.827",
-    timestamp: "2026/03/09 14:00",
-  },
-  {
-    id: "kr4",
-    date: "2026/03/09",
-    dayOfWeek: "日",
-    category: "医師記録",
-    categoryColor: "#1e40af",
-    author: "田村 医師",
-    authorRole: "医師D",
-    content: "リスパダール 2mg → 3mg に増量指示。経過観察継続。",
-    tags: [],
-    orderNumber: "NO.827",
-    timestamp: "2026/03/09 13:45",
-  },
-  {
-    id: "kr5",
-    date: "2026/03/08",
-    dayOfWeek: "土",
-    category: "看護サマリ",
-    categoryColor: "#7c3aed",
-    author: "山本 看護師",
-    authorRole: "",
-    content:
-      "面会あり（家族：妻）。面会後やや落ち着かない様子。見守り継続。30分後に落ち着きを取り戻す。",
-    tags: ["退院支援", "看護師カンファ"],
-    orderNumber: "NO827",
-    timestamp: "2026/03/08 10:30",
-  },
-  {
-    id: "kr6",
-    date: "2026/03/07",
-    dayOfWeek: "金",
-    category: "看護記録",
-    categoryColor: "#c2410c",
-    author: "佐々木 看護師",
-    authorRole: "",
-    content: "夜間巡回。入眠確認。呼吸状態安定。体位変換不要。",
-    tags: [],
-    timestamp: "2026/03/07 21:00",
-  },
-  {
-    id: "kr7",
-    date: "2026/03/06",
-    dayOfWeek: "木",
-    category: "入退院記録",
-    categoryColor: "#b91c1c",
-    author: "田村 医師",
-    authorRole: "医師D",
-    content:
-      "【精神科】\n退院環境調整の指示\n [居場所]当院病棟\n [現在室]101\n [身長]167.8cm\n [体重]72.0kg",
-    tags: [],
-    orderNumber: "NO.837",
-    timestamp: "2026/03/06 17:23",
-  },
+  // 3/10 (月)
+  { id: "kr1", date: "2026/03/10", dayOfWeek: "月", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "定期回診。状態安定。処方継続。", tags: [], timestamp: "2026/03/10 10:30" },
+  { id: "kr2", date: "2026/03/10", dayOfWeek: "月", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。", tags: ["看護記録"], timestamp: "2026/03/10 09:00" },
+  { id: "kr2b", date: "2026/03/10", dayOfWeek: "月", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "日中レクリエーション参加。他患者と会話あり。笑顔も見られた。", tags: ["看護記録"], timestamp: "2026/03/10 14:30" },
+  // 3/9 (日)
+  { id: "kr3", date: "2026/03/09", dayOfWeek: "日", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。", tags: ["看護記録", "クリニカルパス"], orderNumber: "NO.827", timestamp: "2026/03/09 14:00" },
+  { id: "kr4", date: "2026/03/09", dayOfWeek: "日", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "リスパダール 2mg → 3mg に増量指示。経過観察継続。", tags: [], orderNumber: "NO.827", timestamp: "2026/03/09 13:45" },
+  // 3/8 (土)
+  { id: "kr5", date: "2026/03/08", dayOfWeek: "土", category: "看護サマリ", categoryColor: "#7c3aed", author: "山本 看護師", authorRole: "", content: "面会あり（家族：妻）。面会後やや落ち着かない様子。見守り継続。30分後に落ち着きを取り戻す。", tags: ["退院支援", "看護師カンファ"], orderNumber: "NO.827", timestamp: "2026/03/08 10:30" },
+  { id: "kr5b", date: "2026/03/08", dayOfWeek: "土", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "夕食後、自室にて読書。消灯前に服薬確認済み。入眠スムーズ。", tags: [], timestamp: "2026/03/08 20:00" },
+  // 3/7 (金)
+  { id: "kr6", date: "2026/03/07", dayOfWeek: "金", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "夜間巡回。入眠確認。呼吸状態安定。体位変換不要。", tags: [], timestamp: "2026/03/07 21:00" },
+  { id: "kr6b", date: "2026/03/07", dayOfWeek: "金", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。", tags: [], timestamp: "2026/03/07 15:00" },
+  { id: "kr6c", date: "2026/03/07", dayOfWeek: "金", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "午前中リハビリ参加。歩行訓練15分実施。疲労感の訴えなし。", tags: ["看護記録"], timestamp: "2026/03/07 11:00" },
+  // 3/6 (木)
+  { id: "kr7", date: "2026/03/06", dayOfWeek: "木", category: "入退院記録", categoryColor: "#b91c1c", author: "田村 医師", authorRole: "医師D", content: "【精神科】\n退院環境調整の指示\n [居場所]当院病棟\n [現在室]101\n [身長]167.8cm\n [体重]72.0kg", tags: [], orderNumber: "NO.837", timestamp: "2026/03/06 17:23" },
+  { id: "kr7b", date: "2026/03/06", dayOfWeek: "木", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "デイケア参加。集団プログラムにて積極的に発言。気分良好の様子。", tags: ["看護記録"], timestamp: "2026/03/06 14:00" },
+  // 3/5 (水)
+  { id: "kr8", date: "2026/03/05", dayOfWeek: "水", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。", tags: ["全体カンファレンス"], timestamp: "2026/03/05 16:00" },
+  { id: "kr8b", date: "2026/03/05", dayOfWeek: "水", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "体温36.3℃、血圧122/78。便通あり。食事全量摂取。水分摂取促す。", tags: ["看護記録"], timestamp: "2026/03/05 09:00" },
+  { id: "kr8c", date: "2026/03/05", dayOfWeek: "水", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "夜間不眠の訴えあり。頓服投与（レンドルミン0.25mg）。30分後入眠確認。", tags: [], timestamp: "2026/03/05 23:30" },
+  // 3/4 (火)
+  { id: "kr9", date: "2026/03/04", dayOfWeek: "火", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。", tags: ["看護記録"], timestamp: "2026/03/04 14:00" },
+  { id: "kr9b", date: "2026/03/04", dayOfWeek: "火", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "定期回診。睡眠状況改善傾向。日中活動量も増加。退院目標3月下旬を設定。", tags: [], timestamp: "2026/03/04 10:00" },
+  // 3/3 (月)
+  { id: "kr10", date: "2026/03/03", dayOfWeek: "月", category: "看護サマリ", categoryColor: "#7c3aed", author: "山本 看護師", authorRole: "", content: "週間看護サマリ。全体的に状態安定。ADL自立度向上傾向。退院支援計画に沿って進行中。家族との面会も良好。", tags: ["看護サマリ", "退院支援"], timestamp: "2026/03/03 16:00" },
+  { id: "kr10b", date: "2026/03/03", dayOfWeek: "月", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "午前中散歩（院内庭園）。15分程度歩行。息切れなし。気分転換になった様子。", tags: [], timestamp: "2026/03/03 10:30" },
+  // 3/2 (日)
+  { id: "kr11", date: "2026/03/02", dayOfWeek: "日", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "終日穏やかに過ごす。読書・テレビ鑑賞。他患者との交流あり。食事全量摂取。", tags: [], timestamp: "2026/03/02 20:00" },
+  // 3/1 (土)
+  { id: "kr12", date: "2026/03/01", dayOfWeek: "土", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "月初め評価。GAF 63→65に改善。社会復帰プログラムへの参加を開始予定。", tags: [], timestamp: "2026/03/01 11:00" },
+  { id: "kr12b", date: "2026/03/01", dayOfWeek: "土", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "体温36.4℃、血圧130/80。体重72.2kg（前月比-0.3kg）。栄養状態良好。", tags: ["看護記録"], timestamp: "2026/03/01 09:00" },
+  { id: "kr12c", date: "2026/03/01", dayOfWeek: "土", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "面会（家族：長男）。退院後の生活について相談。グループホーム見学の予定を確認。", tags: ["退院支援"], timestamp: "2026/03/01 14:00" },
+  // 2/28 (金)
+  { id: "kr13", date: "2026/02/28", dayOfWeek: "金", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "夜間巡回。0時・3時に確認。入眠良好。中途覚醒なし。", tags: [], timestamp: "2026/02/28 03:00" },
+  { id: "kr13b", date: "2026/02/28", dayOfWeek: "金", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "PSW面談同席。障害年金の申請手続きについて説明。本人・家族ともに了承。", tags: [], orderNumber: "NO.840", timestamp: "2026/02/28 14:00" },
+  // 2/27 (木)
+  { id: "kr14", date: "2026/02/27", dayOfWeek: "木", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "デイケアプログラム参加（料理教室）。味噌汁を作成。手順の理解良好。他メンバーと協力して調理。", tags: ["看護記録"], timestamp: "2026/02/27 13:00" },
+  { id: "kr14b", date: "2026/02/27", dayOfWeek: "木", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "午後、やや不穏の訴え。傾聴対応。20分程度で落ち着く。誘因は不明。", tags: [], timestamp: "2026/02/27 16:00" },
+  // 2/26 (水)
+  { id: "kr15", date: "2026/02/26", dayOfWeek: "水", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "褥瘡カンファレンス。現在褥瘡なし。予防策継続。体位変換は自力で可能。", tags: ["褥瘡カンファレンス"], timestamp: "2026/02/26 15:00" },
+  { id: "kr15b", date: "2026/02/26", dayOfWeek: "水", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "入浴介助。皮膚状態確認。異常なし。清潔保持良好。爪切り実施。", tags: [], timestamp: "2026/02/26 10:00" },
 ];
 
 const RECORD_FILTER_TABS = [
@@ -257,6 +204,7 @@ const KarteAlphaPage: React.FC = () => {
   const navigate = useNavigate();
   const { selectedPatient, setSelectedPatient } = useAppStore();
   const [subTab, setSubTab] = useState(0);
+  const [mainTab, setMainTab] = useState(0);
 
   const patient = selectedPatient || PATIENTS.find((p) => p.id === patientId);
 
@@ -273,36 +221,55 @@ const KarteAlphaPage: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Back button */}
-      <Button
-        startIcon={<ArrowBack />}
-        onClick={() => {
-          setSelectedPatient(null);
-          navigate("/patients");
-        }}
-        sx={{ mb: 1, alignSelf: "flex-start" }}
-      >
-        一覧に戻る
-      </Button>
+      {/* Back link + Main Tab Bar */}
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'stretch',
+        bgcolor: '#4a7c2e',
+        borderRadius: '6px 6px 0 0',
+        overflow: 'hidden',
+        mb: 0.5,
+      }}>
+        <Box
+          onClick={() => { setSelectedPatient(null); navigate("/patients"); }}
+          sx={{
+            display: 'flex', alignItems: 'center', gap: 0.5,
+            px: 1.5, cursor: 'pointer',
+            bgcolor: '#1b5e20',
+            borderRight: '2px solid rgba(255,255,255,0.3)',
+            '&:hover': { bgcolor: '#144d19' },
+          }}
+        >
+          <ArrowBack sx={{ fontSize: 18, color: '#fff' }} />
+          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', textDecoration: 'underline', textUnderlineOffset: '3px' }}>
+            一覧に戻る
+          </Typography>
+        </Box>
+        {['カルテ', '指示状況', '指示簿', 'フローシート', '患者情報', '患者スケジュール'].map((label, i) => (
+          <Box
+            key={label}
+            onClick={() => setMainTab(i)}
+            sx={{
+              flex: 1,
+              textAlign: 'center',
+              py: 0.8,
+              cursor: 'pointer',
+              bgcolor: mainTab === i ? '#fff' : 'transparent',
+              borderRight: i < 5 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+              borderRadius: mainTab === i ? '4px 4px 0 0' : 0,
+              '&:hover': { bgcolor: mainTab === i ? '#fff' : 'rgba(255,255,255,0.15)' },
+              transition: 'all 0.15s',
+            }}
+          >
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: mainTab === i ? '#2e7d32' : 'rgba(255,255,255,0.7)' }}>
+              {label}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
 
       {/* Patient Header - Dense */}
       <PatientHeaderDense patient={patient} />
-
-      {/* Quick Buttons Row */}
-      <Stack
-        direction="row"
-        spacing={0.5}
-        sx={{ my: 1, flexWrap: "wrap" }}
-        useFlexGap
-      >
-        <QuickActionBtn
-          label="添付ファイル"
-          icon={<AttachFile />}
-          color="primary"
-        />
-        <QuickActionBtn label="処方" icon={<LocalPharmacy />} color="error" />
-        <QuickActionBtn label="紹介" icon={<FolderShared />} color="warning" />
-      </Stack>
 
       {/* Main content - scrollable */}
       <Box
@@ -436,29 +403,6 @@ function PatientHeaderDense({ patient }: { patient: any }) {
         </Stack>
       </CardContent>
     </Card>
-  );
-}
-
-// ----- Quick Action Button -----
-function QuickActionBtn({
-  label,
-  icon,
-  color,
-}: {
-  label: string;
-  icon: React.ReactElement;
-  color: "primary" | "error" | "warning";
-}) {
-  return (
-    <Button
-      variant="contained"
-      color={color}
-      size="small"
-      startIcon={icon}
-      sx={{ fontSize: "0.7rem", px: 1.5, py: 0.3 }}
-    >
-      {label}
-    </Button>
   );
 }
 
@@ -741,10 +685,51 @@ function MedicalRecordsDense() {
           ))}
         </Stack>
 
-        {/* Records */}
-        <Box sx={{ flex: 1, overflowY: "auto" }}>
+        {/* Records with date sidebar */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {/* Date navigation sidebar */}
+          <Box sx={{ width: 110, flexShrink: 0, overflowY: 'auto', borderRight: '1px solid', borderColor: 'divider', pr: 0.5 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.6rem', display: 'block', mb: 0.5 }}>
+              【最近の9日分を表示】
+            </Typography>
+            {Object.entries(groupedRecords).map(([date, records]) => {
+              const d = date.split('/');
+              const dayStr = `${d[2]}日(${records[0].dayOfWeek})`;
+              const monthLabel = `${d[0]}年${d[1]}月`;
+              const hasDoctor = records.some(r => r.category === '医師記録');
+              const hasNursing = records.some(r => r.category === '看護記録' || r.category === '看護サマリ');
+              const hasAdmission = records.some(r => r.category === '入退院記録');
+              return (
+                <Box
+                  key={date}
+                  onClick={() => {
+                    const el = document.getElementById(`record-date-${date.replace(/\//g, '-')}`);
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.5,
+                    py: 0.3, px: 0.5, cursor: 'pointer', borderRadius: 0.5,
+                    '&:hover': { bgcolor: '#e3f2fd' },
+                  }}
+                >
+                  <Typography sx={{ fontSize: '0.65rem', color: 'primary.main', fontWeight: 600 }}>※</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'text.primary', fontWeight: 500 }}>
+                    {dayStr}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.2, ml: 'auto' }}>
+                    {hasDoctor && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#1e40af' }} />}
+                    {hasNursing && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#c2410c' }} />}
+                    {hasAdmission && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#b91c1c' }} />}
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* Records content */}
+          <Box sx={{ flex: 1, overflowY: 'auto' }}>
           {Object.entries(groupedRecords).map(([date, records], gi) => (
-            <Box key={date}>
+            <Box key={date} id={`record-date-${date.replace(/\//g, '-')}`}>
               {/* Date separator */}
               <Box
                 sx={{
@@ -871,6 +856,7 @@ function MedicalRecordsDense() {
               ))}
             </Box>
           ))}
+          </Box>
         </Box>
       </CardContent>
       )}
