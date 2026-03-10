@@ -198,8 +198,8 @@ const FlowsheetView: React.FC<Props> = ({ patientId = 'P001' }) => {
         表示期間: {dates[0]} ～ {dates[dates.length - 1]}（7日間）
       </Typography>
 
-      {/* Header info table (date nav, room, isolation etc.) */}
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 1 }}>
+      {/* Header info table (date nav, admit days, buttons) */}
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0 }}>
         <Table size="small">
           <TableBody>
             {/* Date navigation row */}
@@ -279,11 +279,22 @@ const FlowsheetView: React.FC<Props> = ({ patientId = 'P001' }) => {
                 </TableCell>
               ))}
             </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* ── セクション: 隔離拘束・外出外泊 ── */}
+      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>隔離拘束・外出外泊</Typography>
+      </Box>
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
+        <Table size="small">
+          <TableBody>
             {/* 病室 */}
             <TableRow>
-              <TableCell sx={{ ...stickyCell, fontSize: '0.7rem' }}>病室</TableCell>
+              <TableCell sx={{ ...stickyCell, minWidth: 120, fontSize: '0.7rem' }}>病室</TableCell>
               {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem' }}>{d.room}</TableCell>
+                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem', minWidth: 85 }}>{d.room}</TableCell>
               ))}
             </TableRow>
             {/* 隔離 */}
@@ -322,65 +333,72 @@ const FlowsheetView: React.FC<Props> = ({ patientId = 'P001' }) => {
         </Table>
       </TableContainer>
 
-      {/* Chart */}
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>バイタルサイングラフ</Typography>
-          {/* Y axis scale labels */}
-          <Box sx={{ display: 'flex', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-            {[
-              { label: '体温', color: '#e53935', unit: '℃' },
-              { label: 'BP', color: '#1e40af', unit: 'mmHg' },
-              { label: '脈拍', color: '#d32f2f', unit: '回/分' },
-              { label: 'SpO2', color: '#2e7d32', unit: '%' },
-              { label: '呼吸', color: '#9c27b0', unit: '回/分' },
-            ].map((item) => (
-              <Stack key={item.label} direction="row" spacing={0.5} alignItems="center">
-                <Box sx={{ width: 12, height: 3, bgcolor: item.color, borderRadius: 1 }} />
-                <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>{item.label}({item.unit})</Typography>
-              </Stack>
-            ))}
+      {/* ── セクション: バイタル・サイングラフ ── */}
+      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>バイタル・サイングラフ</Typography>
+      </Box>
+      <Paper variant="outlined" sx={{ mb: 2, borderTop: 'none', borderRadius: 0 }}>
+        <Box sx={{ display: 'flex' }}>
+          {/* Left label column to align with tables */}
+          <Box sx={{ minWidth: 120, maxWidth: 120, bgcolor: '#f8fafc', borderRight: '1px solid #e0e0e0', p: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {[
+                { label: '体温', color: '#e53935', unit: '℃' },
+                { label: 'BP', color: '#1e40af', unit: 'mmHg' },
+                { label: '脈拍', color: '#d32f2f', unit: '回/分' },
+                { label: 'SpO2', color: '#2e7d32', unit: '%' },
+                { label: '呼吸', color: '#9c27b0', unit: '回/分' },
+              ].map((item) => (
+                <Stack key={item.label} direction="row" spacing={0.5} alignItems="center">
+                  <Box sx={{ width: 12, height: 3, bgcolor: item.color, borderRadius: 1 }} />
+                  <Typography sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>{item.label}({item.unit})</Typography>
+                </Stack>
+              ))}
+            </Box>
           </Box>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-              <XAxis dataKey="date" fontSize={11} tick={{ fill: '#666' }} />
-              <YAxis
-                yAxisId="vitals"
-                domain={[0, 300]}
-                ticks={[0, 50, 100, 150, 200, 250, 300]}
-                fontSize={10}
-                tick={{ fill: '#666' }}
-                width={35}
-              />
-              <YAxis
-                yAxisId="temp"
-                orientation="right"
-                domain={[35, 40]}
-                ticks={[35, 36, 37, 38, 39, 40]}
-                fontSize={10}
-                tick={{ fill: '#e53935' }}
-                width={35}
-              />
-              <Tooltip contentStyle={{ fontSize: 12 }} />
-              <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3" />
-              <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3" />
-              {/* BP上 - blue solid */}
-              <Line yAxisId="vitals" type="monotone" dataKey="BP(上)" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} connectNulls />
-              {/* BP下 - blue dashed */}
-              <Line yAxisId="vitals" type="monotone" dataKey="BP(下)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: '#1e40af' }} connectNulls />
-              {/* 脈拍 - red */}
-              <Line yAxisId="vitals" type="monotone" dataKey="脈拍" stroke="#d32f2f" strokeWidth={2} dot={{ r: 4, fill: '#d32f2f' }} connectNulls />
-              {/* SpO2 - green */}
-              <Line yAxisId="vitals" type="monotone" dataKey="SpO2" stroke="#2e7d32" strokeWidth={2} dot={{ r: 3, fill: '#2e7d32', stroke: '#2e7d32' }} connectNulls />
-              {/* 呼吸 - purple */}
-              <Line yAxisId="vitals" type="monotone" dataKey="呼吸" stroke="#9c27b0" strokeWidth={1.5} dot={{ r: 3, fill: '#9c27b0' }} connectNulls />
-              {/* 体温 - red (right axis) */}
-              <Line yAxisId="temp" type="monotone" dataKey="体温" stroke="#e53935" strokeWidth={2} dot={{ r: 4, fill: '#ff9800', stroke: '#e53935', strokeWidth: 2 }} connectNulls />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+          {/* Chart area */}
+          <Box sx={{ flex: 1, py: 1, pr: 1 }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" fontSize={11} tick={{ fill: '#666' }} />
+                <YAxis
+                  yAxisId="vitals"
+                  domain={[0, 300]}
+                  ticks={[0, 50, 100, 150, 200, 250, 300]}
+                  fontSize={10}
+                  tick={{ fill: '#666' }}
+                  width={35}
+                />
+                <YAxis
+                  yAxisId="temp"
+                  orientation="right"
+                  domain={[35, 40]}
+                  ticks={[35, 36, 37, 38, 39, 40]}
+                  fontSize={10}
+                  tick={{ fill: '#e53935' }}
+                  width={35}
+                />
+                <Tooltip contentStyle={{ fontSize: 12 }} />
+                <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3" />
+                <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3" />
+                {/* BP上 - blue solid */}
+                <Line yAxisId="vitals" type="monotone" dataKey="BP(上)" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} connectNulls />
+                {/* BP下 - blue dashed */}
+                <Line yAxisId="vitals" type="monotone" dataKey="BP(下)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: '#1e40af' }} connectNulls />
+                {/* 脈拍 - red */}
+                <Line yAxisId="vitals" type="monotone" dataKey="脈拍" stroke="#d32f2f" strokeWidth={2} dot={{ r: 4, fill: '#d32f2f' }} connectNulls />
+                {/* SpO2 - green */}
+                <Line yAxisId="vitals" type="monotone" dataKey="SpO2" stroke="#2e7d32" strokeWidth={2} dot={{ r: 3, fill: '#2e7d32', stroke: '#2e7d32' }} connectNulls />
+                {/* 呼吸 - purple */}
+                <Line yAxisId="vitals" type="monotone" dataKey="呼吸" stroke="#9c27b0" strokeWidth={1.5} dot={{ r: 3, fill: '#9c27b0' }} connectNulls />
+                {/* 体温 - red (right axis) */}
+                <Line yAxisId="temp" type="monotone" dataKey="体温" stroke="#e53935" strokeWidth={2} dot={{ r: 4, fill: '#ff9800', stroke: '#e53935', strokeWidth: 2 }} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
+        </Box>
+      </Paper>
 
       {/* Data Table */}
       <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600 }}>
