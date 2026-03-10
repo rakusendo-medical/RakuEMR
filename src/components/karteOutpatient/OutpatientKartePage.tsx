@@ -29,6 +29,12 @@ import {
   ChatBubbleOutline,
   ExpandMore,
   ExpandLess,
+  Description,
+  AssignmentTurnedIn,
+  ListAlt,
+  ShowChart,
+  PersonOutline,
+  EventNote,
 } from "@mui/icons-material";
 import { PATIENTS } from "../../data/mockData";
 import StatusBadge from "../common/StatusBadge";
@@ -209,13 +215,23 @@ const OutpatientKartePage: React.FC = () => {
             一覧に戻る
           </Typography>
         </Box>
-        {['カルテ', '指示状況', '指示簿', 'フローシート', '患者情報', 'スケジュール'].map((label, i) => (
+        {[
+          { label: 'カルテ', icon: <Description sx={{ fontSize: 16 }} /> },
+          { label: '指示状況', icon: <AssignmentTurnedIn sx={{ fontSize: 16 }} /> },
+          { label: '指示簿', icon: <ListAlt sx={{ fontSize: 16 }} /> },
+          { label: 'フローシート', icon: <ShowChart sx={{ fontSize: 16 }} /> },
+          { label: '患者情報', icon: <PersonOutline sx={{ fontSize: 16 }} /> },
+          { label: 'スケジュール', icon: <EventNote sx={{ fontSize: 16 }} /> },
+        ].map((tab, i) => (
           <Box
-            key={label}
+            key={tab.label}
             onClick={() => setMainTab(i)}
             sx={{
               flex: 1,
-              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.5,
               py: 0.8,
               cursor: 'pointer',
               bgcolor: mainTab === i ? THEME.primary : '#fff',
@@ -225,10 +241,12 @@ const OutpatientKartePage: React.FC = () => {
               '&:last-child': { borderRight: `1px solid ${THEME.border}`, borderRadius: '0 4px 0 0' },
               '&:hover': { bgcolor: mainTab === i ? THEME.primary : THEME.primaryLight },
               transition: 'all 0.15s',
+              color: mainTab === i ? '#fff' : THEME.primary,
             }}
           >
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: mainTab === i ? '#fff' : THEME.primary }}>
-              {label}
+            {tab.icon}
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'inherit' }}>
+              {tab.label}
             </Typography>
           </Box>
         ))}

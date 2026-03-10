@@ -33,10 +33,17 @@ import {
   ChatBubbleOutline,
   ExpandMore,
   ExpandLess,
+  Description,
+  AssignmentTurnedIn,
+  ListAlt,
+  ShowChart,
+  PersonOutline,
+  EventNote,
 } from "@mui/icons-material";
 import { PATIENTS, ORDERS, NURSING_RECORDS } from "../../data/mockData";
 import StatusBadge from "../common/StatusBadge";
 import { useAppStore } from "../../stores/useAppStore";
+import FlowsheetView from "../flowsheet/Flowsheet";
 
 // ===== Mock data for the dense karte view =====
 
@@ -247,13 +254,23 @@ const KarteAlphaPage: React.FC = () => {
             一覧に戻る
           </Typography>
         </Box>
-        {['カルテ', '指示状況', '指示簿', 'フローシート', '患者情報', 'スケジュール'].map((label, i) => (
+        {[
+          { label: 'カルテ', icon: <Description sx={{ fontSize: 16 }} /> },
+          { label: '指示状況', icon: <AssignmentTurnedIn sx={{ fontSize: 16 }} /> },
+          { label: '指示簿', icon: <ListAlt sx={{ fontSize: 16 }} /> },
+          { label: 'フローシート', icon: <ShowChart sx={{ fontSize: 16 }} /> },
+          { label: '患者情報', icon: <PersonOutline sx={{ fontSize: 16 }} /> },
+          { label: 'スケジュール', icon: <EventNote sx={{ fontSize: 16 }} /> },
+        ].map((tab, i) => (
           <Box
-            key={label}
+            key={tab.label}
             onClick={() => setMainTab(i)}
             sx={{
               flex: 1,
-              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.5,
               py: 0.8,
               cursor: 'pointer',
               bgcolor: mainTab === i ? '#1e3a5f' : '#fff',
@@ -263,10 +280,12 @@ const KarteAlphaPage: React.FC = () => {
               '&:last-child': { borderRight: '1px solid #1e3a5f', borderRadius: '0 4px 0 0' },
               '&:hover': { bgcolor: mainTab === i ? '#1e3a5f' : '#e8eef5' },
               transition: 'all 0.15s',
+              color: mainTab === i ? '#fff' : '#1e3a5f',
             }}
           >
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: mainTab === i ? '#fff' : '#1e3a5f' }}>
-              {label}
+            {tab.icon}
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'inherit' }}>
+              {tab.label}
             </Typography>
           </Box>
         ))}
@@ -297,30 +316,47 @@ const KarteAlphaPage: React.FC = () => {
             p: 0.5,
           }}
         >
-        {/* 生活歴 Timeline */}
-        <LifeTimelineCompact />
+        {/* Tab content by mainTab */}
+        {mainTab === 0 && (
+          <>
+            {/* 生活歴 Timeline */}
+            <LifeTimelineCompact />
 
-        {/* 診療情報 */}
-        <MedicalInfoDense patient={patient} />
+            {/* 診療情報 */}
+            <MedicalInfoDense patient={patient} />
 
-        {/* Sub tabs row */}
-        <Paper variant="outlined" sx={{ px: 1 }}>
-          <Stack direction="row" spacing={0} sx={{ overflowX: "auto" }}>
-            {SUB_TABS.map((tab, i) => (
-              <Chip
-                key={tab}
-                label={tab}
-                variant={subTab === i ? "filled" : "outlined"}
-                color={subTab === i ? "primary" : "default"}
-                onClick={() => setSubTab(i)}
-                sx={{ borderRadius: 1, mr: 0.5, my: 0.5 }}
-              />
-            ))}
-          </Stack>
-        </Paper>
+            {/* Sub tabs row */}
+            <Paper variant="outlined" sx={{ px: 1 }}>
+              <Stack direction="row" spacing={0} sx={{ overflowX: "auto" }}>
+                {SUB_TABS.map((tab, i) => (
+                  <Chip
+                    key={tab}
+                    label={tab}
+                    variant={subTab === i ? "filled" : "outlined"}
+                    color={subTab === i ? "primary" : "default"}
+                    onClick={() => setSubTab(i)}
+                    sx={{ borderRadius: 1, mr: 0.5, my: 0.5 }}
+                  />
+                ))}
+              </Stack>
+            </Paper>
 
-        {/* 診療録 */}
-        <MedicalRecordsDense />
+            {/* 診療録 */}
+            <MedicalRecordsDense />
+          </>
+        )}
+
+        {mainTab === 3 && (
+          <FlowsheetView patientId={patient.id} />
+        )}
+
+        {mainTab !== 0 && mainTab !== 3 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography color="text.secondary">
+              {['カルテ', '指示状況', '指示簿', 'フローシート', '患者情報', 'スケジュール'][mainTab]} - 準備中
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       {/* Bottom Action Bar */}

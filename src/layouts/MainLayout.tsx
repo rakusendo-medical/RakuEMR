@@ -32,7 +32,6 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'patient-search', label: '患者検索',         icon: <Search />,         path: '/patient-search' },
   { key: 'admission',      label: '入退院管理',       icon: <MeetingRoom />,    path: '/admission' },
   { key: 'nursing',        label: '看護記録',         icon: <Description />,    path: '/nursing' },
-  { key: 'flowsheet',      label: 'フローシート',     icon: <Assessment />,     path: '/flowsheet' },
   { key: 'isolation',      label: '隔離拘束',         icon: <Lock />,           path: '/isolation' },
   { key: 'behavior',       label: '行動範囲',         icon: <Lock />,           path: '/behavior' },
   { key: 'outing',         label: '外出外泊',         icon: <Home />,           path: '/outing' },
