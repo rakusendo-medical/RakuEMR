@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Typography, Chip, Tabs, Tab, Stack,
 } from '@mui/material';
 import type { OutpatientStatus } from '../../types';
 import { OUTPATIENT_VISITS } from '../../data/mockData';
+import { useAppStore } from '../../stores/useAppStore';
 
 type FilterStatus = OutpatientStatus | 'all';
 
@@ -24,7 +26,27 @@ const FILTER_TABS: { value: FilterStatus; label: string }[] = [
 ];
 
 const OutpatientList: React.FC = () => {
+  const navigate = useNavigate();
+  const { setSelectedPatient } = useAppStore();
   const [filter, setFilter] = useState<FilterStatus>('all');
+
+  const handleRowClick = (visit: typeof OUTPATIENT_VISITS[0]) => {
+    setSelectedPatient({
+      id: visit.patientId,
+      name: visit.patientName,
+      age: visit.age,
+      gender: visit.gender,
+      wardId: 'ward1' as any,
+      roomNumber: '',
+      bedLabel: '',
+      status: 'stable' as any,
+      admitDate: '',
+      doctorName: visit.doctorName,
+      diagnosis: '',
+      department: visit.department,
+    } as any);
+    navigate(`/karte-outpatient/${visit.patientId}`);
+  };
 
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -95,7 +117,7 @@ const OutpatientList: React.FC = () => {
           </TableHead>
           <TableBody>
             {filtered.map((v) => (
-              <TableRow key={v.id} hover>
+              <TableRow key={v.id} hover onClick={() => handleRowClick(v)} sx={{ cursor: 'pointer' }}>
                 <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{v.id}</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>{v.patientName}</TableCell>
                 <TableCell>{v.age}歳</TableCell>

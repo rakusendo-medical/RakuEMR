@@ -265,6 +265,9 @@ const OutpatientKartePage: React.FC = () => {
         {/* 診療情報 */}
         <OutpatientMedicalInfo />
 
+        {/* 指示簿 */}
+        <OutpatientOrderBook />
+
         {/* Sub tabs row */}
         <Paper variant="outlined" sx={{ px: 1 }}>
           <Stack direction="row" spacing={0} sx={{ overflowX: "auto" }}>
@@ -549,6 +552,169 @@ function OutpatientMedicalInfo() {
             </TableRow>
           </TableBody>
         </Table>
+      </CardContent>
+      )}
+    </Card>
+  );
+}
+
+// ----- Order Book (指示簿) -----
+interface OrderEntry {
+  id: string;
+  status: "待ち" | "継続" | "完了";
+  statusColor: string;
+  orderDate: string;
+  orderType: string;
+  content: string;
+  department: string;
+  doctor: string;
+  orderSource: string;
+  acceptDate: string;
+  nextDate: string;
+  cancelled: boolean;
+}
+
+const MOCK_ORDERS_OUTPATIENT: OrderEntry[] = [
+  {
+    id: "OO1", status: "待ち", statusColor: "#e53935", orderDate: "2014/08/21",
+    orderType: "臨時", content: "アミノルバン 200mL　1瓶\n【向】10%フェノバール 1mL　1管\n点滴注射 1回",
+    department: "内科", doctor: "医師 太郎", orderSource: "処置室注射", acceptDate: "", nextDate: "2014/08/21", cancelled: true,
+  },
+  {
+    id: "OO2", status: "継続", statusColor: "#1e88e5", orderDate: "2014/08/19",
+    orderType: "定期", content: "デイケア",
+    department: "内科", doctor: "医師 太郎", orderSource: "デイケア", acceptDate: "", nextDate: "2014/08/21", cancelled: false,
+  },
+  {
+    id: "OO3", status: "継続", statusColor: "#1e88e5", orderDate: "2014/08/21",
+    orderType: "定期", content: "訪問看護",
+    department: "", doctor: "医師 太郎", orderSource: "訪問看護", acceptDate: "", nextDate: "[未定]", cancelled: false,
+  },
+  {
+    id: "OO4", status: "待ち", statusColor: "#e53935", orderDate: "2014/08/21",
+    orderType: "臨時", content: "（身長：157.0 cm（体重：46.0 kg）\n2014/08/21(木)\n【食事糖負荷試験(血糖)】\n血糖 食前(糖負荷)/血糖 食後120分(糖負荷)/---\n【食事糖負荷試験(尿)】\n尿糖 食前(糖負荷)/---",
+    department: "内科", doctor: "医師 太郎", orderSource: "院外尿検査", acceptDate: "", nextDate: "2014/08/21", cancelled: true,
+  },
+];
+
+function OutpatientOrderBook() {
+  const [open, setOpen] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  return (
+    <Card sx={{ overflow: 'visible', flexShrink: 0 }}>
+      <OutpatientSectionHeader title="指示簿" open={open} onToggle={() => setOpen(!open)} />
+      {open && (
+      <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
+        {/* Header */}
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ mb: 0.5 }}>
+          <Chip
+            label={showCompleted ? "実施済みオーダを非表示" : "実施済みオーダを表示"}
+            size="small"
+            variant="outlined"
+            onClick={() => setShowCompleted(!showCompleted)}
+            sx={{ fontSize: "0.65rem", height: 22 }}
+          />
+        </Stack>
+
+        {/* Table Header */}
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: '70px 50px 1fr 50px 100px 80px 90px 40px',
+          bgcolor: '#e8f5e9',
+          borderBottom: '2px solid #2e7d32',
+          px: 0.5,
+          py: 0.3,
+          gap: 0.5,
+        }}>
+          {['', '指示日', 'オーダ', '内容', '科', '伝票(指示医)', '指示受け', '次回実施日', '中止'].map((h) => (
+            <Typography key={h} sx={{ fontSize: '0.65rem', fontWeight: 700, color: 'text.secondary' }}>
+              {h}
+            </Typography>
+          ))}
+        </Box>
+
+        {/* Order Rows */}
+        {MOCK_ORDERS_OUTPATIENT.map((order) => (
+          <Box
+            key={order.id}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '70px 50px 1fr 50px 100px 80px 90px 40px',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              px: 0.5,
+              py: 0.5,
+              gap: 0.5,
+              '&:hover': { bgcolor: '#f1f8e9' },
+            }}
+          >
+            {/* Status + Date */}
+            <Box>
+              <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: order.statusColor }}>
+                {order.status}
+              </Typography>
+              <Typography sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
+                {order.orderDate}
+              </Typography>
+            </Box>
+
+            {/* Order Type */}
+            <Box>
+              <Chip
+                label={order.orderType}
+                size="small"
+                sx={{
+                  height: 18, fontSize: '0.6rem', fontWeight: 700,
+                  bgcolor: order.orderType === '定期' ? '#1e88e5' : '#ff9800',
+                  color: '#fff',
+                }}
+              />
+            </Box>
+
+            {/* Content */}
+            <Box>
+              <Typography sx={{ fontSize: '0.7rem', whiteSpace: 'pre-line', lineHeight: 1.4 }}>
+                {order.content}
+              </Typography>
+            </Box>
+
+            {/* Department */}
+            <Typography sx={{ fontSize: '0.7rem' }}>
+              {order.department}
+            </Typography>
+
+            {/* Doctor + Source */}
+            <Box>
+              <Typography sx={{ fontSize: '0.7rem' }}>
+                {order.orderSource}
+              </Typography>
+              <Typography sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
+                ({order.doctor})
+              </Typography>
+            </Box>
+
+            {/* Accept Date */}
+            <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+              {order.acceptDate || '—'}
+            </Typography>
+
+            {/* Next Date */}
+            <Typography sx={{ fontSize: '0.7rem' }}>
+              {order.nextDate}
+            </Typography>
+
+            {/* Cancel */}
+            <Box sx={{ textAlign: 'center' }}>
+              {order.cancelled && (
+                <Typography sx={{ fontSize: '1rem', color: '#e53935' }}>⊘</Typography>
+              )}
+              {!order.cancelled && (
+                <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>-</Typography>
+              )}
+            </Box>
+          </Box>
+        ))}
       </CardContent>
       )}
     </Card>
