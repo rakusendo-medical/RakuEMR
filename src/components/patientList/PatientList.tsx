@@ -33,7 +33,7 @@ const PatientList: React.FC = () => {
     const patient = PATIENTS.find((p) => p.id === patientId);
     if (patient) {
       setSelectedPatient(patient);
-      navigate(`/patients/${patientId}`);
+      navigate(`/karte-alpha/${patientId}`);
     }
   };
 

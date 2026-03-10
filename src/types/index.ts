@@ -1,24 +1,30 @@
 // ===== 共通型定義 =====
 
 /** 病棟 */
-export type WardId = 'ward1' | 'ward2';
+export type WardId = "ward1" | "ward2";
 export const WARD_LABELS: Record<WardId, string> = {
-  ward1: '第１病棟',
-  ward2: '第２病棟',
+  ward1: "第１病棟",
+  ward2: "第２病棟",
 };
 
 /** 患者ステータス */
-export type PatientStatus = 'stable' | 'observation' | 'isolation' | 'restraint' | 'outing' | 'empty';
+export type PatientStatus =
+  | "stable"
+  | "observation"
+  | "isolation"
+  | "restraint"
+  | "outing"
+  | "empty";
 
 export interface StatusConfig {
   label: string;
   color: string;
   bgColor: string;
-  muiColor: 'success' | 'warning' | 'error' | 'info' | 'default';
+  muiColor: "success" | "warning" | "error" | "info" | "default";
 }
 
 /** 性別 */
-export type Gender = 'M' | 'F';
+export type Gender = "M" | "F";
 
 // ===== エンティティ型 =====
 
@@ -53,13 +59,27 @@ export interface Patient {
   doctorName: string;
   diagnosis?: string;
   insuranceType?: string;
+  // カルテ画面用の追加フィールド
+  nameKana?: string;
+  bloodType?: string;
+  birthDate?: string;
+  wardName?: string;
+  nurse?: string;
+  daycare?: string;
 }
 
 /** オーダ種別 */
-export type OrderType = '処方' | '注射' | '心理検査' | 'ECT' | '入院定時' | 'IF' | '文字';
+export type OrderType =
+  | "処方"
+  | "注射"
+  | "心理検査"
+  | "ECT"
+  | "入院定時"
+  | "IF"
+  | "文字";
 
 /** オーダステータス */
-export type OrderStatus = '指示済' | '実施中' | '予定' | '中止' | '実施済';
+export type OrderStatus = "指示済" | "実施中" | "予定" | "中止" | "実施済";
 
 /** オーダ */
 export interface Order {
@@ -86,7 +106,11 @@ export interface NursingRecord {
   time: string;
   author: string;
   content: string;
-  editHistory?: { editedAt: string; editedBy: string; previousContent: string }[];
+  editHistory?: {
+    editedAt: string;
+    editedBy: string;
+    previousContent: string;
+  }[];
 }
 
 /** バイタルサイン */
@@ -94,7 +118,7 @@ export interface VitalSign {
   id: string;
   patientId: string;
   date: string;
-  timeSlot: string; // '6時' | '9時' | '12時' | '15時' | '18時' | '21時'
+  timeSlot: string;
   bpSystolic?: number;
   bpDiastolic?: number;
   pulse?: number;
@@ -121,14 +145,14 @@ export interface FlowsheetDaily {
 }
 
 /** 入退院指示ステータス */
-export type AdmissionStatus = '指示済' | '手続中' | '手続完了' | 'キャンセル';
+export type AdmissionStatus = "指示済" | "手続中" | "手続完了" | "キャンセル";
 
 /** 入退院指示 */
 export interface AdmissionOrder {
   id: string;
   patientId: string;
   patientName: string;
-  type: '入院' | '退院';
+  type: "入院" | "退院";
   status: AdmissionStatus;
   scheduledDate: string;
   doctorName: string;
@@ -159,11 +183,11 @@ export interface AdmissionHistory {
   wardId: WardId;
   roomNumber: string;
   doctorName: string;
-  status: '入院中' | '退院済' | 'キャンセル';
+  status: "入院中" | "退院済" | "キャンセル";
 }
 
 /** 隔離拘束種別 */
-export type IsolationType = '隔離' | '拘束';
+export type IsolationType = "隔離" | "拘束";
 
 /** 隔離拘束指示 */
 export interface IsolationOrder {
@@ -183,20 +207,30 @@ export interface IsolationOrder {
 }
 
 /** 観察記録 */
-export type ObservationState = '未記入' | '浅眠' | '落ち着き' | '不穏' | '睡眠' | '中途覚醒';
+export type ObservationState =
+  | "未記入"
+  | "浅眠"
+  | "落ち着き"
+  | "不穏"
+  | "睡眠"
+  | "中途覚醒";
 
 export interface ObservationRecord {
   id: string;
   isolationOrderId: string;
   patientId: string;
   date: string;
-  time: string; // HH:mm形式（15分単位）
+  time: string;
   state: ObservationState;
   note?: string;
 }
 
 /** 行動範囲 */
-export type BehaviorRangeLevel = '病棟内' | '院内' | '院外許可あり' | '開放病棟';
+export type BehaviorRangeLevel =
+  | "病棟内"
+  | "院内"
+  | "院外許可あり"
+  | "開放病棟";
 
 export interface BehaviorRange {
   id: string;
@@ -211,10 +245,10 @@ export interface BehaviorRange {
 }
 
 /** 外出外泊種別 */
-export type OutingType = '外出' | '外泊';
+export type OutingType = "外出" | "外泊";
 
 /** 外出外泊申請ステータス */
-export type OutingStatus = '申請中' | '許可' | '不許可';
+export type OutingStatus = "申請中" | "許可" | "不許可";
 
 /** 外出外泊 */
 export interface OutingRecord {
@@ -228,7 +262,7 @@ export interface OutingRecord {
   wardId: WardId;
   returnedAt?: string;
   approvedBy?: string;
-  method: 'application' | 'direct'; // 申請・許可 or 医師直接許可
+  method: "application" | "direct";
 }
 
 /** 患者スケジュール */
@@ -239,7 +273,7 @@ export interface PatientScheduleEvent {
   date: string;
   startTime: string;
   endTime?: string;
-  category: 'order' | 'rehab' | 'meeting' | 'outing' | 'other';
+  category: "order" | "rehab" | "meeting" | "outing" | "other";
   notes?: string;
 }
 
@@ -252,7 +286,7 @@ export interface RehabOrder {
   doctorName: string;
   startDate: string;
   frequency: string;
-  status: '指示済' | '実施中' | '終了';
+  status: "指示済" | "実施中" | "終了";
 }
 
 /** リハビリ日報 */
@@ -275,7 +309,7 @@ export interface RehabEvaluation {
   date: string;
   evaluator: string;
   content: string;
-  type: '定期' | '開始時' | '終了時';
+  type: "定期" | "開始時" | "終了時";
 }
 
 /** 看護ケア予定 */
@@ -296,10 +330,10 @@ export interface Document {
   patientId: string;
   patientName: string;
   title: string;
-  type: '入院時' | '退院時' | '隔離拘束' | '行動制限' | 'その他';
+  type: "入院時" | "退院時" | "隔離拘束" | "行動制限" | "その他";
   createdAt: string;
   createdBy: string;
-  status: '作成中' | '完成' | '登録済';
+  status: "作成中" | "完成" | "登録済";
 }
 
 /** 看護管理日誌 */
@@ -326,7 +360,7 @@ export interface WardDiaryEntry {
 }
 
 /** 外来受診ステータス */
-export type OutpatientStatus = '待機中' | '診察中' | '会計待ち' | '完了';
+export type OutpatientStatus = "待機中" | "診察中" | "会計待ち" | "完了";
 
 /** 外来受診 */
 export interface OutpatientVisit {
@@ -337,7 +371,7 @@ export interface OutpatientVisit {
   gender: Gender;
   department: string;
   doctorName: string;
-  visitType: '初診' | '再診';
+  visitType: "初診" | "再診";
   appointmentTime: string;
   receptionTime?: string;
   status: OutpatientStatus;
@@ -349,6 +383,84 @@ export interface OutpatientVisit {
 export interface NavItem {
   key: string;
   label: string;
-  icon: string; // MUI icon name
+  icon: string;
   path: string;
+}
+
+// ===== カルテ画面用型定義 =====
+
+export interface InsuranceInfo {
+  type: string;
+  validPeriod: string;
+  insurerNumber: string;
+  recordNumber: string;
+  insuredNumber: string;
+  copay: string;
+}
+
+export interface DiagnosisInfo {
+  mainDiagnosis: string;
+  mainDiagnosisCode: string;
+  mainDiagnosisDate: string;
+  subDiagnosis: string;
+  subDiagnosisCode: string;
+  subDiagnosisDate: string;
+}
+
+export interface AllergyInfo {
+  drug: string[];
+  food: string[];
+  other: string[];
+}
+
+export interface StaffInfo {
+  responsibleTeam: string;
+  wardManagement: string;
+  staffManagement: string;
+  physicalRehab: string;
+  independenceLevel: string;
+  dementiaCareLevel: string;
+}
+
+export interface AdlInfo {
+  barthel: string;
+  gaf: string;
+  gafDate: string;
+  planDate: string;
+}
+
+export type RecordCategory =
+  | "医師記録"
+  | "看護記録"
+  | "看護サマリ"
+  | "クリニカルパス"
+  | "作業療法記録"
+  | "栄養指導記録"
+  | "入退院記録";
+
+export interface MedicalRecord {
+  id: string;
+  date: string;
+  dayOfWeek: string;
+  category: RecordCategory;
+  author: string;
+  authorRole: string;
+  content: string;
+  tags: string[];
+  orderNumber?: string;
+  timestamp: string;
+  likes: number;
+  comments: number;
+}
+
+export interface LifeEvent {
+  date: string;
+  type: "治療歴" | "デイケア" | "学歴・経歴" | "エピソード" | "生活歴・現病歴";
+  label: string;
+}
+
+export interface KarteTab {
+  id: string;
+  label: string;
+  active?: boolean;
 }
