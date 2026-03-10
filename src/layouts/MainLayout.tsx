@@ -80,21 +80,39 @@ const MainLayout: React.FC = () => {
         }}
       >
         {/* Logo */}
-        <Box sx={{ p: sidebarOpen ? '12px 16px' : '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1e293b' }}>
-          {sidebarOpen && (
-            <Box>
-              <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800, letterSpacing: '0.05em', fontSize: '0.875rem' }}>
-                EMR
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.625rem' }}>
-                電子カルテシステム
-              </Typography>
+        {sidebarOpen ? (
+          <Box sx={{ p: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box
+                component="img"
+                src="https://rakusendo-hp.jp/shared/images/logo-s.png"
+                alt="楽仙堂病院"
+                sx={{ height: 32, width: 'auto', borderRadius: '4px' }}
+              />
+              <IconButton onClick={toggleSidebar} size="small" sx={{ color: '#64748b', mt: -0.5, mr: -0.5 }}>
+                <ChevronLeftIcon />
+              </IconButton>
             </Box>
-          )}
-          <IconButton onClick={toggleSidebar} size="small" sx={{ color: '#64748b' }}>
-            {sidebarOpen ? <ChevronLeftIcon /> : <MenuIcon />}
-          </IconButton>
-        </Box>
+            <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800, letterSpacing: '0.05em', fontSize: '0.875rem', lineHeight: 1.2, mt: 1 }}>
+              EMR
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.625rem' }}>
+              電子カルテシステム
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ py: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, borderBottom: '1px solid #1e293b' }}>
+            <Box
+              component="img"
+              src="https://rakusendo-hp.jp/favicon.gif"
+              alt="楽仙堂病院"
+              sx={{ height: 28, width: 28, borderRadius: '4px' }}
+            />
+            <IconButton onClick={toggleSidebar} size="small" sx={{ color: '#64748b' }}>
+              <MenuIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        )}
 
         {/* Nav Items */}
         <List sx={{ flex: 1, overflowY: 'auto', py: 1 }}>
