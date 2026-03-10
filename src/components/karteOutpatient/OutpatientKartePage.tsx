@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -6,11 +6,8 @@ import {
   Card,
   CardContent,
   Typography,
-  Tabs,
-  Tab,
   Stack,
   Chip,
-  Grid,
   Divider,
   Table,
   TableBody,
@@ -26,7 +23,6 @@ import {
   Edit,
   NoteAdd,
   Receipt,
-  MeetingRoom,
   CalendarMonth,
   Print,
   ThumbUpAltOutlined,
@@ -34,11 +30,20 @@ import {
   ExpandMore,
   ExpandLess,
 } from "@mui/icons-material";
-import { PATIENTS, ORDERS, NURSING_RECORDS } from "../../data/mockData";
+import { PATIENTS } from "../../data/mockData";
 import StatusBadge from "../common/StatusBadge";
 import { useAppStore } from "../../stores/useAppStore";
 
-// ===== Mock data for the dense karte view =====
+// ===== Color theme for outpatient =====
+const THEME = {
+  primary: "#2e7d32",       // green main
+  primaryDark: "#1b5e20",   // green dark (tab active, headers)
+  primaryLight: "#e8f5e9",  // green light (hover)
+  headerBg: "#2e7d32",
+  border: "#2e7d32",
+};
+
+// ===== Mock data for outpatient karte =====
 
 interface KarteInsurance {
   type: string;
@@ -62,18 +67,6 @@ interface KarteAllergy {
   food: string[];
 }
 
-interface KarteStaff {
-  team: string;
-  wardMgmt: string;
-  independenceLevel: string;
-}
-
-interface KarteAdl {
-  barthel: string;
-  gaf: string;
-  planDate: string;
-}
-
 interface KarteRecord {
   id: string;
   date: string;
@@ -89,9 +82,9 @@ interface KarteRecord {
 }
 
 const MOCK_INSURANCE: KarteInsurance = {
-  type: "テスト保険",
+  type: "自費 本人",
   insurerNumber: "39999839",
-  recordNumber: "01・23456789",
+  recordNumber: "00000000",
   copay: "3割",
   validPeriod: "39999999",
 };
@@ -99,82 +92,50 @@ const MOCK_INSURANCE: KarteInsurance = {
 const MOCK_DIAGNOSIS: KarteDiagnosis = {
   main: "統合失調症",
   mainCode: "F20.9",
-  mainDate: "2026/01/10 ～",
-  sub: "不眠症",
-  subCode: "G47.0",
-  subDate: "2026/01/20 ～",
+  mainDate: "2017/05/06 ～",
+  sub: "気管支喘息",
+  subCode: "J45.9",
+  subDate: "2018/02/08 ～",
 };
 
 const MOCK_ALLERGY: KarteAllergy = {
-  drug: ["アレルギー性鼻炎[アレルギー性鼻炎炎]", "喘息", "ウイルス性肝炎X"],
+  drug: ["アレルギー性鼻炎[アレルギー性鼻炎]", "喘息入院歴あり", "ウイルス性肝炎X日", "服用禁忌あり"],
   food: ["鶏卵アレルギー[鶏卵]"],
 };
 
-const MOCK_STAFF: KarteStaff = {
-  team: "病棟内/スタッフ同伴",
-  wardMgmt: "2/B(昼)1h/B(夜)",
-  independenceLevel: "B.",
-};
-
-const MOCK_ADL: KarteAdl = {
-  barthel: "バーサリ: 記録値 AB30",
-  gaf: "63点 (確定日) 2026/01/10",
-  planDate: "2026年3月 10日 (月)",
-};
-
 const MOCK_RECORDS: KarteRecord[] = [
-  // 3/10 (月)
-  { id: "kr1", date: "2026/03/10", dayOfWeek: "月", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "定期回診。状態安定。処方継続。", tags: [], timestamp: "2026/03/10 10:30" },
-  { id: "kr2", date: "2026/03/10", dayOfWeek: "月", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。", tags: ["看護記録"], timestamp: "2026/03/10 09:00" },
-  { id: "kr2b", date: "2026/03/10", dayOfWeek: "月", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "日中レクリエーション参加。他患者と会話あり。笑顔も見られた。", tags: ["看護記録"], timestamp: "2026/03/10 14:30" },
-  // 3/9 (日)
-  { id: "kr3", date: "2026/03/09", dayOfWeek: "日", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。", tags: ["看護記録", "クリニカルパス"], orderNumber: "NO.827", timestamp: "2026/03/09 14:00" },
-  { id: "kr4", date: "2026/03/09", dayOfWeek: "日", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "リスパダール 2mg → 3mg に増量指示。経過観察継続。", tags: [], orderNumber: "NO.827", timestamp: "2026/03/09 13:45" },
-  // 3/8 (土)
-  { id: "kr5", date: "2026/03/08", dayOfWeek: "土", category: "看護サマリ", categoryColor: "#7c3aed", author: "山本 看護師", authorRole: "", content: "面会あり（家族：妻）。面会後やや落ち着かない様子。見守り継続。30分後に落ち着きを取り戻す。", tags: ["退院支援", "看護師カンファ"], orderNumber: "NO.827", timestamp: "2026/03/08 10:30" },
-  { id: "kr5b", date: "2026/03/08", dayOfWeek: "土", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "夕食後、自室にて読書。消灯前に服薬確認済み。入眠スムーズ。", tags: [], timestamp: "2026/03/08 20:00" },
-  // 3/7 (金)
-  { id: "kr6", date: "2026/03/07", dayOfWeek: "金", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "夜間巡回。入眠確認。呼吸状態安定。体位変換不要。", tags: [], timestamp: "2026/03/07 21:00" },
-  { id: "kr6b", date: "2026/03/07", dayOfWeek: "金", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。", tags: [], timestamp: "2026/03/07 15:00" },
-  { id: "kr6c", date: "2026/03/07", dayOfWeek: "金", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "午前中リハビリ参加。歩行訓練15分実施。疲労感の訴えなし。", tags: ["看護記録"], timestamp: "2026/03/07 11:00" },
-  // 3/6 (木)
-  { id: "kr7", date: "2026/03/06", dayOfWeek: "木", category: "入退院記録", categoryColor: "#b91c1c", author: "田村 医師", authorRole: "医師D", content: "【精神科】\n退院環境調整の指示\n [居場所]当院病棟\n [現在室]101\n [身長]167.8cm\n [体重]72.0kg", tags: [], orderNumber: "NO.837", timestamp: "2026/03/06 17:23" },
-  { id: "kr7b", date: "2026/03/06", dayOfWeek: "木", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "デイケア参加。集団プログラムにて積極的に発言。気分良好の様子。", tags: ["看護記録"], timestamp: "2026/03/06 14:00" },
-  // 3/5 (水)
-  { id: "kr8", date: "2026/03/05", dayOfWeek: "水", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。", tags: ["全体カンファレンス"], timestamp: "2026/03/05 16:00" },
-  { id: "kr8b", date: "2026/03/05", dayOfWeek: "水", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "体温36.3℃、血圧122/78。便通あり。食事全量摂取。水分摂取促す。", tags: ["看護記録"], timestamp: "2026/03/05 09:00" },
-  { id: "kr8c", date: "2026/03/05", dayOfWeek: "水", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "夜間不眠の訴えあり。頓服投与（レンドルミン0.25mg）。30分後入眠確認。", tags: [], timestamp: "2026/03/05 23:30" },
-  // 3/4 (火)
-  { id: "kr9", date: "2026/03/04", dayOfWeek: "火", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。", tags: ["看護記録"], timestamp: "2026/03/04 14:00" },
-  { id: "kr9b", date: "2026/03/04", dayOfWeek: "火", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "定期回診。睡眠状況改善傾向。日中活動量も増加。退院目標3月下旬を設定。", tags: [], timestamp: "2026/03/04 10:00" },
-  // 3/3 (月)
-  { id: "kr10", date: "2026/03/03", dayOfWeek: "月", category: "看護サマリ", categoryColor: "#7c3aed", author: "山本 看護師", authorRole: "", content: "週間看護サマリ。全体的に状態安定。ADL自立度向上傾向。退院支援計画に沿って進行中。家族との面会も良好。", tags: ["看護サマリ", "退院支援"], timestamp: "2026/03/03 16:00" },
-  { id: "kr10b", date: "2026/03/03", dayOfWeek: "月", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "午前中散歩（院内庭園）。15分程度歩行。息切れなし。気分転換になった様子。", tags: [], timestamp: "2026/03/03 10:30" },
-  // 3/2 (日)
-  { id: "kr11", date: "2026/03/02", dayOfWeek: "日", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "終日穏やかに過ごす。読書・テレビ鑑賞。他患者との交流あり。食事全量摂取。", tags: [], timestamp: "2026/03/02 20:00" },
-  // 3/1 (土)
-  { id: "kr12", date: "2026/03/01", dayOfWeek: "土", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "月初め評価。GAF 63→65に改善。社会復帰プログラムへの参加を開始予定。", tags: [], timestamp: "2026/03/01 11:00" },
-  { id: "kr12b", date: "2026/03/01", dayOfWeek: "土", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "体温36.4℃、血圧130/80。体重72.2kg（前月比-0.3kg）。栄養状態良好。", tags: ["看護記録"], timestamp: "2026/03/01 09:00" },
-  { id: "kr12c", date: "2026/03/01", dayOfWeek: "土", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "面会（家族：長男）。退院後の生活について相談。グループホーム見学の予定を確認。", tags: ["退院支援"], timestamp: "2026/03/01 14:00" },
-  // 2/28 (金)
-  { id: "kr13", date: "2026/02/28", dayOfWeek: "金", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "夜間巡回。0時・3時に確認。入眠良好。中途覚醒なし。", tags: [], timestamp: "2026/02/28 03:00" },
-  { id: "kr13b", date: "2026/02/28", dayOfWeek: "金", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "PSW面談同席。障害年金の申請手続きについて説明。本人・家族ともに了承。", tags: [], orderNumber: "NO.840", timestamp: "2026/02/28 14:00" },
-  // 2/27 (木)
-  { id: "kr14", date: "2026/02/27", dayOfWeek: "木", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "デイケアプログラム参加（料理教室）。味噌汁を作成。手順の理解良好。他メンバーと協力して調理。", tags: ["看護記録"], timestamp: "2026/02/27 13:00" },
-  { id: "kr14b", date: "2026/02/27", dayOfWeek: "木", category: "看護記録", categoryColor: "#c2410c", author: "中田 看護師", authorRole: "", content: "午後、やや不穏の訴え。傾聴対応。20分程度で落ち着く。誘因は不明。", tags: [], timestamp: "2026/02/27 16:00" },
-  // 2/26 (水)
-  { id: "kr15", date: "2026/02/26", dayOfWeek: "水", category: "医師記録", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "褥瘡カンファレンス。現在褥瘡なし。予防策継続。体位変換は自力で可能。", tags: ["褥瘡カンファレンス"], timestamp: "2026/02/26 15:00" },
-  { id: "kr15b", date: "2026/02/26", dayOfWeek: "水", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "入浴介助。皮膚状態確認。異常なし。清潔保持良好。爪切り実施。", tags: [], timestamp: "2026/02/26 10:00" },
+  // 6/26 (月)
+  { id: "or1", date: "2017/06/26", dayOfWeek: "月", category: "精神科D", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "【精神科】□○\n（身長:170.0 cm 体重:65.0 kg）\n血圧値ペン/四肢/HDLコレステロール/TSH/T3(状) アラーゼ定量/DLPAN", tags: [], orderNumber: "NO.858", timestamp: "2017/06/26 17:33:26" },
+  { id: "or1b", date: "2017/06/26", dayOfWeek: "月", category: "ディケア(指示)", categoryColor: "#2e7d32", author: "田村 医師", authorRole: "", content: "デイケアプログラム参加指示。週3回（月・水・金）。", tags: ["ディケア(指示)"], timestamp: "2017/06/26 10:00" },
+  // 6/25 (日)
+  { id: "or2", date: "2017/06/25", dayOfWeek: "日", category: "精神科D", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "【精神科】※①\nデイケアプログラム\n生活リズムの維持・確定", tags: [], timestamp: "2017/06/25 14:00" },
+  // 6/24 (土)
+  { id: "or3", date: "2017/06/24", dayOfWeek: "土", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "外来受診。表情穏やか。服薬状況確認。主訴なし。次回予約確認済み。", tags: ["看護記録"], timestamp: "2017/06/24 09:30" },
+  // 6/21 (水)
+  { id: "or4", date: "2017/06/21", dayOfWeek: "水", category: "頓用外来", categoryColor: "#7c3aed", author: "田村 医師", authorRole: "医師D", content: "頓用外来受診。不眠の訴えあり。レンドルミン0.25mg 5回分処方。", tags: ["頓用外来"], orderNumber: "NO.864", timestamp: "2017/06/21 11:00" },
+  // 6/18 (日)
+  { id: "or5", date: "2017/06/18", dayOfWeek: "日", category: "精神科D", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "（身長:170.0cm\n 体重:65.0kg）\n定期検査結果確認。特に異常なし。現行処方継続。", tags: [], timestamp: "2017/06/18 15:00" },
+  // 6/14 (水)
+  { id: "or6", date: "2017/06/14", dayOfWeek: "水", category: "看護記録", categoryColor: "#c2410c", author: "佐々木 看護師", authorRole: "", content: "電話相談あり。家族より生活状況の報告。デイケアへの参加意欲あり。", tags: [], timestamp: "2017/06/14 14:30" },
+  // 6/10 (土)
+  { id: "or7", date: "2017/06/10", dayOfWeek: "土", category: "精神科D", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "定期外来。状態安定。リスパダール2mg 継続。次回1ヶ月後。", tags: [], timestamp: "2017/06/10 10:00" },
+  { id: "or7b", date: "2017/06/10", dayOfWeek: "土", category: "検査(指示)", categoryColor: "#0277bd", author: "田村 医師", authorRole: "", content: "血液検査オーダー。CBC、肝機能、腎機能、脂質。", tags: ["検査(指示)"], timestamp: "2017/06/10 10:30" },
+  // 6/05 (月)
+  { id: "or8", date: "2017/06/05", dayOfWeek: "月", category: "文字オーダ", categoryColor: "#6d4c41", author: "田村 医師", authorRole: "医師D", content: "処方箋送信。リスパダール2mg 1日1回 夕食後 30日分。", tags: [], orderNumber: "NO.870", timestamp: "2017/06/05 09:00" },
+  // 6/01 (木)
+  { id: "or9", date: "2017/06/01", dayOfWeek: "木", category: "看護記録", categoryColor: "#c2410c", author: "山本 看護師", authorRole: "", content: "デイケア初回参加。グループワークに参加。緊張あるも最後まで参加できた。", tags: ["看護記録"], timestamp: "2017/06/01 13:00" },
+  { id: "or9b", date: "2017/06/01", dayOfWeek: "木", category: "精神科D", categoryColor: "#1e40af", author: "田村 医師", authorRole: "医師D", content: "デイケア開始指示。生活リズムの維持・確立を目標とする。", tags: [], timestamp: "2017/06/01 09:00" },
 ];
 
 const RECORD_FILTER_TABS = [
-  "全体カンファレンス",
-  "NSTカンファレンス",
-  "褥瘡カンファレンス",
-  "臨床記録",
-  "行動範囲",
-  "外出/外泊",
-  "日勤帯記録",
+  "精神病式[薬処]",
+  "精神科(精神療法)",
+  "脳器・器型型/精神分析療法",
+  "精袋/変性蒼患(1)",
+  "ファミリ",
+  "電話連絡",
+  "精本予約(1)",
+  "検査",
 ];
 
 const SUB_TABS = [
@@ -188,17 +149,18 @@ const SUB_TABS = [
 ];
 
 const ACTION_BUTTONS = [
-  { label: "オーダ送信", icon: <Send />, color: "primary" as const },
-  { label: "事後入力", icon: <Edit />, color: "primary" as const },
-  { label: "看護ケア", icon: <NoteAdd />, color: "secondary" as const },
-  { label: "オーダ入力", icon: <Receipt />, color: "info" as const },
+  { label: "オーダ送信", icon: <Send />, color: "success" as const },
+  { label: "事後入力", icon: <Edit />, color: "success" as const },
+  { label: "Drオーダ", icon: <Receipt />, color: "success" as const },
+  { label: "文字オーダ", icon: <NoteAdd />, color: "success" as const },
+  { label: "6診療形態", icon: <Receipt />, color: "success" as const },
   { label: "患者予約", icon: <CalendarMonth />, color: "warning" as const },
-  { label: "記事作成", icon: <Edit />, color: "primary" as const },
+  { label: "記事作成", icon: <Edit />, color: "success" as const },
 ];
 
 // ===== Components =====
 
-const KarteAlphaPage: React.FC = () => {
+const OutpatientKartePage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { selectedPatient, setSelectedPatient } = useAppStore();
@@ -211,7 +173,7 @@ const KarteAlphaPage: React.FC = () => {
     return (
       <Box sx={{ textAlign: "center", py: 8 }}>
         <Typography color="text.secondary">患者が見つかりません</Typography>
-        <Button onClick={() => navigate("/patients")} sx={{ mt: 2 }}>
+        <Button onClick={() => navigate("/outpatient")} sx={{ mt: 2 }}>
           一覧に戻る
         </Button>
       </Box>
@@ -220,8 +182,8 @@ const KarteAlphaPage: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Patient Header - Dense */}
-      <PatientHeaderDense patient={patient} />
+      {/* Patient Header */}
+      <OutpatientHeaderDense patient={patient} />
 
       <Box sx={{ height: 6 }} />
 
@@ -232,14 +194,14 @@ const KarteAlphaPage: React.FC = () => {
         flexShrink: 0,
       }}>
         <Box
-          onClick={() => { setSelectedPatient(null); navigate("/patients"); }}
+          onClick={() => { setSelectedPatient(null); navigate("/outpatient"); }}
           sx={{
             display: 'flex', alignItems: 'center', gap: 0.5,
             px: 1.5, cursor: 'pointer',
-            bgcolor: '#1e3a5f',
+            bgcolor: THEME.primaryDark,
             borderRadius: '4px 0 0 0',
             borderRight: '2px solid rgba(255,255,255,0.4)',
-            '&:hover': { bgcolor: '#142b47' },
+            '&:hover': { bgcolor: '#0d3d10' },
           }}
         >
           <ArrowBack sx={{ fontSize: 18, color: '#fff' }} />
@@ -256,28 +218,28 @@ const KarteAlphaPage: React.FC = () => {
               textAlign: 'center',
               py: 0.8,
               cursor: 'pointer',
-              bgcolor: mainTab === i ? '#1e3a5f' : '#fff',
-              border: '1px solid #1e3a5f',
-              borderBottom: mainTab === i ? 'none' : '1px solid #1e3a5f',
+              bgcolor: mainTab === i ? THEME.primary : '#fff',
+              border: `1px solid ${THEME.border}`,
+              borderBottom: mainTab === i ? 'none' : `1px solid ${THEME.border}`,
               borderRight: 'none',
-              '&:last-child': { borderRight: '1px solid #1e3a5f', borderRadius: '0 4px 0 0' },
-              '&:hover': { bgcolor: mainTab === i ? '#1e3a5f' : '#e8eef5' },
+              '&:last-child': { borderRight: `1px solid ${THEME.border}`, borderRadius: '0 4px 0 0' },
+              '&:hover': { bgcolor: mainTab === i ? THEME.primary : THEME.primaryLight },
               transition: 'all 0.15s',
             }}
           >
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: mainTab === i ? '#fff' : '#1e3a5f' }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: mainTab === i ? '#fff' : THEME.primary }}>
               {label}
             </Typography>
           </Box>
         ))}
       </Box>
 
-      {/* Tab content area - visually connected to active tab */}
+      {/* Tab content area */}
       <Box sx={{
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        border: '1px solid #1e3a5f',
+        border: `1px solid ${THEME.border}`,
         borderTop: 'none',
         borderRadius: '0 0 6px 6px',
         bgcolor: '#fff',
@@ -298,10 +260,10 @@ const KarteAlphaPage: React.FC = () => {
           }}
         >
         {/* 生活歴 Timeline */}
-        <LifeTimelineCompact />
+        <OutpatientLifeTimeline />
 
         {/* 診療情報 */}
-        <MedicalInfoDense patient={patient} />
+        <OutpatientMedicalInfo />
 
         {/* Sub tabs row */}
         <Paper variant="outlined" sx={{ px: 1 }}>
@@ -311,7 +273,7 @@ const KarteAlphaPage: React.FC = () => {
                 key={tab}
                 label={tab}
                 variant={subTab === i ? "filled" : "outlined"}
-                color={subTab === i ? "primary" : "default"}
+                color={subTab === i ? "success" : "default"}
                 onClick={() => setSubTab(i)}
                 sx={{ borderRadius: 1, mr: 0.5, my: 0.5 }}
               />
@@ -320,7 +282,7 @@ const KarteAlphaPage: React.FC = () => {
         </Paper>
 
         {/* 診療録 */}
-        <MedicalRecordsDense />
+        <OutpatientRecords />
       </Box>
 
       {/* Bottom Action Bar */}
@@ -343,7 +305,7 @@ const KarteAlphaPage: React.FC = () => {
             </Button>
           ))}
           <Box sx={{ flex: 1 }} />
-          <Button variant="outlined" startIcon={<Print />} size="small">
+          <Button variant="outlined" startIcon={<Print />} size="small" color="success">
             印刷
           </Button>
           <Button variant="contained" color="error" size="small">
@@ -356,24 +318,22 @@ const KarteAlphaPage: React.FC = () => {
   );
 };
 
-// ----- Patient Header Dense -----
-function PatientHeaderDense({ patient }: { patient: any }) {
+// ----- Outpatient Header Dense -----
+function OutpatientHeaderDense({ patient }: { patient: any }) {
   return (
-    <Card sx={{ border: '1px solid #1e3a5f', boxShadow: 'none' }}>
+    <Card sx={{ border: `1px solid ${THEME.border}`, boxShadow: 'none' }}>
       <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Chip
-            label="入院"
+            label="外来"
             size="small"
-            color="error"
-            sx={{ fontWeight: 700 }}
+            sx={{ fontWeight: 700, bgcolor: THEME.primary, color: '#fff' }}
           />
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="baseline">
               <Typography
                 variant="subtitle1"
-                color="primary.main"
-                sx={{ fontWeight: 700 }}
+                sx={{ fontWeight: 700, color: THEME.primary }}
               >
                 {patient.id}
               </Typography>
@@ -383,17 +343,10 @@ function PatientHeaderDense({ patient }: { patient: any }) {
               <Typography variant="body2" color="text.secondary">
                 {patient.gender === "M" ? "男" : "女"}　{patient.age}歳
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {patient.wardId === "ward1" ? "第１病棟" : "第２病棟"}　
-                {patient.roomNumber}号室-{patient.bedLabel}
-              </Typography>
             </Stack>
             <Stack direction="row" spacing={2} sx={{ mt: 0.3 }}>
-              <Typography variant="caption" color="primary.main">
+              <Typography variant="caption" sx={{ color: THEME.primary }}>
                 Dr {patient.doctorName}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                入院日: {patient.admitDate}
               </Typography>
               {patient.diagnosis && (
                 <Typography variant="caption" color="text.secondary">
@@ -410,13 +363,13 @@ function PatientHeaderDense({ patient }: { patient: any }) {
 }
 
 // ----- Collapsible Section Header -----
-function SectionHeader({ title, color, open, onToggle }: { title: string; color: string; open: boolean; onToggle: () => void }) {
+function OutpatientSectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
   return (
     <Box
       onClick={onToggle}
       sx={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        bgcolor: color, px: 1.5, py: 0.5, cursor: 'pointer',
+        bgcolor: THEME.primary, px: 1.5, py: 0.5, cursor: 'pointer',
         borderRadius: open ? '8px 8px 0 0' : '8px',
         '&:hover': { opacity: 0.9 },
       }}
@@ -429,8 +382,8 @@ function SectionHeader({ title, color, open, onToggle }: { title: string; color:
   );
 }
 
-// ----- Life Timeline Compact -----
-function LifeTimelineCompact() {
+// ----- Life Timeline -----
+function OutpatientLifeTimeline() {
   const [open, setOpen] = useState(true);
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const rows = [
@@ -459,7 +412,7 @@ function LifeTimelineCompact() {
 
   return (
     <Card sx={{ overflow: 'visible', flexShrink: 0 }}>
-      <SectionHeader title="生活歴" color="#1e3a5f" open={open} onToggle={() => setOpen(!open)} />
+      <OutpatientSectionHeader title="生活歴" open={open} onToggle={() => setOpen(!open)} />
       {open && (
         <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
           <Box sx={{ overflowX: "auto" }}>
@@ -489,9 +442,7 @@ function LifeTimelineCompact() {
                       width: 16,
                       minWidth: 16,
                       height: 14,
-                      bgcolor: row.activeDays.includes(d)
-                        ? row.color
-                        : "grey.100",
+                      bgcolor: row.activeDays.includes(d) ? row.color : "grey.100",
                       border: "1px solid",
                       borderColor: "divider",
                       borderRight: "none",
@@ -511,12 +462,12 @@ function LifeTimelineCompact() {
   );
 }
 
-// ----- Medical Info Dense -----
-function MedicalInfoDense({ patient }: { patient: any }) {
+// ----- Medical Info -----
+function OutpatientMedicalInfo() {
   const [open, setOpen] = useState(true);
   return (
     <Card sx={{ overflow: 'visible', flexShrink: 0 }}>
-      <SectionHeader title="診療情報" color="#1e3a5f" open={open} onToggle={() => setOpen(!open)} />
+      <OutpatientSectionHeader title="診療情報" open={open} onToggle={() => setOpen(!open)} />
       {open && (
       <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
         <Table
@@ -527,14 +478,12 @@ function MedicalInfoDense({ patient }: { patient: any }) {
         >
           <TableBody>
             <TableRow>
-              <TableCell
-                sx={{ fontWeight: 600, color: "text.secondary", width: 80 }}
-              >
+              <TableCell sx={{ fontWeight: 600, color: "text.secondary", width: 80 }}>
                 保険情報
               </TableCell>
               <TableCell>
                 {MOCK_INSURANCE.type}　有効期限: {MOCK_INSURANCE.validPeriod}
-                　保険者番号: {MOCK_INSURANCE.insurerNumber}　
+                　保険者番号: {MOCK_INSURANCE.insurerNumber}　記号番号: {MOCK_INSURANCE.recordNumber}
                 {MOCK_INSURANCE.copay}
               </TableCell>
             </TableRow>
@@ -546,7 +495,7 @@ function MedicalInfoDense({ patient }: { patient: any }) {
                 <Chip
                   label={MOCK_DIAGNOSIS.mainCode}
                   size="small"
-                  color="primary"
+                  color="success"
                   variant="outlined"
                   sx={{ mr: 0.5, height: 18, fontSize: "0.65rem" }}
                 />
@@ -572,42 +521,30 @@ function MedicalInfoDense({ patient }: { patient: any }) {
                 アレルギー
               </TableCell>
               <TableCell>
-                <Typography
-                  variant="caption"
-                  color="error.main"
-                  sx={{ fontWeight: 600 }}
-                >
+                <Typography variant="caption" color="error.main" sx={{ fontWeight: 600 }}>
                   {MOCK_ALLERGY.drug.join(" / ")}
                 </Typography>
-                <Typography
-                  variant="caption"
-                  color="warning.main"
-                  sx={{ ml: 1 }}
-                >
+                <Typography variant="caption" color="warning.main" sx={{ ml: 1 }}>
                   食物: {MOCK_ALLERGY.food.join(" / ")}
                 </Typography>
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell sx={{ fontWeight: 600, color: "text.secondary" }}>
-                責任範囲
-              </TableCell>
-              <TableCell>{MOCK_STAFF.team}</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600, color: "text.secondary" }}>
-                ADL/GAF
+                食物アレルギー
               </TableCell>
               <TableCell>
-                {MOCK_ADL.barthel}　|　GAF {MOCK_ADL.gaf}
+                <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                  セラチア, もち
+                </Typography>
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell sx={{ fontWeight: 600, color: "text.secondary" }}>
-                自立度
+                その他注記
               </TableCell>
               <TableCell>
-                {MOCK_STAFF.independenceLevel}　病棟管理: {MOCK_STAFF.wardMgmt}
+                特記すべき主要事項
               </TableCell>
             </TableRow>
           </TableBody>
@@ -618,12 +555,11 @@ function MedicalInfoDense({ patient }: { patient: any }) {
   );
 }
 
-// ----- Medical Records Dense -----
-function MedicalRecordsDense() {
+// ----- Medical Records -----
+function OutpatientRecords() {
   const [filterActive, setFilterActive] = useState("all");
   const [open, setOpen] = useState(true);
 
-  // Group records by date
   const groupedRecords: Record<string, KarteRecord[]> = {};
   MOCK_RECORDS.forEach((r) => {
     if (!groupedRecords[r.date]) groupedRecords[r.date] = [];
@@ -631,10 +567,8 @@ function MedicalRecordsDense() {
   });
 
   return (
-    <Card
-      sx={{ overflow: 'visible', flexShrink: 0, display: "flex", flexDirection: "column" }}
-    >
-      <SectionHeader title="診療録" color="#1e3a5f" open={open} onToggle={() => setOpen(!open)} />
+    <Card sx={{ overflow: 'visible', flexShrink: 0, display: "flex", flexDirection: "column" }}>
+      <OutpatientSectionHeader title="診療録" open={open} onToggle={() => setOpen(!open)} />
       {open && (
       <CardContent
         sx={{
@@ -646,31 +580,24 @@ function MedicalRecordsDense() {
       >
         {/* Header */}
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-          <Typography
-            variant="caption"
-            sx={{ fontWeight: 700, color: "text.secondary" }}
-          >
-            最近の6日分
+          <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary" }}>
+            最近の9日分を表示
           </Typography>
           <Box sx={{ flex: 1 }} />
-          <Button size="small" variant="text" sx={{ fontSize: "0.65rem" }}>
+          <Button size="small" variant="text" color="success" sx={{ fontSize: "0.65rem" }}>
             最初へ ▲
           </Button>
-          <Button size="small" variant="outlined" sx={{ fontSize: "0.65rem" }}>
+          <Button size="small" variant="outlined" color="success" sx={{ fontSize: "0.65rem" }}>
             続き ▼
           </Button>
         </Stack>
 
         {/* Filter tabs */}
-        <Stack
-          direction="row"
-          spacing={0.5}
-          sx={{ mb: 1, overflowX: "auto", pb: 0.5 }}
-        >
+        <Stack direction="row" spacing={0.5} sx={{ mb: 1, overflowX: "auto", pb: 0.5 }}>
           <Chip
-            label="最近の6日分"
+            label="最近の9日分"
             size="small"
-            color={filterActive === "all" ? "primary" : "default"}
+            color={filterActive === "all" ? "success" : "default"}
             variant={filterActive === "all" ? "filled" : "outlined"}
             onClick={() => setFilterActive("all")}
             sx={{ fontSize: "0.65rem", height: 22 }}
@@ -698,31 +625,30 @@ function MedicalRecordsDense() {
             {Object.entries(groupedRecords).map(([date, records]) => {
               const d = date.split('/');
               const dayStr = `${d[2]}日(${records[0].dayOfWeek})`;
-              const monthLabel = `${d[0]}年${d[1]}月`;
-              const hasDoctor = records.some(r => r.category === '医師記録');
-              const hasNursing = records.some(r => r.category === '看護記録' || r.category === '看護サマリ');
-              const hasAdmission = records.some(r => r.category === '入退院記録');
+              const hasDoctor = records.some(r => r.category.includes('精神科') || r.category.includes('文字オーダ'));
+              const hasNursing = records.some(r => r.category === '看護記録');
+              const hasOrder = records.some(r => r.category.includes('指示') || r.category.includes('検査'));
               return (
                 <Box
                   key={date}
                   onClick={() => {
-                    const el = document.getElementById(`record-date-${date.replace(/\//g, '-')}`);
+                    const el = document.getElementById(`outpatient-record-${date.replace(/\//g, '-')}`);
                     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 0.5,
                     py: 0.3, px: 0.5, cursor: 'pointer', borderRadius: 0.5,
-                    '&:hover': { bgcolor: '#e3f2fd' },
+                    '&:hover': { bgcolor: THEME.primaryLight },
                   }}
                 >
-                  <Typography sx={{ fontSize: '0.65rem', color: 'primary.main', fontWeight: 600 }}>※</Typography>
+                  <Typography sx={{ fontSize: '0.65rem', color: THEME.primary, fontWeight: 600 }}>※</Typography>
                   <Typography sx={{ fontSize: '0.7rem', color: 'text.primary', fontWeight: 500 }}>
                     {dayStr}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 0.2, ml: 'auto' }}>
                     {hasDoctor && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#1e40af' }} />}
                     {hasNursing && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#c2410c' }} />}
-                    {hasAdmission && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#b91c1c' }} />}
+                    {hasOrder && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: THEME.primary }} />}
                   </Box>
                 </Box>
               );
@@ -732,11 +658,11 @@ function MedicalRecordsDense() {
           {/* Records content */}
           <Box sx={{ flex: 1, overflowY: 'auto' }}>
           {Object.entries(groupedRecords).map(([date, records], gi) => (
-            <Box key={date} id={`record-date-${date.replace(/\//g, '-')}`}>
+            <Box key={date} id={`outpatient-record-${date.replace(/\//g, '-')}`}>
               {/* Date separator */}
               <Box
                 sx={{
-                  bgcolor: "grey.50",
+                  bgcolor: "#f1f8e9",
                   borderBottom: 1,
                   borderTop: gi > 0 ? 1 : 0,
                   borderColor: "divider",
@@ -765,22 +691,14 @@ function MedicalRecordsDense() {
                 >
                   {/* Left: time */}
                   <Box sx={{ width: 50, flexShrink: 0 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{ fontWeight: 600, fontSize: "0.7rem" }}
-                    >
+                    <Typography variant="caption" sx={{ fontWeight: 600, fontSize: "0.7rem" }}>
                       {record.timestamp.split(" ")[1]}
                     </Typography>
                   </Box>
 
                   {/* Content */}
                   <Box sx={{ flex: 1 }}>
-                    <Stack
-                      direction="row"
-                      spacing={0.5}
-                      alignItems="center"
-                      sx={{ mb: 0.3 }}
-                    >
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.3 }}>
                       {record.tags.map((tag) => (
                         <Chip
                           key={tag}
@@ -789,68 +707,43 @@ function MedicalRecordsDense() {
                           sx={{
                             height: 18,
                             fontSize: "0.6rem",
-                            bgcolor:
-                              tag === "退院支援"
-                                ? "error.light"
-                                : tag === "看護師カンファ"
-                                  ? "success.light"
-                                  : "info.light",
+                            bgcolor: tag.includes("ディケア") ? "success.light"
+                              : tag.includes("検査") ? "info.light"
+                              : tag.includes("頓用") ? "warning.light"
+                              : "info.light",
                             color: "#fff",
                           }}
                         />
                       ))}
-                      <Typography
-                        variant="caption"
-                        sx={{ fontWeight: 700, color: record.categoryColor }}
-                      >
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: record.categoryColor }}>
                         {record.category}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {record.author}
                       </Typography>
                       {record.orderNumber && (
-                        <Typography
-                          variant="caption"
-                          color="text.disabled"
-                          sx={{ ml: "auto" }}
-                        >
+                        <Typography variant="caption" color="text.disabled" sx={{ ml: "auto" }}>
                           {record.orderNumber}
                         </Typography>
                       )}
                     </Stack>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontSize: "0.75rem", whiteSpace: "pre-line" }}
-                    >
+                    <Typography variant="body2" sx={{ fontSize: "0.75rem", whiteSpace: "pre-line" }}>
                       {record.content}
                     </Typography>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      sx={{ mt: 0.3 }}
-                    >
-                      <Typography
-                        variant="caption"
-                        color="text.disabled"
-                        sx={{ fontSize: "0.65rem" }}
-                      >
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.3 }}>
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: "0.65rem" }}>
                         {record.authorRole && `${record.authorRole}/`}
                         {record.author}　{record.timestamp}
                       </Typography>
                       <Box sx={{ flex: 1 }} />
                       <Tooltip title="いいね">
                         <IconButton size="small" sx={{ p: 0.2 }}>
-                          <ThumbUpAltOutlined
-                            sx={{ fontSize: 14, color: "text.disabled" }}
-                          />
+                          <ThumbUpAltOutlined sx={{ fontSize: 14, color: "text.disabled" }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="コメント">
                         <IconButton size="small" sx={{ p: 0.2 }}>
-                          <ChatBubbleOutline
-                            sx={{ fontSize: 14, color: "text.disabled" }}
-                          />
+                          <ChatBubbleOutline sx={{ fontSize: 14, color: "text.disabled" }} />
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -867,4 +760,4 @@ function MedicalRecordsDense() {
   );
 }
 
-export default KarteAlphaPage;
+export default OutpatientKartePage;

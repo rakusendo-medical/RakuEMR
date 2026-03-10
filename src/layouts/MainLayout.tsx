@@ -199,7 +199,7 @@ const MainLayout: React.FC = () => {
       {/* Main Area */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Top Bar */}
-        {!location.pathname.startsWith('/karte-alpha') && (
+        {!location.pathname.startsWith('/karte-alpha') && !location.pathname.startsWith('/karte-outpatient') && (
         <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Toolbar variant="dense" sx={{ justifyContent: 'space-between', minHeight: 48 }}>
             <Typography variant="h6" color="text.primary">
