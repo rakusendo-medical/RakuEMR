@@ -1,7 +1,6 @@
 import { Box, Typography, Button, Select, MenuItem, Chip } from '@mui/material';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import TodayIcon from '@mui/icons-material/Today';
 import PatientHeader from '../karte/PatientHeader';
 import VitalChart from './VitalChart';
 import FlowsheetGrid from './FlowsheetGrid';

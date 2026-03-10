@@ -77,9 +77,33 @@ export default function MedicalRecords() {
 
       {/* Records list */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 0.5, py: 0.5 }}>
-        {medicalRecords.map((record) => (
-          <RecordEntry key={record.id} record={record} />
-        ))}
+        {medicalRecords.map((record, idx) => {
+          const prev = idx > 0 ? medicalRecords[idx - 1] : null;
+          const showDateHeader = !prev || prev.date !== record.date;
+          return (
+            <Box key={record.id}>
+              {showDateHeader && (
+                <Box
+                  sx={{
+                    bgcolor: '#f5f7fa',
+                    borderBottom: '1px solid #ccc',
+                    borderTop: idx > 0 ? '1px solid #ccc' : 'none',
+                    px: 1,
+                    py: 0.3,
+                    mt: idx > 0 ? 1 : 0,
+                  }}
+                >
+                  <Typography
+                    sx={{ fontSize: '11px', fontWeight: 700, color: '#333' }}
+                  >
+                    {record.date}({record.dayOfWeek})
+                  </Typography>
+                </Box>
+              )}
+              <RecordEntry record={record} />
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );

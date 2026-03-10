@@ -52,8 +52,8 @@ export default function VitalChart() {
         <Typography sx={{ fontSize: '10px', fontWeight: 600 }}>T</Typography>
       </Box>
 
-      <Box sx={{ height: 200, px: 1, py: 0.5 }}>
-        <ResponsiveContainer width="100%" height="100%">
+      <Box sx={{ width: '100%', height: 200, px: 1, py: 0.5 }}>
+        <ResponsiveContainer width="99%" height={190}>
           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
