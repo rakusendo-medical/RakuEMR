@@ -54,6 +54,9 @@ const WardMap: React.FC = () => {
             <Grid item xs={12} sm={6} md={3} key={room.roomNumber}>
               <Card
                 sx={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
                   border: isSelected ? '2px solid' : '1px solid',
                   borderColor: isSelected ? 'primary.main' : 'divider',
                   bgcolor: isSelected ? 'primary.main' + '08' : 'background.paper',
@@ -74,14 +77,14 @@ const WardMap: React.FC = () => {
                     sx={{ p: 0 }}
                   />
                 </Box>
-                <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <CardContent sx={{ p: 0, '&:last-child': { pb: 0 }, flex: 1 }}>
                   {room.beds.map((bed) => (
                     <Box
                       key={bed.bed}
                       onClick={() => bed.patientId && handlePatientClick(bed.patientId)}
                       sx={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        px: 1.5, py: 1, borderBottom: '1px solid #f1f5f9',
+                        px: 1.5, py: 1, minHeight: 56, borderBottom: '1px solid #f1f5f9',
                         cursor: bed.patientId ? 'pointer' : 'default',
                         '&:hover': bed.patientId ? { bgcolor: '#f0f7ff' } : {},
                       }}

@@ -11,6 +11,7 @@ import {
   LocalHospital, People, MeetingRoom, Search, Groups,
   Description, Assessment, Lock, Home, Receipt,
   FitnessCenter, Favorite, FolderOpen, Business, PersonAdd,
+  VpnKey as VpnKeyIcon, Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../stores/useAppStore';
 
@@ -114,6 +115,53 @@ const MainLayout: React.FC = () => {
           </Box>
         )}
 
+        {/* Logon Info */}
+        {sidebarOpen ? (
+          <Box sx={{ px: 1.5, py: 1, borderBottom: '1px solid #1e293b' }}>
+            <Box
+              sx={{
+                border: '1px solid #334155',
+                borderRadius: 1,
+                px: 1.5,
+                py: 1,
+                bgcolor: '#1e293b',
+              }}
+            >
+              <Typography sx={{ fontSize: '0.625rem', color: '#64748b', mb: 0.5, fontWeight: 600 }}>
+                【ログオン情報】
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography sx={{ fontSize: '0.8125rem', color: '#fff', fontWeight: 700 }}>
+                  医師 太郎
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.25 }}>
+                  <Tooltip title="パスワード変更">
+                    <IconButton size="small" sx={{ color: '#94a3b8', p: 0.25, '&:hover': { color: '#fff' } }}>
+                      <VpnKeyIcon sx={{ fontSize: 20 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="ログアウト">
+                    <IconButton size="small" sx={{ color: '#94a3b8', p: 0.25, '&:hover': { color: '#ef4444' } }}>
+                      <LogoutIcon sx={{ fontSize: 20 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+              <Typography sx={{ fontSize: '0.6875rem', color: '#94a3b8' }}>
+                精神科
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Tooltip title="医師 太郎 / 精神科" placement="right">
+            <Box sx={{ py: 1, display: 'flex', justifyContent: 'center', borderBottom: '1px solid #1e293b' }}>
+              <Avatar sx={{ width: 28, height: 28, bgcolor: '#1e3a5f', fontSize: '0.625rem', fontWeight: 700 }}>
+                医
+              </Avatar>
+            </Box>
+          </Tooltip>
+        )}
+
         {/* Nav Items */}
         <List sx={{ flex: 1, overflowY: 'auto', py: 1 }}>
           {NAV_ITEMS.map((item) => {
@@ -169,7 +217,7 @@ const MainLayout: React.FC = () => {
         </AppBar>
 
         {/* Content */}
-        <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
+        <Box sx={{ flex: 1, overflow: 'auto', p: 1.5, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Outlet />
         </Box>
       </Box>

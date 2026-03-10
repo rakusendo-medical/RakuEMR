@@ -11,7 +11,7 @@ export default function KartePage() {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: '100%',
         bgcolor: '#f0f2f5',
         overflow: 'hidden',
       }}
@@ -19,11 +19,11 @@ export default function KartePage() {
       {/* Top: Patient header with tabs and info */}
       <PatientHeader />
 
-      {/* Middle: scrollable content area */}
+      {/* Middle: flex layout - LifeTimeline & MedicalInfo take natural height, MedicalRecords fills rest */}
       <Box
         sx={{
           flex: 1,
-          overflowY: 'auto',
+          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           px: 0.5,
@@ -31,13 +31,15 @@ export default function KartePage() {
           minHeight: 0,
         }}
       >
-        {/* ⑤⑥ Life timeline */}
+        {/* ⑤⑥ Life timeline - fixed height */}
         <LifeTimeline />
 
-        {/* ⑦⑧ Medical information */}
-        <MedicalInfo />
+        {/* ⑦⑧ Medical information - scrollable with max height */}
+        <Box sx={{ maxHeight: '30%', overflowY: 'auto', flexShrink: 0 }}>
+          <MedicalInfo />
+        </Box>
 
-        {/* ⑨ Medical records */}
+        {/* ⑨ Medical records - fills remaining space */}
         <MedicalRecords />
       </Box>
 
