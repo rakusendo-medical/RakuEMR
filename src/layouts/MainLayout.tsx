@@ -11,6 +11,7 @@ import {
   LocalHospital, People, MeetingRoom, Search, Groups,
   Description, Assessment, Lock, Home, Receipt,
   FitnessCenter, Favorite, FolderOpen, Business, PersonAdd,
+  Palette,
   VpnKey as VpnKeyIcon, Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../stores/useAppStore';
@@ -41,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'rehab',          label: 'リハビリ',         icon: <FitnessCenter />,  path: '/rehab' },
   { key: 'care',           label: '看護ケア予定',     icon: <Favorite />,       path: '/nursing-care' },
   { key: 'patient-reg',    label: '患者登録',         icon: <PersonAdd />,      path: '/patient-registration' },
+  { key: 'design-guide',  label: 'デザインガイド',   icon: <Palette />,        path: '/design-guide' },
 ];
 
 const MainLayout: React.FC = () => {
