@@ -464,3 +464,64 @@ export interface KarteTab {
   label: string;
   active?: boolean;
 }
+
+// ===== 看護計画・定期評価 =====
+
+/** 看護問題 */
+export interface NursingProblem {
+  id: string;
+  no: number;
+  problem: string;      // 問題点
+  goal: string;         // 目標
+  planDate: string;     // 立案日
+  observation: string;  // O: 観察
+  treatment: string;    // T: 治療的ケア
+  education: string;    // E: 教育
+}
+
+/** 看護計画 */
+export interface NursingPlan {
+  patientId: string;
+  patientName: string;
+  wardId: WardId;
+  roomNumber: string;
+  doctorName: string;
+  periodStart: string;
+  longTermGoal: string;
+  problems: NursingProblem[];
+  nextEvaluationDue: string;
+}
+
+/** 定期評価エントリ */
+export interface EvaluationEntry {
+  id: string;
+  problemId: string;
+  stageIndex: number;
+  evaluationType: '評価' | 'A評価' | 'B評価';
+  content: string;
+  evaluator: string;
+  evaluatedAt: string;
+}
+
+/** 評価ステージ（列） */
+export interface EvaluationStage {
+  label: string;           // 列ヘッダラベル
+  date: string;            // 評価日
+  clinicalPathStage: string; // クリニカルパスステージ名
+  stageLabel: string;      // ステージ名
+}
+
+/** 定期評価レコード */
+export interface PeriodicEvaluationRecord {
+  patientId: string;
+  patientName: string;
+  wardId: WardId;
+  roomNumber: string;
+  doctorName: string;
+  periodStart: string;
+  longTermGoal: string;
+  displayStageCount: number;
+  stages: EvaluationStage[];
+  evaluations: EvaluationEntry[];
+  nextEvaluationDue: string;
+}
