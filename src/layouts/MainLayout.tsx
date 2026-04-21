@@ -9,8 +9,9 @@ import {
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
   LocalHospital, People, MeetingRoom, Search, Groups,
-  Description, Assessment, Lock, Home, Receipt,
-  FitnessCenter, Favorite, FolderOpen, Business, PersonAdd,
+  Description, Lock, Home, Receipt,
+  Favorite, FolderOpen, Business,
+  EventNote,
   VpnKey as VpnKeyIcon, Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../stores/useAppStore';
@@ -38,9 +39,8 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'ward-mgmt',      label: '病棟管理',         icon: <Business />,       path: '/ward-management' },
   { key: 'documents',      label: '書類管理',         icon: <FolderOpen />,     path: '/documents' },
   { key: 'orders',         label: 'オーダ管理',       icon: <Receipt />,        path: '/orders' },
-  { key: 'rehab',          label: 'リハビリ',         icon: <FitnessCenter />,  path: '/rehab' },
   { key: 'care',           label: '看護ケア予定',     icon: <Favorite />,       path: '/nursing-care' },
-  { key: 'patient-reg',    label: '患者登録',         icon: <PersonAdd />,      path: '/patient-registration' },
+  { key: 'care-plan',      label: '看護計画',         icon: <EventNote />,      path: '/care-plan' },
 ];
 
 const MainLayout: React.FC = () => {

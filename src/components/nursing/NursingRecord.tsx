@@ -4,17 +4,18 @@ import {
   Button, Stack, Divider, Card, CardContent,
 } from '@mui/material';
 import { Edit, History } from '@mui/icons-material';
-import { NURSING_RECORDS } from '../../data/mockData';
 import type { NursingRecord } from '../../types';
+import { useNursingRecordStore } from '../../stores/useNursingRecordStore';
 
 interface Props {
   patientId?: string;
 }
 
 const NursingRecordView: React.FC<Props> = ({ patientId }) => {
+  const allRecords = useNursingRecordStore((s) => s.records);
   const records = patientId
-    ? NURSING_RECORDS.filter((r) => r.patientId === patientId)
-    : NURSING_RECORDS;
+    ? allRecords.filter((r) => r.patientId === patientId)
+    : allRecords;
   const [selected, setSelected] = useState<NursingRecord | null>(null);
 
   return (
