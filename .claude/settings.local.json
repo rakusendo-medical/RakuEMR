@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /workspaces/RakuEMR/*.lock /workspaces/RakuEMR/*.lock.json)",
+      "Bash(wc -l /workspaces/RakuEMR/package.json /workspaces/RakuEMR/src/**/*.tsx /workspaces/RakuEMR/src/**/*.ts)",
+      "Bash(node -e \"const pkg = require\\(''/workspaces/RakuEMR/package.json''\\); console.log\\(''=== DEPENDENCIES ===''\\); Object.entries\\(pkg.dependencies\\).forEach\\(\\([k,v]\\) => console.log\\(k + '': '' + v\\)\\); console.log\\(''\\\\n=== DEV DEPENDENCIES ===''\\); Object.entries\\(pkg.devDependencies\\).forEach\\(\\([k,v]\\) => console.log\\(k + '': '' + v\\)\\);\")"
+    ]
+  }
+}

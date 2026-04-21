@@ -1,4 +1,4 @@
-# EMR - 電子カルテシステム（フロントエンド）
+# RakuEMR — 電子カルテシステム（フロントエンド）
 
 精神科病院向け電子カルテシステムのフロントエンドモックアップです。
 
@@ -7,108 +7,175 @@
 | カテゴリ | 技術 |
 |---------|------|
 | フレームワーク | React 18 + TypeScript |
-| UIライブラリ | MUI (Material UI) v5 |
-| 状態管理 | Zustand |
+| UI ライブラリ | MUI (Material UI) v5 |
+| データグリッド | MUI X DataGrid v7 |
+| 日付ピッカー | MUI X DatePickers v7 |
+| 状態管理 | Zustand v4 |
 | ルーティング | React Router v6 |
 | チャート | Recharts |
-| ビルドツール | Vite |
 | 日付処理 | Day.js |
+| ビルドツール | Vite |
 
 ## セットアップ
 
 ```bash
-cd emr-frontend
 npm install
 npm run dev
 ```
 
-ブラウザで `http://localhost:3000` にアクセスしてください。
+ブラウザで `http://localhost:3000` にアクセスしてください（devcontainer 環境では自動起動しません）。
 
-## 実装機能一覧（全17機能）
+---
 
-| # | 機能名 | パス | 状態 |
-|---|--------|------|------|
-| 1 | 病棟マップ | `/` | ✅ 完全実装 |
-| 2 | 入院患者一覧 | `/patients` | ✅ 完全実装 |
-| 3 | 一括入力 | `/batch-input` | ✅ 完全実装 |
-| 4 | 一括オーダ | `/batch-order` | ✅ 完全実装 |
-| 5 | 入退院管理 | `/admission` | ✅ 完全実装 |
-| 6 | 看護録 | `/nursing` | ✅ 完全実装 |
-| 7 | フローシート | `/flowsheet` | ✅ 完全実装 |
-| 8 | 隔離拘束 | `/isolation` | ✅ 完全実装 |
-| 9 | 行動範囲 | `/behavior` | ✅ 完全実装 |
-| 10 | 外出外泊 | `/outing` | ✅ 完全実装 |
-| 11 | 患者スケジュール | `/schedule` | ✅ 完全実装 |
-| 12 | 病棟管理 | `/ward-management` | ✅ 完全実装 |
-| 13 | 書類管理 | `/documents` | ✅ 完全実装 |
-| 14 | オーダ管理 | `/orders` | ✅ 完全実装 |
-| 15 | リハビリ（作業療法） | `/rehab` | ✅ 完全実装 |
-| 16 | 看護ケア予定 | `/nursing-care` | ✅ 完全実装 |
-| 17 | 患者登録（ORCA連携） | `/patient-registration` | ✅ 完全実装 |
+## 実装機能一覧
+
+### サイドバーメニュー（14機能）
+
+| # | 機能名 | パス |
+|---|--------|------|
+| 1 | 病棟マップ | `/` |
+| 2 | 入院患者一覧 | `/patients` |
+| 3 | 外来一覧 | `/outpatient` |
+| 4 | 患者検索 | `/patient-search` |
+| 5 | 入退院管理 | `/admission` |
+| 6 | 看護記録 | `/nursing` |
+| 7 | 隔離拘束 | `/isolation` |
+| 8 | 行動範囲 | `/behavior` |
+| 9 | 外出外泊 | `/outing` |
+| 10 | 病棟管理 | `/ward-management` |
+| 11 | 書類管理 | `/documents` |
+| 12 | オーダ管理 | `/orders` |
+| 13 | 看護ケア予定 | `/nursing-care` |
+| 14 | 看護計画 | `/care-plan` |
+
+### ルートのみ（サイドバー非表示）
+
+| 機能名 | パス | 備考 |
+|--------|------|------|
+| 入院カルテ (Alpha) | `/karte-alpha/:patientId` | 患者一覧からアクセス |
+| 外来カルテ | `/karte-outpatient/:patientId` | 外来一覧からアクセス |
+| フローシート | `/flowsheet` | 入院カルテ内タブ |
+| 患者スケジュール | `/schedule` | 入院カルテ内タブ |
+| 一括入力 | `/batch-input` | 病棟マップから |
+| リハビリ | `/rehab` | ルート残存（未掲載）|
+| 患者登録 (ORCA連携) | `/patient-registration` | ルート残存（未掲載）|
+
+---
+
+## 看護計画モジュール（`src/features/carePlan/`）
+
+サイドバーの「看護計画」から入る独立モジュールです。
+
+### 画面構成
+
+| 画面 | パス | 説明 |
+|------|------|------|
+| ダッシュボード | `/care-plan` | 担当看護師ごとの患者一覧・評価期限アラート |
+| 患者計画詳細 | `/care-plan/patients/:id` | 長期目標・問題点一覧 |
+| 新規計画立案 | `/care-plan/patients/:id/create` | 3ステップウィザード |
+| 月次評価 | `/care-plan/patients/:id/evaluate` | 問題点ごとの達成度評価 |
+
+### 主な機能
+
+- **看護計画立案ウィザード** — 長期目標テンプレート選択（疾患別4種）→ 問題点追加 → 立案確定
+- **問題点管理** — NANDA看護診断選択、領域分類、OTE（観察/援助/指導）入力
+- **月次評価** — 問題点ごとの達成度・所見入力、評価完了後に看護記録へ転記可能
+- **引用コピー** — 疾患別標準テンプレート・他患者・過去計画からの問題点コピー
+- **評価期限アラート** — ダッシュボードで期限超過・今月評価必要を色分け表示
+
+---
 
 ## プロジェクト構造
 
 ```
 src/
-├── main.tsx                    # エントリポイント
-├── App.tsx                     # ルートコンポーネント
+├── main.tsx
+├── App.tsx
 ├── types/
-│   └── index.ts                # 全型定義（30+ types）
+│   └── index.ts                  # 共通型定義（NursingRecord, VitalSign 等）
 ├── data/
-│   └── mockData.ts             # モックデータ層（将来のAPI切替用）
+│   ├── mockData.ts               # 汎用モックデータ（看護記録・バイタル等）
+│   └── flowsheetMockData.ts      # フローシート用モックデータ
 ├── stores/
-│   └── useAppStore.ts          # Zustand グローバルストア
+│   ├── useAppStore.ts            # グローバル状態（サイドバー・スナックバー等）
+│   └── useNursingRecordStore.ts  # 看護記録ストア（評価転記に対応）
 ├── theme/
-│   └── theme.ts                # MUIカスタムテーマ
+│   └── theme.ts
 ├── layouts/
-│   └── MainLayout.tsx          # サイドバー + ヘッダーレイアウト
-├── components/
-│   ├── common/                 # 共通コンポーネント
-│   │   ├── StatusBadge.tsx
-│   │   └── WardFilterTabs.tsx
-│   ├── wardMap/                # 1. 病棟マップ
-│   ├── patientList/            # 2. 入院患者一覧
-│   ├── patientMain/            # 入院メイン画面
-│   ├── batchInput/             # 3. 一括入力
-│   ├── batchOrder/             # 4. 一括オーダ
-│   ├── admission/              # 5. 入退院管理
-│   ├── nursing/                # 6. 看護録
-│   ├── flowsheet/              # 7. フローシート
-│   ├── isolation/              # 8. 隔離拘束
-│   ├── behaviorRange/          # 9. 行動範囲
-│   ├── outing/                 # 10. 外出外泊
-│   ├── schedule/               # 11. 患者スケジュール
-│   ├── wardManagement/         # 12. 病棟管理
-│   ├── documents/              # 13. 書類管理
-│   ├── orders/                 # 14. オーダ管理
-│   ├── rehab/                  # 15. リハビリ
-│   ├── nursingCare/            # 16. 看護ケア予定
-│   └── patientRegistration/    # 17. 患者登録
-└── routes/
-    └── index.tsx               # ルーティング定義
+│   └── MainLayout.tsx            # サイドバー + トップバー
+├── routes/
+│   └── index.tsx
+├── features/
+│   └── carePlan/                 # 看護計画モジュール（独立Feature）
+│       ├── types.ts
+│       ├── mockData.ts
+│       ├── store.ts              # Zustand ストア
+│       ├── routes.tsx
+│       ├── pages/
+│       │   ├── Dashboard.tsx
+│       │   ├── PatientCarePlan.tsx
+│       │   ├── CarePlanCreate.tsx
+│       │   └── MonthlyEvaluation.tsx
+│       └── components/
+│           ├── EvaluationForm.tsx
+│           ├── ProblemItemCard.tsx
+│           ├── ProblemItemEditDialog.tsx
+│           ├── NandaSelectDialog.tsx
+│           ├── OteInput.tsx
+│           ├── CopyFromDialog.tsx
+│           ├── PatientHeader.tsx
+│           ├── PriorityChip.tsx
+│           └── StatusChip.tsx
+└── components/
+    ├── common/
+    ├── wardMap/
+    ├── patientList/
+    ├── patientMain/
+    ├── karteAlpha/
+    ├── karteOutpatient/
+    ├── outpatient/
+    ├── patientSearch/
+    ├── admission/
+    ├── nursing/
+    ├── flowsheet/
+    ├── batchInput/
+    ├── isolation/
+    ├── behaviorRange/
+    ├── outing/
+    ├── schedule/
+    ├── wardManagement/
+    ├── documents/
+    ├── orders/
+    ├── nursingCare/
+    ├── rehab/
+    └── patientRegistration/
 ```
+
+---
 
 ## 設計方針
 
 ### モックデータ層
-- `src/data/mockData.ts` にすべてのモックデータを集約
-- 将来のAPI層追加時は、各コンポーネントのimport元をAPI hookに差し替えるだけで移行可能
-- 生成関数（`generateVitalSigns`, `generateFlowsheetDaily`等）でダイナミックデータに対応
+- `src/data/mockData.ts` に汎用モックデータを集約
+- 看護計画モジュール固有のデータは `src/features/carePlan/mockData.ts` に分離
+- 将来のAPI移行時は import 元を API フックに差し替えるだけで対応可能
 
 ### 状態管理（Zustand）
-- 軽量かつ型安全なグローバルストア
-- 選択中の患者、病棟フィルタ、サイドバー状態、通知を管理
-- 将来のサーバー状態管理にはTanStack Queryの追加を推奨
+- `useAppStore` — サイドバー開閉、スナックバー通知、病棟フィルタ等のグローバル状態
+- `useNursingRecordStore` — 看護記録（評価転記で動的追加に対応）
+- `carePlan/store` — 看護計画・問題点・評価のCRUD + 変更履歴ログ
 
-### 画面遷移
-- 病棟マップ → 患者クリック → 入院メイン画面（サマリ/オーダ/看護録/フローシート）
-- 病棟マップ → 病室選択 → 一括入力画面
-- 各一覧画面は全病棟/第１病棟/第２病棟のフィルタ付き
+### 看護計画モジュールの独立性
+- `src/features/carePlan/` に型・データ・ストア・ページ・コンポーネントをすべて内包
+- 他モジュールへの依存は `useNursingRecordStore`（評価転記）と `useAppStore`（通知）のみ
+
+---
 
 ## 今後の拡張ポイント
 
-1. **バックエンドAPI接続** — モックデータ層をAPIフック（TanStack Query）に置換
-2. **認証・ロール管理** — 医師/看護師/事務の3ロール対応
-3. **ORCA連携** — 患者登録画面のAPI実装
-4. **帳票出力** — 行動制限一覧性台帳、看護管理日誌等のPDF出力
-5. **リアルタイム通知** — WebSocketによるオーダ通知
+1. **バックエンドAPI接続** — モックデータ層を TanStack Query + REST/GraphQL に置換
+2. **認証・ロール管理** — 医師 / 看護師 / 事務の権限分離
+3. **ORCA連携** — 患者登録画面の API 実装（ルート・コンポーネントは実装済み）
+4. **帳票出力** — 看護計画書・月次評価報告書・行動制限台帳の PDF 出力
+5. **リアルタイム通知** — WebSocket によるオーダ・評価期限アラート
+6. **リハビリモジュール** — リハビリオーダ・日報・評価（ルート・コンポーネントは実装済み）

@@ -25,7 +25,7 @@ import WardManagement from '../components/wardManagement/WardManagement';
 import PatientRegistration from '../components/patientRegistration/PatientRegistration';
 import KarteAlphaPage from '../components/karteAlpha/KarteAlphaPage';
 import OutpatientKartePage from '../components/karteOutpatient/OutpatientKartePage';
-import DesignGuide from '../components/designGuide/DesignGuide';
+import { CARE_PLAN_ROUTES } from '../features/carePlan/routes';
 
 const AppRoutes: React.FC = () => (
   <Routes>
@@ -54,7 +54,7 @@ const AppRoutes: React.FC = () => (
       <Route path="/documents" element={<DocumentManagement />} />
       <Route path="/ward-management" element={<WardManagement />} />
       <Route path="/patient-registration" element={<PatientRegistration />} />
-      <Route path="/design-guide" element={<DesignGuide />} />
+      {CARE_PLAN_ROUTES}
     </Route>
   </Routes>
 );

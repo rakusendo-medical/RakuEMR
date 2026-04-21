@@ -39,11 +39,8 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'ward-mgmt',      label: '病棟管理',         icon: <Business />,       path: '/ward-management' },
   { key: 'documents',      label: '書類管理',         icon: <FolderOpen />,     path: '/documents' },
   { key: 'orders',         label: 'オーダ管理',       icon: <Receipt />,        path: '/orders' },
-  { key: 'rehab',          label: 'リハビリ',         icon: <FitnessCenter />,  path: '/rehab' },
-  { key: 'care',             label: '看護ケア予定',     icon: <Favorite />,           path: '/nursing-care' },
-  { key: 'nursing-plan',    label: '看護計画',          icon: <EventNote />,          path: '/nursing-plan' },
-  { key: 'periodic-eval',   label: '定期評価',          icon: <AssignmentTurnedIn />, path: '/periodic-evaluation' },
-  { key: 'patient-reg',     label: '患者登録',          icon: <PersonAdd />,          path: '/patient-registration' },
+  { key: 'care',           label: '看護ケア予定',     icon: <Favorite />,       path: '/nursing-care' },
+  { key: 'nursing-plan',   label: '看護計画',          icon: <EventNote />,          path: '/nursing-plan' },
   { key: 'design-guide',   label: 'デザインガイド',   icon: <Palette />,             path: '/design-guide' },
 ];
 
