@@ -38,6 +38,7 @@ import {
   Palette,
   AssignmentTurnedIn,
   EventNote,
+  MenuBook as MenuBookIcon,
   VpnKey as VpnKeyIcon,
   Logout as LogoutIcon,
 } from "@mui/icons-material";
@@ -118,6 +119,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "デザインガイド",
     icon: <Palette />,
     path: "/design-guide",
+  },
+  {
+    key: "docs",
+    label: "ドキュメント",
+    icon: <MenuBookIcon />,
+    path: "/docs",
   },
 ];
 
