@@ -39,11 +39,13 @@ import {
   ShowChart,
   PersonOutline,
   EventNote,
+  MedicalServices,
 } from "@mui/icons-material";
 import { PATIENTS, ORDERS, NURSING_RECORDS } from "../../data/mockData";
 import StatusBadge from "../common/StatusBadge";
 import { useAppStore } from "../../stores/useAppStore";
 import FlowsheetView from "../flowsheet/Flowsheet";
+import PatientCarePlan from "../../features/carePlan/pages/PatientCarePlan";
 
 // ===== Mock data for the dense karte view =====
 
@@ -259,6 +261,7 @@ const KarteAlphaPage: React.FC = () => {
           { label: '指示状況', icon: <AssignmentTurnedIn sx={{ fontSize: 16 }} /> },
           { label: '指示簿', icon: <ListAlt sx={{ fontSize: 16 }} /> },
           { label: 'フローシート', icon: <ShowChart sx={{ fontSize: 16 }} /> },
+          { label: '看護過程', icon: <MedicalServices sx={{ fontSize: 16 }} /> },
           { label: '患者情報', icon: <PersonOutline sx={{ fontSize: 16 }} /> },
           { label: 'スケジュール', icon: <EventNote sx={{ fontSize: 16 }} /> },
         ].map((tab, i) => (
@@ -350,10 +353,14 @@ const KarteAlphaPage: React.FC = () => {
           <FlowsheetView patientId={patient.id} />
         )}
 
-        {mainTab !== 0 && mainTab !== 3 && (
+        {mainTab === 4 && (
+          <PatientCarePlan embedded patientId={patient.id} />
+        )}
+
+        {mainTab !== 0 && mainTab !== 3 && mainTab !== 4 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography color="text.secondary">
-              {['カルテ', '指示状況', '指示簿', 'フローシート', '患者情報', 'スケジュール'][mainTab]} - 準備中
+              {['カルテ', '指示状況', '指示簿', 'フローシート', '看護過程', '患者情報', 'スケジュール'][mainTab]} - 準備中
             </Typography>
           </Box>
         )}

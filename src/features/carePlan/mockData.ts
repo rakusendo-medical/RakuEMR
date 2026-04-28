@@ -54,29 +54,29 @@ export const NANDA_MASTER: NandaDiagnosis[] = [
 
 // 10 患者 - Ns A担当 4名、B担当 3名、C担当 3名
 export const PATIENTS: Patient[] = [
-  { id: 'p-001', name: '山田太郎', age: 75, sex: 'M', roomNo: '101', admissionDate: '2025-11-10', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-a' },
-  { id: 'p-002', name: '佐藤花子', age: 68, sex: 'F', roomNo: '203', admissionDate: '2025-12-05', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-a' },
-  { id: 'p-003', name: '鈴木一郎', age: 82, sex: 'M', roomNo: '105', admissionDate: '2026-04-10', primaryDiagnosis: '認知症', primaryNurseId: 'ns-a' },
-  { id: 'p-004', name: '田中良子', age: 55, sex: 'F', roomNo: '207', admissionDate: '2026-01-20', primaryDiagnosis: '双極性障害', primaryNurseId: 'ns-a' },
-  { id: 'p-005', name: '高橋健', age: 45, sex: 'M', roomNo: '102', admissionDate: '2025-10-15', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-b' },
-  { id: 'p-006', name: '伊藤美香', age: 38, sex: 'F', roomNo: '208', admissionDate: '2026-02-01', primaryDiagnosis: '適応障害', primaryNurseId: 'ns-b' },
-  { id: 'p-007', name: '渡辺正雄', age: 70, sex: 'M', roomNo: '103', admissionDate: '2026-03-12', primaryDiagnosis: 'アルコール依存症', primaryNurseId: 'ns-b' },
-  { id: 'p-008', name: '中村早苗', age: 62, sex: 'F', roomNo: '201', admissionDate: '2025-09-20', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-c' },
-  { id: 'p-009', name: '小林拓也', age: 29, sex: 'M', roomNo: '106', admissionDate: '2026-02-18', primaryDiagnosis: 'パニック障害', primaryNurseId: 'ns-c' },
-  { id: 'p-010', name: '加藤由美', age: 51, sex: 'F', roomNo: '205', admissionDate: '2025-11-25', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-c' },
+  { id: 'P001', name: '山田太郎', age: 75, sex: 'M', roomNo: '101', admissionDate: '2025-11-10', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-a' },
+  { id: 'P002', name: '佐藤花子', age: 68, sex: 'F', roomNo: '203', admissionDate: '2025-12-05', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-a' },
+  { id: 'P003', name: '鈴木一郎', age: 82, sex: 'M', roomNo: '105', admissionDate: '2026-04-10', primaryDiagnosis: '認知症', primaryNurseId: 'ns-a' },
+  { id: 'P004', name: '田中良子', age: 55, sex: 'F', roomNo: '207', admissionDate: '2026-01-20', primaryDiagnosis: '双極性障害', primaryNurseId: 'ns-a' },
+  { id: 'P005', name: '高橋健', age: 45, sex: 'M', roomNo: '102', admissionDate: '2025-10-15', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-b' },
+  { id: 'P006', name: '伊藤美香', age: 38, sex: 'F', roomNo: '208', admissionDate: '2026-02-01', primaryDiagnosis: '適応障害', primaryNurseId: 'ns-b' },
+  { id: 'P007', name: '渡辺正雄', age: 70, sex: 'M', roomNo: '103', admissionDate: '2026-03-12', primaryDiagnosis: 'アルコール依存症', primaryNurseId: 'ns-b' },
+  { id: 'P008', name: '中村早苗', age: 62, sex: 'F', roomNo: '201', admissionDate: '2025-09-20', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-c' },
+  { id: 'P009', name: '小林拓也', age: 29, sex: 'M', roomNo: '106', admissionDate: '2026-02-18', primaryDiagnosis: 'パニック障害', primaryNurseId: 'ns-c' },
+  { id: 'P010', name: '加藤由美', age: 51, sex: 'F', roomNo: '205', admissionDate: '2025-11-25', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-c' },
 ];
 
 // CarePlans - 全10名のうち p-003 (鈴木一郎) のみ計画未立案
 export const CARE_PLANS: CarePlan[] = [
-  { id: 'cp-001', patientId: 'p-001', longTermGoal: '服薬自己管理ができ、自宅退院を目指す', status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a' },
-  { id: 'cp-002', patientId: 'p-002', longTermGoal: '気分の安定を保ち、日常生活動作を自立して行える', status: 'active', createdAt: '2026-01-20', createdBy: 'ns-a' },
-  { id: 'cp-004', patientId: 'p-004', longTermGoal: '気分の波をコントロールし、社会復帰の準備を進める', status: 'active', createdAt: '2026-02-10', createdBy: 'ns-a' },
-  { id: 'cp-005', patientId: 'p-005', longTermGoal: '幻聴への対処方法を習得し、生活リズムを整える', status: 'active', createdAt: '2025-11-01', createdBy: 'ns-b' },
-  { id: 'cp-006', patientId: 'p-006', longTermGoal: 'ストレス対処行動を身に付け、職場復帰を目指す', status: 'active', createdAt: '2026-02-15', createdBy: 'ns-b' },
-  { id: 'cp-007', patientId: 'p-007', longTermGoal: '断酒継続のセルフモニタリングを確立する', status: 'active', createdAt: '2026-03-20', createdBy: 'ns-b' },
-  { id: 'cp-008', patientId: 'p-008', longTermGoal: '希死念慮を訴えることができ、安全に療養生活を送れる', status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c' },
-  { id: 'cp-009', patientId: 'p-009', longTermGoal: '予期不安のコントロール方法を獲得する', status: 'active', createdAt: '2026-02-25', createdBy: 'ns-c' },
-  { id: 'cp-010', patientId: 'p-010', longTermGoal: '陰性症状への対応と生活リズムの確立', status: 'active', createdAt: '2025-12-01', createdBy: 'ns-c' },
+  { id: 'cp-001', patientId: 'P001', longTermGoal: '服薬自己管理ができ、自宅退院を目指す', status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a' },
+  { id: 'cp-002', patientId: 'P002', longTermGoal: '気分の安定を保ち、日常生活動作を自立して行える', status: 'active', createdAt: '2026-01-20', createdBy: 'ns-a' },
+  { id: 'cp-004', patientId: 'P004', longTermGoal: '気分の波をコントロールし、社会復帰の準備を進める', status: 'active', createdAt: '2026-02-10', createdBy: 'ns-a' },
+  { id: 'cp-005', patientId: 'P005', longTermGoal: '幻聴への対処方法を習得し、生活リズムを整える', status: 'active', createdAt: '2025-11-01', createdBy: 'ns-b' },
+  { id: 'cp-006', patientId: 'P006', longTermGoal: 'ストレス対処行動を身に付け、職場復帰を目指す', status: 'active', createdAt: '2026-02-15', createdBy: 'ns-b' },
+  { id: 'cp-007', patientId: 'P007', longTermGoal: '断酒継続のセルフモニタリングを確立する', status: 'active', createdAt: '2026-03-20', createdBy: 'ns-b' },
+  { id: 'cp-008', patientId: 'P008', longTermGoal: '希死念慮を訴えることができ、安全に療養生活を送れる', status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c' },
+  { id: 'cp-009', patientId: 'P009', longTermGoal: '予期不安のコントロール方法を獲得する', status: 'active', createdAt: '2026-02-25', createdBy: 'ns-c' },
+  { id: 'cp-010', patientId: 'P010', longTermGoal: '陰性症状への対応と生活リズムの確立', status: 'active', createdAt: '2025-12-01', createdBy: 'ns-c' },
 ];
 
 // ProblemItems

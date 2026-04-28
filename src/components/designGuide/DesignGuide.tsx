@@ -103,7 +103,7 @@ const DesignGuide: React.FC = () => {
       {/* ━━━ タイポグラフィ ━━━ */}
       <Section title="タイポグラフィ">
         <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-          フォント: Noto Sans JP / Hiragino Kaku Gothic ProN / Yu Gothic &nbsp;|&nbsp; ベースサイズ: 13px
+          フォント: Noto Sans JP / Hiragino Kaku Gothic ProN / Yu Gothic &nbsp;|&nbsp; ベースサイズ: 14px
         </Typography>
         <TableContainer>
           <Table size="small">
@@ -116,13 +116,13 @@ const DesignGuide: React.FC = () => {
             </TableHead>
             <TableBody>
               {([
-                { variant: 'h5' as const, desc: '1.5rem / 700' },
-                { variant: 'h6' as const, desc: '1rem / 700' },
-                { variant: 'subtitle1' as const, desc: '1rem / 600' },
-                { variant: 'subtitle2' as const, desc: '0.8rem / 600' },
+                { variant: 'h5' as const, desc: '1.625rem / 700' },
+                { variant: 'h6' as const, desc: '1.125rem / 700' },
+                { variant: 'subtitle1' as const, desc: '1.0625rem / 600' },
+                { variant: 'subtitle2' as const, desc: '0.9375rem / 600' },
                 { variant: 'body1' as const, desc: '1rem / 400' },
-                { variant: 'body2' as const, desc: '0.8125rem / 400' },
-                { variant: 'caption' as const, desc: '0.75rem / 400' },
+                { variant: 'body2' as const, desc: '0.9375rem / 400' },
+                { variant: 'caption' as const, desc: '0.8125rem / 400' },
               ]).map(({ variant, desc }) => (
                 <TableRow key={variant}>
                   <TableCell><code>{variant}</code></TableCell>

@@ -4,7 +4,7 @@ import {
   DialogContent, DialogTitle, Divider, Paper, Stack, Typography,
 } from '@mui/material';
 import {
-  Edit as EditIcon, Save as SaveIcon, CheckCircle as CheckCircleIcon,
+  Save as SaveIcon, CheckCircle as CheckCircleIcon,
   Article as ArticleIcon,
 } from '@mui/icons-material';
 import { useNursingRecordStore } from '../../../stores/useNursingRecordStore';
@@ -12,7 +12,6 @@ import { useAppStore } from '../../../stores/useAppStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import PatientHeader from '../components/PatientHeader';
 import EvaluationForm, { type EvaluationDraft } from '../components/EvaluationForm';
-import ProblemItemEditDialog from '../components/ProblemItemEditDialog';
 import StatusChip from '../components/StatusChip';
 import PriorityChip from '../components/PriorityChip';
 import { useCarePlanStore, formatJPDate } from '../store';
@@ -36,16 +35,13 @@ const MonthlyEvaluation: React.FC = () => {
     (s) => s.nurses.find((n) => n.id === s.currentNurseId)?.name ?? ''
   );
   const createEvaluation = useCarePlanStore((s) => s.createEvaluation);
-  const updateProblemItem = useCarePlanStore((s) => s.updateProblemItem);
 
   const addNursingRecord = useNursingRecordStore((s) => s.addRecord);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
 
   const [drafts, setDrafts] = useState<Record<string, EvaluationDraft>>({});
-  const [editItemId, setEditItemId] = useState<string | null>(null);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [savedDrafts, setSavedDrafts] = useState<Record<string, EvaluationDraft>>({});
-  const editingItem = problemItems.find((pi) => pi.id === editItemId);
 
   const latestEvals = useMemo(() => {
     const map: Record<string, string | undefined> = {};
@@ -87,7 +83,7 @@ const MonthlyEvaluation: React.FC = () => {
     const achievementLabel = (a: string) =>
       a === 'achieved' ? '達成' : a === 'partial' ? '一部達成' : '未達';
     const lines = [
-      `【看護計画月次評価】`,
+      `【看護過程月次評価】`,
       `評価日: ${formatJPDate(TODAY)}　評価者: ${currentNurseName}`,
       `長期目標: ${carePlan?.longTermGoal ?? '—'}`,
       '',
@@ -96,7 +92,7 @@ const MonthlyEvaluation: React.FC = () => {
       const d = targetDrafts[pi.id];
       if (!d) return;
       const diagName = nanda.find((n) => n.code === pi.nandaCode)?.name ?? pi.nandaCode;
-      lines.push(`■ 問題点${idx + 1}: ${diagName}`);
+      lines.push(`■ 看護計画${idx + 1}: ${diagName}`);
       lines.push(`  目標: ${pi.shortTermGoal}`);
       lines.push(`  達成度: ${achievementLabel(d.achievement)}`);
       if (d.findings) lines.push(`  所見: ${d.findings}`);
@@ -139,7 +135,7 @@ const MonthlyEvaluation: React.FC = () => {
 
   return (
     <Container maxWidth="xl" disableGutters>
-      <PatientHeader patient={patient} title="月次評価" />
+      <PatientHeader patient={patient} title="看護過程 月次評価" />
 
       <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5, bgcolor: '#f8fafc' }}>
         <Stack direction="row" spacing={3}>
@@ -169,13 +165,9 @@ const MonthlyEvaluation: React.FC = () => {
             <Card key={pi.id} variant="outlined">
               <CardContent sx={{ p: 2 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                  <Typography variant="subtitle1">問題点 {idx + 1} / {problemItems.length}</Typography>
+                  <Typography variant="subtitle1">看護計画 {idx + 1} / {problemItems.length}</Typography>
                   <StatusChip status={pi.status} />
                   <PriorityChip priority={pi.priority} />
-                  <Box sx={{ flex: 1 }} />
-                  <Button size="small" startIcon={<EditIcon />} onClick={() => setEditItemId(pi.id)}>
-                    問題点を編集(目標・OTE修正)
-                  </Button>
                 </Stack>
                 <Divider sx={{ mb: 1 }} />
                 <Box sx={{ mb: 1 }}>
@@ -183,7 +175,7 @@ const MonthlyEvaluation: React.FC = () => {
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     #{idx + 1} {diagName} ({pi.nandaCode})
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">目標</Typography>
+                  <Typography variant="caption" color="text.secondary">短期目標</Typography>
                   <Typography variant="body2">{pi.shortTermGoal}</Typography>
                 </Box>
                 <EvaluationForm
@@ -239,24 +231,6 @@ const MonthlyEvaluation: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <ProblemItemEditDialog
-        open={editItemId !== null}
-        mode="edit"
-        initial={editingItem}
-        onClose={() => setEditItemId(null)}
-        onSubmit={(draft) => {
-          if (editItemId) {
-            updateProblemItem(editItemId, {
-              domain: draft.domain,
-              priority: draft.priority,
-              nandaCode: draft.nandaCode,
-              shortTermGoal: draft.shortTermGoal,
-              ote: draft.ote,
-            });
-          }
-          setEditItemId(null);
-        }}
-      />
     </Container>
   );
 };

@@ -8,12 +8,15 @@ export const theme = createTheme({
       '"Yu Gothic"',
       'sans-serif',
     ].join(','),
-    fontSize: 13,
-    h5: { fontWeight: 700 },
-    h6: { fontWeight: 700, fontSize: '1rem' },
-    subtitle1: { fontWeight: 600 },
-    subtitle2: { fontWeight: 600, fontSize: '0.8rem' },
-    body2: { fontSize: '0.8125rem' },
+    fontSize: 14,
+    h5: { fontWeight: 700, fontSize: '1.625rem' },
+    h6: { fontWeight: 700, fontSize: '1.125rem' },
+    subtitle1: { fontWeight: 600, fontSize: '1.0625rem' },
+    subtitle2: { fontWeight: 600, fontSize: '0.9375rem' },
+    body1: { fontSize: '1rem' },
+    body2: { fontSize: '0.9375rem' },
+    caption: { fontSize: '0.8125rem' },
+    button: { fontSize: '0.875rem' },
   },
   palette: {
     primary: {
@@ -60,20 +63,20 @@ export const theme = createTheme({
     MuiButton: {
       defaultProps: { disableElevation: true, size: 'small' },
       styleOverrides: {
-        root: { textTransform: 'none', fontWeight: 600, fontSize: '0.8125rem' },
-        sizeSmall: { padding: '5px 14px' },
+        root: { textTransform: 'none', fontWeight: 600, fontSize: '0.875rem' },
+        sizeSmall: { padding: '6px 14px' },
       },
     },
     MuiChip: {
       defaultProps: { size: 'small' },
       styleOverrides: {
-        root: { fontWeight: 600, fontSize: '0.6875rem' },
-        sizeSmall: { height: 24 },
+        root: { fontWeight: 600, fontSize: '0.75rem' },
+        sizeSmall: { height: 26 },
       },
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { padding: '8px 12px', fontSize: '0.8125rem' },
+        root: { padding: '8px 12px', fontSize: '0.875rem' },
         head: { fontWeight: 700, color: '#475569', backgroundColor: '#f8fafc', whiteSpace: 'nowrap' },
       },
     },
@@ -87,7 +90,7 @@ export const theme = createTheme({
     },
     MuiTab: {
       styleOverrides: {
-        root: { textTransform: 'none', fontWeight: 600, minHeight: 40, fontSize: '0.8125rem' },
+        root: { textTransform: 'none', fontWeight: 600, minHeight: 40, fontSize: '0.875rem' },
       },
     },
     MuiTabs: {

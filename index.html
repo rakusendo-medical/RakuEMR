@@ -8,6 +8,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+    <style>
+      @media print {
+        /* 画面UI(サイドバー/ヘッダ/フッタ等)を非表示 */
+        .MuiDrawer-root,
+        .MuiAppBar-root,
+        .no-print {
+          display: none !important;
+        }
+        /* 印刷専用レイアウトを表示 */
+        .print-only {
+          display: block !important;
+        }
+        /* メインスクロール領域はオーバーフロー解除して全頁出力 */
+        body, html, #root {
+          overflow: visible !important;
+          background: #fff !important;
+        }
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box, Button, Card, CardActionArea, CardContent, Container, FormControl,
   InputLabel, MenuItem, Paper, Select, Stack, Typography,
@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCarePlanStore, daysUntil, formatJPDate, formatShortDate } from '../store';
 import type { DashboardCategory, Patient } from '../types';
 import { TODAY } from '../mockData';
+import SectionHeader from '../../../components/common/SectionHeader';
 
 interface CategorizedPatient {
   patient: Patient;
@@ -31,6 +32,15 @@ const Dashboard: React.FC = () => {
   const carePlans = useCarePlanStore((s) => s.carePlans);
   const problemItems = useCarePlanStore((s) => s.problemItems);
 
+  const [sectionOpen, setSectionOpen] = useState({
+    overdue: true,
+    dueThisMonth: true,
+    notPlanned: true,
+    evaluating: true,
+  });
+  const toggleSection = (k: keyof typeof sectionOpen) =>
+    setSectionOpen((s) => ({ ...s, [k]: !s[k] }));
+
   const categorized = useMemo<CategorizedPatient[]>(() => {
     return patients
       .filter((p) => p.primaryNurseId === currentNurseId)
@@ -43,7 +53,6 @@ const Dashboard: React.FC = () => {
         if (items.length === 0) {
           return { patient: p, daysDiff: null, category: 'notPlanned' as const };
         }
-        // 最も期限の近い(最小の daysUntil)明細を代表として採用
         const withDue = items
           .map((it) => ({ it, d: daysUntil(it.nextEvaluationDueAt) }))
           .filter((x) => x.d !== null) as { it: typeof items[number]; d: number }[];
@@ -85,7 +94,7 @@ const Dashboard: React.FC = () => {
     color: string;
     icon: React.ReactNode;
   }> = ({ id, label, count, color, icon }) => (
-    <Card variant="outlined" sx={{ flex: 1 }}>
+    <Card variant="outlined" sx={{ flex: 1, border: '1px solid #1e3a5f', boxShadow: 'none' }}>
       <CardActionArea onClick={() => scrollTo(`sec-${id}`)}>
         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
           <Stack direction="row" spacing={1} alignItems="center">
@@ -128,15 +137,51 @@ const Dashboard: React.FC = () => {
     </Paper>
   );
 
+  interface CategorySectionProps {
+    id: DashboardCategory;
+    title: string;
+    color: string;
+    count: number;
+    open: boolean;
+    onToggle: () => void;
+    children: React.ReactNode;
+    emptyText?: string;
+  }
+  const CategorySection: React.FC<CategorySectionProps> = ({
+    id, title, color, count, open, onToggle, children, emptyText = '該当なし',
+  }) => (
+    <Card
+      id={`sec-${id}`}
+      sx={{ border: `1px solid ${color}`, boxShadow: 'none', mb: 1.5 }}
+    >
+      <SectionHeader
+        title={`${title} (${count}件)`}
+        color={color}
+        open={open}
+        onToggle={onToggle}
+      />
+      {open && (
+        <CardContent sx={{ py: 1.25, '&:last-child': { pb: 1.25 } }}>
+          {count === 0 ? (
+            <Typography variant="caption" color="text.secondary">
+              {emptyText}
+            </Typography>
+          ) : (
+            children
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+
   return (
     <Container maxWidth="xl" disableGutters>
-      <Stack direction="row" alignItems="center" sx={{ mb: 1.5 }}>
-        <Typography variant="h6">看護計画ダッシュボード</Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.5 }}>
+        <Box sx={{ flex: 1 }} />
+        <Typography variant="caption" color="text.secondary">
           基準日: {formatJPDate(TODAY)}
         </Typography>
-        <Box sx={{ flex: 1 }} />
-        <FormControl sx={{ minWidth: 160 }}>
+        <FormControl sx={{ minWidth: 160 }} size="small">
           <InputLabel>担当看護師</InputLabel>
           <Select
             label="担当看護師"
@@ -157,13 +202,14 @@ const Dashboard: React.FC = () => {
         <StatCard id="evaluating" label="評価中のまま" count={byCategory.evaluating.length} color="#ea580c" icon={<HourglassIcon />} />
       </Stack>
 
-      {/* 評価期限超過 */}
-      <Box id="sec-overdue" sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-          <ErrorIcon sx={{ color: '#dc2626', fontSize: 20 }} />
-          <Typography variant="subtitle1" sx={{ color: '#dc2626' }}>評価期限超過</Typography>
-          <Typography variant="caption" color="text.secondary">({byCategory.overdue.length}件)</Typography>
-        </Stack>
+      <CategorySection
+        id="overdue"
+        title="評価期限超過"
+        color="#dc2626"
+        count={byCategory.overdue.length}
+        open={sectionOpen.overdue}
+        onToggle={() => toggleSection('overdue')}
+      >
         {byCategory.overdue.map((row) => (
           <PatientRow
             key={row.patient.id}
@@ -173,18 +219,16 @@ const Dashboard: React.FC = () => {
             action={{ label: '評価する', onClick: () => navigate(`/care-plan/patients/${row.patient.id}/evaluate`) }}
           />
         ))}
-        {byCategory.overdue.length === 0 && (
-          <Typography variant="caption" color="text.secondary">該当なし</Typography>
-        )}
-      </Box>
+      </CategorySection>
 
-      {/* 今月評価必要 */}
-      <Box id="sec-dueThisMonth" sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-          <WarningIcon sx={{ color: '#d97706', fontSize: 20 }} />
-          <Typography variant="subtitle1" sx={{ color: '#d97706' }}>今月評価が必要</Typography>
-          <Typography variant="caption" color="text.secondary">({byCategory.dueThisMonth.length}件)</Typography>
-        </Stack>
+      <CategorySection
+        id="dueThisMonth"
+        title="今月評価が必要"
+        color="#d97706"
+        count={byCategory.dueThisMonth.length}
+        open={sectionOpen.dueThisMonth}
+        onToggle={() => toggleSection('dueThisMonth')}
+      >
         {byCategory.dueThisMonth.map((row) => (
           <PatientRow
             key={row.patient.id}
@@ -194,18 +238,16 @@ const Dashboard: React.FC = () => {
             action={{ label: '評価する', onClick: () => navigate(`/care-plan/patients/${row.patient.id}/evaluate`) }}
           />
         ))}
-        {byCategory.dueThisMonth.length === 0 && (
-          <Typography variant="caption" color="text.secondary">該当なし</Typography>
-        )}
-      </Box>
+      </CategorySection>
 
-      {/* 計画未立案 */}
-      <Box id="sec-notPlanned" sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-          <InfoIcon sx={{ color: '#64748b', fontSize: 20 }} />
-          <Typography variant="subtitle1" sx={{ color: '#64748b' }}>計画未立案</Typography>
-          <Typography variant="caption" color="text.secondary">({byCategory.notPlanned.length}件)</Typography>
-        </Stack>
+      <CategorySection
+        id="notPlanned"
+        title="計画未立案"
+        color="#64748b"
+        count={byCategory.notPlanned.length}
+        open={sectionOpen.notPlanned}
+        onToggle={() => toggleSection('notPlanned')}
+      >
         {byCategory.notPlanned.map((row) => {
           const admissionDays = daysUntil(row.patient.admissionDate);
           return (
@@ -213,22 +255,20 @@ const Dashboard: React.FC = () => {
               key={row.patient.id}
               row={row}
               subText={`新入院 ${formatShortDate(row.patient.admissionDate)} (${admissionDays !== null ? -admissionDays : 0}日経過)`}
-              action={{ label: '計画立案', onClick: () => navigate(`/care-plan/patients/${row.patient.id}/create`) }}
+              action={{ label: '計画立案', onClick: () => navigate(`/care-plan/patients/${row.patient.id}`) }}
             />
           );
         })}
-        {byCategory.notPlanned.length === 0 && (
-          <Typography variant="caption" color="text.secondary">該当なし</Typography>
-        )}
-      </Box>
+      </CategorySection>
 
-      {/* 評価中のまま */}
-      <Box id="sec-evaluating" sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-          <HourglassIcon sx={{ color: '#ea580c', fontSize: 20 }} />
-          <Typography variant="subtitle1" sx={{ color: '#ea580c' }}>評価中のまま</Typography>
-          <Typography variant="caption" color="text.secondary">({byCategory.evaluating.length}件)</Typography>
-        </Stack>
+      <CategorySection
+        id="evaluating"
+        title="評価中のまま"
+        color="#ea580c"
+        count={byCategory.evaluating.length}
+        open={sectionOpen.evaluating}
+        onToggle={() => toggleSection('evaluating')}
+      >
         {byCategory.evaluating.map((row) => (
           <PatientRow
             key={row.patient.id}
@@ -238,10 +278,7 @@ const Dashboard: React.FC = () => {
             action={{ label: '確認する', onClick: () => navigate(`/care-plan/patients/${row.patient.id}`) }}
           />
         ))}
-        {byCategory.evaluating.length === 0 && (
-          <Typography variant="caption" color="text.secondary">該当なし</Typography>
-        )}
-      </Box>
+      </CategorySection>
     </Container>
   );
 };

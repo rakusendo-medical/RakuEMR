@@ -76,7 +76,7 @@ const ProblemItemEditDialog: React.FC<Props> = ({
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
         <DialogTitle>
-          {mode === 'create' ? '問題点を追加' : '問題点を編集'}
+          {mode === 'create' ? '看護計画を追加' : '看護計画を編集'}
         </DialogTitle>
         <Divider />
         <DialogContent>
@@ -120,7 +120,7 @@ const ProblemItemEditDialog: React.FC<Props> = ({
                   <InfoIcon sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
                 </Tooltip>
               </Stack>
-              <Stack direction="row" spacing={1}>
+              <Stack direction="row" spacing={1} alignItems="flex-start">
                 <TextField
                   fullWidth
                   value={selectedNanda ? `${selectedNanda.name} (${selectedNanda.code})` : ''}
@@ -128,14 +128,18 @@ const ProblemItemEditDialog: React.FC<Props> = ({
                   InputProps={{ readOnly: true }}
                   helperText={draft.nandaCode ? `領域: ${selectedNanda?.domain ?? '—'}` : undefined}
                 />
-                <Button variant="outlined" onClick={() => setNandaDialogOpen(true)}>
+                <Button
+                  variant="outlined"
+                  onClick={() => setNandaDialogOpen(true)}
+                  sx={{ flexShrink: 0, height: 40 }}
+                >
                   選択...
                 </Button>
               </Stack>
             </Box>
 
             <Box>
-              <Typography variant="caption" color="text.secondary">目標(短期目標)</Typography>
+              <Typography variant="caption" color="text.secondary">短期目標</Typography>
               <TextField
                 fullWidth
                 multiline
@@ -162,7 +166,7 @@ const ProblemItemEditDialog: React.FC<Props> = ({
                   variant="outlined"
                   onClick={(e) => setCloseMenuAnchor(e.currentTarget)}
                 >
-                  この問題点をクローズ...
+                  この看護計画をクローズ...
                 </Button>
                 <Menu
                   anchorEl={closeMenuAnchor}

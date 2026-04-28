@@ -110,7 +110,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     key: "care-plan",
-    label: "看護計画",
+    label: "看護過程",
     icon: <EventNote />,
     path: "/care-plan",
   },

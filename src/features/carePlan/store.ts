@@ -47,6 +47,8 @@ interface CarePlanState {
   createCarePlan: (patientId: UUID, longTermGoal: string) => CarePlan;
   activateCarePlan: (carePlanId: UUID) => void;
   updateLongTermGoal: (carePlanId: UUID, longTermGoal: string) => void;
+  /** 立案日と長期目標の編集。評価期限などには影響させない */
+  updateCarePlanMeta: (carePlanId: UUID, patch: { longTermGoal?: string; createdAt?: string }) => void;
   addProblemItem: (
     carePlanId: UUID,
     item: Omit<ProblemItem, 'id' | 'carePlanId' | 'createdAt' | 'createdBy' | 'status'> & {
@@ -101,7 +103,7 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
           actorId: get().currentNurseId,
           actorName: a?.name || '',
           at: now,
-          summary: '看護計画を新規作成(下書き)',
+          summary: '看護過程を新規作成(下書き)',
         },
       ],
     }));
@@ -163,6 +165,45 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
     }));
   },
 
+  updateCarePlanMeta: (carePlanId, patch) => {
+    const now = new Date().toISOString();
+    const a = actor(get());
+    const before = get().carePlans.find((p) => p.id === carePlanId);
+    if (!before) return;
+    const fields: string[] = [];
+    if (patch.longTermGoal !== undefined && patch.longTermGoal !== before.longTermGoal) {
+      fields.push('長期目標');
+    }
+    if (patch.createdAt !== undefined && patch.createdAt !== before.createdAt) {
+      fields.push('立案日');
+    }
+    if (fields.length === 0) return;
+    set((s) => ({
+      carePlans: s.carePlans.map((p) =>
+        p.id === carePlanId
+          ? {
+              ...p,
+              ...(patch.longTermGoal !== undefined ? { longTermGoal: patch.longTermGoal } : {}),
+              ...(patch.createdAt !== undefined ? { createdAt: patch.createdAt } : {}),
+            }
+          : p
+      ),
+      changeLogs: [
+        ...s.changeLogs,
+        {
+          id: uid('log'),
+          targetType: 'care_plan',
+          targetId: carePlanId,
+          action: 'update',
+          actorId: get().currentNurseId,
+          actorName: a?.name || '',
+          at: now,
+          summary: `${fields.join('・')}を更新`,
+        },
+      ],
+    }));
+  },
+
   addProblemItem: (carePlanId, item) => {
     const now = new Date().toISOString();
     const a = actor(get());
@@ -194,7 +235,7 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
           actorId: get().currentNurseId,
           actorName: a?.name || '',
           at: now,
-          summary: '問題点を追加',
+          summary: '看護計画を追加',
         },
       ],
     }));
@@ -218,7 +259,7 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
           actorId: get().currentNurseId,
           actorName: a?.name || '',
           at: now,
-          summary: '問題点を編集',
+          summary: '看護計画を編集',
         },
       ],
     }));
@@ -243,7 +284,7 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
           actorId: get().currentNurseId,
           actorName: a?.name || '',
           at: now,
-          summary: `問題点をクローズ(${reason})`,
+          summary: `看護計画をクローズ(${reason})`,
         },
       ],
     }));
@@ -305,6 +346,7 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
         nandaCode: it.nandaCode,
         shortTermGoal: it.shortTermGoal,
         ote: it.ote,
+        status: 'draft',
         copiedFrom: { sourceType: 'template', sourceId: templateId },
       });
     });
@@ -320,6 +362,7 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
         nandaCode: src.nandaCode,
         shortTermGoal: src.shortTermGoal,
         ote: src.ote,
+        status: 'draft',
         copiedFrom: { sourceType, sourceId: srcId },
       });
     });

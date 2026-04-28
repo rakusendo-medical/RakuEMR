@@ -169,7 +169,7 @@ const CopyFromDialog: React.FC<Props> = ({ open, onClose, targetCarePlanId, allo
                         }
                         label={
                           <Typography variant="body2">
-                            問題点: {nandaName(pi.nandaCode)} / 目標: {pi.shortTermGoal}
+                            看護計画: {nandaName(pi.nandaCode)} / 目標: {pi.shortTermGoal}
                           </Typography>
                         }
                       />
@@ -205,7 +205,7 @@ const CopyFromDialog: React.FC<Props> = ({ open, onClose, targetCarePlanId, allo
             })}
             {otherPatientItems.length === 0 && (
               <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-                該当する問題点がありません
+                該当する看護計画がありません
               </Typography>
             )}
           </List>

@@ -14,10 +14,19 @@ import ProblemItemEditDialog from '../components/ProblemItemEditDialog';
 import CopyFromDialog from '../components/CopyFromDialog';
 import { useCarePlanStore } from '../store';
 
-const STEPS = ['長期目標を入力', '問題点を追加', '立案確定'];
+const STEPS = ['長期目標を入力', '看護計画を追加', '立案確定'];
 
-const CarePlanCreate: React.FC = () => {
-  const { patientId = '' } = useParams();
+interface Props {
+  /** カルテ画面に埋め込む際は true。PatientHeader を出さず、立案確定後も画面遷移しない */
+  embedded?: boolean;
+  patientId?: string;
+  /** embedded 時、立案確定後に親へ通知して PatientCarePlan ビューへ遷移させる */
+  onActivated?: () => void;
+}
+
+const CarePlanCreate: React.FC<Props> = ({ embedded = false, patientId: patientIdProp, onActivated }) => {
+  const params = useParams();
+  const patientId = patientIdProp ?? params.patientId ?? '';
   const navigate = useNavigate();
   const patient = useCarePlanStore((s) => s.patients.find((p) => p.id === patientId));
   const existingPlan = useCarePlanStore((s) =>
@@ -60,13 +69,15 @@ const CarePlanCreate: React.FC = () => {
   if (existingPlan && existingPlan.status === 'active') {
     return (
       <Container maxWidth="xl" disableGutters>
-        <PatientHeader patient={patient} />
+        {!embedded && <PatientHeader patient={patient} />}
         <Alert severity="info" action={
-          <Button size="small" onClick={() => navigate(`/care-plan/patients/${patient.id}`)}>
-            計画を開く
-          </Button>
+          !embedded ? (
+            <Button size="small" onClick={() => navigate(`/care-plan/patients/${patient.id}`)}>
+              看護過程を開く
+            </Button>
+          ) : undefined
         }>
-          この患者には既に有効な看護計画があります。
+          この患者には既に有効な看護過程があります。
         </Alert>
       </Container>
     );
@@ -91,13 +102,17 @@ const CarePlanCreate: React.FC = () => {
       return;
     }
     if (draftItems.length === 0) {
-      alert('少なくとも1件の問題点を追加してください');
+      alert('少なくとも1件の看護計画を追加してください');
       return;
     }
     const id = ensurePlan();
     updateLongTermGoal(id, longTermGoal);
     activateCarePlan(id);
-    navigate(`/care-plan/patients/${patient.id}`);
+    if (embedded) {
+      onActivated?.();
+    } else {
+      navigate(`/care-plan/patients/${patient.id}`);
+    }
   };
 
   const editingItem = editDialog?.mode === 'edit'
@@ -106,7 +121,7 @@ const CarePlanCreate: React.FC = () => {
 
   return (
     <Container maxWidth="xl" disableGutters>
-      <PatientHeader patient={patient} title="新規看護計画立案" />
+      {!embedded && <PatientHeader patient={patient} title="新規看護過程立案" />}
       <Stepper activeStep={activeStep} sx={{ mb: 2 }}>
         {STEPS.map((label) => (
           <Step key={label}><StepLabel>{label}</StepLabel></Step>
@@ -162,29 +177,29 @@ const CarePlanCreate: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Step 2: 問題点 */}
+      {/* Step 2: 看護計画 */}
       <Card variant="outlined" sx={{ mb: 2 }}>
         <CardContent>
           <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="subtitle1">ステップ 2: 問題点 ({draftItems.length}件)</Typography>
+            <Typography variant="subtitle1">ステップ 2: 看護計画 ({draftItems.length}件)</Typography>
             <Box sx={{ flex: 1 }} />
             <Button size="small" startIcon={<FileCopyIcon />} onClick={() => { ensurePlan(); setCopyOpen(true); }}>
               引用コピー
             </Button>
             <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => { ensurePlan(); setEditDialog({ mode: 'create' }); }}>
-              問題点追加
+              看護計画追加
             </Button>
           </Stack>
           {draftItems.length === 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-              「問題点追加」または「引用コピー」から問題点を追加してください
+              「看護計画追加」または「引用コピー」から追加してください
             </Typography>
           )}
           {draftItems.map((it, idx) => (
             <ProblemItemCard
               key={it.id}
               item={it}
-              index={idx}
+              displayNumber={idx + 1}
               compact
               onEdit={() => setEditDialog({ mode: 'edit', itemId: it.id })}
             />
