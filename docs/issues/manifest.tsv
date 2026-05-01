@@ -1,0 +1,44 @@
+file	title	labels	parent_key	type
+epics/ep-01-bed-map.md	[病床管理] 病棟マップ	epic,area/bed-management		epic
+epics/ep-02-admission-discharge.md	[病床管理] 入退院手続き	epic,area/bed-management		epic
+epics/ep-03-admission-discharge-order.md	[病床管理] 入退院指示	epic,area/bed-management		epic
+epics/ep-04-admission-history.md	[病床管理] 入退院歴	epic,area/bed-management		epic
+epics/ep-05-restraint-order.md	[隔離拘束] 隔離拘束指示	epic,area/restraint		epic
+epics/ep-06-restraint-list.md	[隔離拘束] 隔離拘束一覧	epic,area/restraint		epic
+epics/ep-07-observation.md	[隔離拘束] 観察記録	epic,area/restraint		epic
+epics/ep-08-restraint-history.md	[隔離拘束] 隔離拘束歴	epic,area/restraint		epic
+epics/ep-09-patient-list.md	[共通] 患者情報	epic,area/common		epic
+epics/ep-10-flowsheet.md	[看護] 看護実施	epic,area/nursing		epic
+epics/ep-12-diagnosis.md	[看護] 看護診断	epic,area/nursing		epic
+epics/ep-13-care-plan.md	[看護] 看護計画	epic,area/nursing		epic
+epics/ep-14-evaluation.md	[看護] 看護評価	epic,area/nursing		epic
+user-story/us-01-bed-display.md	[病床管理] 病床表示	story,area/bed-management	epics/ep-01-bed-map.md	story
+user-story/us-02-bed-move.md	[病床管理] 病床移動	story,area/bed-management	epics/ep-01-bed-map.md	story
+user-story/us-03-bed-assign.md	[病床管理] 病床割り当て	story,area/bed-management	epics/ep-01-bed-map.md	story
+user-story/us-04-karte-navigate.md	[病床管理] カルテ画面遷移	story,area/bed-management	epics/ep-01-bed-map.md	story
+user-story/us-05-admission-confirm.md	[病床管理] 入院手続き	story,area/bed-management	epics/ep-02-admission-discharge.md	story
+user-story/us-06-discharge-confirm.md	[病床管理] 退院手続き	story,area/bed-management	epics/ep-02-admission-discharge.md	story
+user-story/us-07-monthly-schedule.md	[病床管理] 入退院情報	story,area/bed-management	epics/ep-02-admission-discharge.md	story
+user-story/us-08-admission-order.md	[病床管理] 入院指示	story,area/bed-management	epics/ep-03-admission-discharge-order.md	story
+user-story/us-09-discharge-order.md	[病床管理] 退院指示	story,area/bed-management	epics/ep-03-admission-discharge-order.md	story
+user-story/us-10-admission-history.md	[病床管理] 入院歴・退院歴	story,area/bed-management	epics/ep-04-admission-history.md	story
+user-story/us-11-restraint-order.md	[隔離拘束] 隔離拘束指示	story,area/restraint	epics/ep-05-restraint-order.md	story
+user-story/us-12-restraint-list.md	[隔離拘束] 隔離拘束指示受け	story,area/restraint	epics/ep-06-restraint-list.md	story
+user-story/us-13-individual-observation.md	[隔離拘束] 個別観察記録	story,area/restraint	epics/ep-07-observation.md	story
+user-story/us-14-bulk-observation.md	[隔離拘束] 一括観察記録	story,area/restraint	epics/ep-07-observation.md	story
+user-story/us-15-restraint-history.md	[隔離拘束] 隔離拘束歴	story,area/restraint	epics/ep-08-restraint-history.md	story
+user-story/us-16-patient-list.md	[共通] 入院患者一覧	story,area/common	epics/ep-09-patient-list.md	story
+user-story/us-17-flowsheet-view.md	[看護] フローシート表示	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-18-flowsheet-edit.md	[看護] フローシート編集	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-19-sign-record.md	[看護] サイン記載	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-20-individual-vitals.md	[看護] 個別バイタル入力	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-21-flowsheet-pattern.md	[看護] フローシートパターン	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-22-nursing-record-view.md	[看護] 看護記録表示	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-23-individual-nursing-record.md	[看護] 個別看護記録	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-24-bulk-vitals.md	[看護] 一括バイタル入力	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-25-bulk-sleep.md	[看護] 一括睡眠活動入力	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-26-bulk-nursing-record.md	[看護] 一括看護記録	story,area/nursing	epics/ep-10-flowsheet.md	story
+user-story/us-28-diagnosis.md	[看護] 看護診断編集	story,area/nursing	epics/ep-12-diagnosis.md	story
+user-story/us-29-care-plan.md	[看護] 看護計画編集	story,area/nursing	epics/ep-13-care-plan.md	story
+user-story/us-30-eval-criteria.md	[看護] 評価項目立案	story,area/nursing	epics/ep-14-evaluation.md	story
+user-story/us-31-periodic-eval.md	[看護] 定期評価	story,area/nursing	epics/ep-14-evaluation.md	story

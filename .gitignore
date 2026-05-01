@@ -43,3 +43,9 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Manuals (vendor-provided, not for tracking)
+docs/manuals/
+
+# Office temp/lock files
+~$*
