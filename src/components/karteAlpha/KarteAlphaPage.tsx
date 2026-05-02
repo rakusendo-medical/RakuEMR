@@ -22,6 +22,8 @@ import {
 } from "@mui/material";
 import {
   ArrowBack,
+  ArrowBackIosNew,
+  ArrowForwardIos,
   Send,
   Edit,
   NoteAdd,
@@ -40,7 +42,11 @@ import {
   PersonOutline,
   EventNote,
   MedicalServices,
+  LoginOutlined,
+  LogoutOutlined,
 } from "@mui/icons-material";
+import AdmissionOrderDialog from "../admission/AdmissionOrderDialog";
+import DischargeOrderDialog from "../admission/DischargeOrderDialog";
 import { PATIENTS, ORDERS, NURSING_RECORDS } from "../../data/mockData";
 import StatusBadge from "../common/StatusBadge";
 import { useAppStore } from "../../stores/useAppStore";
@@ -210,11 +216,34 @@ const ACTION_BUTTONS = [
 const KarteAlphaPage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const { selectedPatient, setSelectedPatient } = useAppStore();
+  const { selectedPatient, setSelectedPatient, wardMapPatientOrder, navigationSource } = useAppStore();
   const [subTab, setSubTab] = useState(0);
   const [mainTab, setMainTab] = useState(0);
 
   const patient = selectedPatient || PATIENTS.find((p) => p.id === patientId);
+
+  // ep-03 入退院指示ダイアログ
+  const [admissionOrderOpen, setAdmissionOrderOpen] = useState(false);
+  const [dischargeOrderOpen, setDischargeOrderOpen] = useState(false);
+
+  // 病棟マップ経由の隣接患者ナビゲーション
+  const fromWardMap = navigationSource === 'ward-map' && !!patient && wardMapPatientOrder.includes(patient.id);
+  const currentIndex = fromWardMap ? wardMapPatientOrder.indexOf(patient!.id) : -1;
+  const prevId = fromWardMap && currentIndex > 0 ? wardMapPatientOrder[currentIndex - 1] : null;
+  const nextId = fromWardMap && currentIndex >= 0 && currentIndex < wardMapPatientOrder.length - 1
+    ? wardMapPatientOrder[currentIndex + 1]
+    : null;
+  const goToAdjacent = (targetId: string | null) => {
+    if (!targetId) return;
+    const target = PATIENTS.find((p) => p.id === targetId);
+    if (!target) return;
+    setSelectedPatient(target);
+    if (target.primaryRecordType === 'nursing-record') {
+      navigate('/nursing');
+    } else {
+      navigate(`/karte-alpha/${targetId}`);
+    }
+  };
 
   if (!patient) {
     return (
@@ -256,6 +285,51 @@ const KarteAlphaPage: React.FC = () => {
             一覧に戻る
           </Typography>
         </Box>
+        {fromWardMap && (
+          <Box sx={{
+            display: 'flex', alignItems: 'center',
+            bgcolor: '#1e3a5f',
+            borderRight: '2px solid rgba(255,255,255,0.4)',
+          }}>
+            <Tooltip title={prevId ? `前の患者: ${PATIENTS.find((p) => p.id === prevId)?.name ?? ''}` : '先頭患者'}>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => goToAdjacent(prevId)}
+                  disabled={!prevId}
+                  sx={{
+                    color: '#fff', borderRadius: 0, px: 1,
+                    '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)' },
+                    '&:hover': { bgcolor: '#142b47' },
+                  }}
+                  aria-label="前の患者"
+                >
+                  <ArrowBackIosNew sx={{ fontSize: 14 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.85)', px: 0.5 }}>
+              {currentIndex + 1}/{wardMapPatientOrder.length}
+            </Typography>
+            <Tooltip title={nextId ? `次の患者: ${PATIENTS.find((p) => p.id === nextId)?.name ?? ''}` : '末尾患者'}>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => goToAdjacent(nextId)}
+                  disabled={!nextId}
+                  sx={{
+                    color: '#fff', borderRadius: 0, px: 1,
+                    '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)' },
+                    '&:hover': { bgcolor: '#142b47' },
+                  }}
+                  aria-label="次の患者"
+                >
+                  <ArrowForwardIos sx={{ fontSize: 14 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        )}
         {[
           { label: 'カルテ', icon: <Description sx={{ fontSize: 16 }} /> },
           { label: '指示状況', icon: <AssignmentTurnedIn sx={{ fontSize: 16 }} /> },
@@ -345,7 +419,7 @@ const KarteAlphaPage: React.FC = () => {
             </Paper>
 
             {/* 診療録 */}
-            <MedicalRecordsDense />
+            <MedicalRecordsDense patientId={patient.id} />
           </>
         )}
 
@@ -385,6 +459,28 @@ const KarteAlphaPage: React.FC = () => {
               {btn.label}
             </Button>
           ))}
+          {/* ep-03: 主治医による入退院指示の入口 */}
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<LoginOutlined />}
+            size="small"
+            onClick={() => setAdmissionOrderOpen(true)}
+          >
+            入院指示
+          </Button>
+          {/* 退院指示は入院患者のみ表示。Patient.admissionState を参照（未指定は 'inpatient' 扱い） */}
+          {(patient.admissionState ?? 'inpatient') === 'inpatient' && (
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<LogoutOutlined />}
+              size="small"
+              onClick={() => setDischargeOrderOpen(true)}
+            >
+              退院指示
+            </Button>
+          )}
           <Box sx={{ flex: 1 }} />
           <Button variant="outlined" startIcon={<Print />} size="small">
             印刷
@@ -395,6 +491,17 @@ const KarteAlphaPage: React.FC = () => {
         </Stack>
       </Paper>
       </Box>
+
+      <AdmissionOrderDialog
+        open={admissionOrderOpen}
+        patient={patient}
+        onClose={() => setAdmissionOrderOpen(false)}
+      />
+      <DischargeOrderDialog
+        open={dischargeOrderOpen}
+        patient={patient}
+        onClose={() => setDischargeOrderOpen(false)}
+      />
     </Box>
   );
 };
@@ -661,16 +768,47 @@ function MedicalInfoDense({ patient }: { patient: any }) {
   );
 }
 
+// 入退院確定など動的に追加されるカルテ記事のカテゴリ → 色マッピング
+const CATEGORY_COLOR_MAP: Record<string, string> = {
+  '医師記録':       '#1e40af',
+  '看護記録':       '#c2410c',
+  '看護サマリ':     '#7c3aed',
+  'クリニカルパス': '#8b5cf6',
+  '作業療法記録':   '#0891b2',
+  '栄養指導記録':   '#16a34a',
+  '入退院記録':     '#b91c1c',
+};
+
 // ----- Medical Records Dense -----
-function MedicalRecordsDense() {
+function MedicalRecordsDense({ patientId }: { patientId: string }) {
   const [filterActive, setFilterActive] = useState("all");
   const [open, setOpen] = useState(true);
+  const dynamicRecords = useAppStore((s) => s.dynamicMedicalRecords[patientId] ?? []);
 
-  // Group records by date
+  // 静的 MOCK_RECORDS（KarteRecord 形式） + ストアの動的 MedicalRecord をマージ。
+  // 動的レコードは store からは MedicalRecord 型で来るが、表示用 KarteRecord に変換する。
   const groupedRecords: Record<string, KarteRecord[]> = {};
   MOCK_RECORDS.forEach((r) => {
     if (!groupedRecords[r.date]) groupedRecords[r.date] = [];
     groupedRecords[r.date].push(r);
+  });
+  dynamicRecords.forEach((r) => {
+    const dateKey = r.date.replace(/-/g, '/');
+    const adapted: KarteRecord = {
+      id: r.id,
+      date: dateKey,
+      dayOfWeek: r.dayOfWeek,
+      category: r.category,
+      categoryColor: CATEGORY_COLOR_MAP[r.category] ?? '#475569',
+      author: r.author,
+      authorRole: r.authorRole,
+      content: r.content,
+      tags: r.tags,
+      orderNumber: r.orderNumber,
+      timestamp: r.timestamp,
+    };
+    if (!groupedRecords[dateKey]) groupedRecords[dateKey] = [];
+    groupedRecords[dateKey].unshift(adapted); // 新規記事は日内の先頭に
   });
 
   return (
