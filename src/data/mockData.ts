@@ -15,6 +15,7 @@ import {
   RehabOrder, RehabDailyReport, RehabEvaluation, NursingCareSchedule,
   Document, NursingDiaryEntry, WardDiaryEntry, StatusConfig, PatientStatus,
   OutpatientVisit, NursingPlan, PeriodicEvaluationRecord,
+  BedFlag, BedFlagConfig, UnassignedPatient,
 } from '../types';
 
 // ===== カルテ画面用データ =====
@@ -262,11 +263,25 @@ export const actionButtons = [
 export const STATUS_CONFIG: Record<PatientStatus, StatusConfig> = {
   stable:      { label: '安定',   color: '#22c55e', bgColor: '#f0fdf4', muiColor: 'success' },
   observation: { label: '観察中', color: '#f59e0b', bgColor: '#fffbeb', muiColor: 'warning' },
-  isolation:   { label: '隔離',   color: '#ef4444', bgColor: '#fef2f2', muiColor: 'error' },
-  restraint:   { label: '拘束',   color: '#dc2626', bgColor: '#fef2f2', muiColor: 'error' },
+  isolation:   { label: '隔離',   color: '#b91c1c', bgColor: '#fef2f2', muiColor: 'error' },
+  restraint:   { label: '拘束',   color: '#b91c1c', bgColor: '#fef2f2', muiColor: 'error' },
   outing:      { label: '外出中', color: '#6366f1', bgColor: '#eef2ff', muiColor: 'info' },
   empty:       { label: '空床',   color: '#94a3b8', bgColor: '#f8fafc', muiColor: 'default' },
 };
+
+// ===== ベッド運用フラグ（病棟マップ凡例・アイコン用） =====
+export const BED_FLAG_CONFIG: Record<BedFlag, BedFlagConfig> = {
+  isolation:      { key: 'isolation',      label: '隔離',   short: '隔', color: '#b91c1c' },
+  restraint:      { key: 'restraint',      label: '拘束',   short: '拘', color: '#7c2d12' },
+  outing:         { key: 'outing',         label: '外出',   short: '外', color: '#6366f1' },
+  overnight:      { key: 'overnight',      label: '外泊',   short: '泊', color: '#4338ca' },
+  reportRequired: { key: 'reportRequired', label: '要報告', short: '報', color: '#d97706' },
+  deposit:        { key: 'deposit',        label: '預り金', short: '金', color: '#0f766e' },
+};
+
+export const BED_FLAG_ORDER: BedFlag[] = [
+  'isolation', 'restraint', 'outing', 'overnight', 'reportRequired', 'deposit',
+];
 
 // ===== 病室データ =====
 export const ROOMS: Room[] = [
@@ -278,20 +293,20 @@ export const ROOMS: Room[] = [
     { bed: 'D', patientId: 'P022', patientName: '小川 浩',       status: 'stable',       gender: 'M', age: 39 },
   ]},
   { roomNumber: '102', wardId: 'ward1', beds: [
-    { bed: 'A', patientId: 'P003', patientName: '鈴木 一郎',     status: 'isolation',    gender: 'M', age: 41 },
+    { bed: 'A', patientId: 'P003', patientName: '鈴木 一郎',     status: 'isolation',    gender: 'M', age: 41, flags: ['isolation', 'reportRequired'] },
     { bed: 'B', patientId: 'P023', patientName: '中山 誠一',     status: 'stable',       gender: 'M', age: 62 },
-    { bed: 'C', patientId: 'P024', patientName: '宮田 典子',     status: 'stable',       gender: 'F', age: 34 },
-    { bed: 'D', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'C', patientId: 'P024', patientName: '宮田 典子',     status: 'stable',       gender: 'F', age: 34, flags: ['deposit'] },
+    { bed: 'D', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null, disabled: true },
   ]},
   { roomNumber: '103', wardId: 'ward1', beds: [
-    { bed: 'A', patientId: 'P004', patientName: '高橋 美咲',     status: 'restraint',    gender: 'F', age: 35 },
+    { bed: 'A', patientId: 'P004', patientName: '高橋 美咲',     status: 'restraint',    gender: 'F', age: 35, flags: ['restraint', 'reportRequired'] },
     { bed: 'B', patientId: 'P005', patientName: '田中 健太',     status: 'stable',       gender: 'M', age: 29 },
     { bed: 'C', patientId: 'P025', patientName: '石川 裕二',     status: 'stable',       gender: 'M', age: 28 },
     { bed: 'D', patientId: 'P026', patientName: '原 由美子',     status: 'stable',       gender: 'F', age: 53 },
   ]},
   { roomNumber: '104', wardId: 'ward1', beds: [
-    { bed: 'A', patientId: 'P006', patientName: '伊藤 幸子',     status: 'outing',       gender: 'F', age: 58 },
-    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔',     status: 'stable',       gender: 'M', age: 44 },
+    { bed: 'A', patientId: 'P006', patientName: '伊藤 幸子',     status: 'outing',       gender: 'F', age: 58, flags: ['outing', 'deposit'] },
+    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔',     status: 'stable',       gender: 'M', age: 44, flags: ['overnight'], hasScheduledMove: true },
     { bed: 'C', patientId: 'P027', patientName: '内田 道子',     status: 'stable',       gender: 'F', age: 55 },
     { bed: 'D', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
   ]},
@@ -337,7 +352,7 @@ export const ROOMS: Room[] = [
     { bed: 'H', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '202', wardId: 'ward2', beds: [
-    { bed: 'A', patientId: 'P013', patientName: '松本 拓也',     status: 'restraint',    gender: 'M', age: 33 },
+    { bed: 'A', patientId: 'P013', patientName: '松本 拓也',     status: 'restraint',    gender: 'M', age: 33, flags: ['restraint'] },
     { bed: 'B', patientId: 'P040', patientName: '島本 弥生',     status: 'stable',       gender: 'F', age: 46 },
     { bed: 'C', patientId: 'P056', patientName: '山崎 悟',       status: 'stable',       gender: 'M', age: 53 },
     { bed: 'D', patientId: 'P057', patientName: '中井 由紀',     status: 'stable',       gender: 'F', age: 41 },
@@ -348,7 +363,7 @@ export const ROOMS: Room[] = [
   ]},
   { roomNumber: '203', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P014', patientName: '井上 さくら',   status: 'stable',       gender: 'F', age: 28 },
-    { bed: 'B', patientId: 'P015', patientName: '木村 正樹',     status: 'outing',       gender: 'M', age: 50 },
+    { bed: 'B', patientId: 'P015', patientName: '木村 正樹',     status: 'outing',       gender: 'M', age: 50, flags: ['overnight'] },
     { bed: 'C', patientId: 'P059', patientName: '橋本 みどり',   status: 'stable',       gender: 'F', age: 35 },
     { bed: 'D', patientId: 'P060', patientName: '上田 隆',       status: 'stable',       gender: 'M', age: 62 },
     { bed: 'E', patientId: 'P061', patientName: '金子 玲奈',     status: 'stable',       gender: 'F', age: 25 },
@@ -358,7 +373,7 @@ export const ROOMS: Room[] = [
   ]},
   { roomNumber: '204', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P016', patientName: '林 美穂',       status: 'stable',       gender: 'F', age: 42 },
-    { bed: 'B', patientId: 'P017', patientName: '清水 翔太',     status: 'isolation',    gender: 'M', age: 36 },
+    { bed: 'B', patientId: 'P017', patientName: '清水 翔太',     status: 'isolation',    gender: 'M', age: 36, flags: ['isolation', 'restraint'] },
     { bed: 'C', patientId: 'P062', patientName: '加藤 大介',     status: 'stable',       gender: 'M', age: 48 },
     { bed: 'D', patientId: 'P063', patientName: '渡部 千佳',     status: 'stable',       gender: 'F', age: 32 },
     { bed: 'E', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
@@ -383,12 +398,12 @@ export const ROOMS: Room[] = [
     { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '207', wardId: 'ward2', beds: [
-    { bed: 'A', patientId: 'P050', patientName: '長田 直樹',     status: 'isolation',    gender: 'M', age: 37 },
+    { bed: 'A', patientId: 'P050', patientName: '長田 直樹',     status: 'isolation',    gender: 'M', age: 37, flags: ['isolation'] },
     { bed: 'B', patientId: 'P067', patientName: '浜田 由美子',   status: 'stable',       gender: 'F', age: 49 },
     { bed: 'C', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
     { bed: 'D', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
-    { bed: 'E', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'E', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null, disabled: true },
+    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null, disabled: true },
   ]},
   { roomNumber: '208', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P051', patientName: '石井 礼子',     status: 'stable',       gender: 'F', age: 61 },
@@ -400,10 +415,50 @@ export const ROOMS: Room[] = [
   ]},
 ];
 
+// ===== 未割当患者（病棟・病室・ベッドのいずれかが「仮」） =====
+export const UNASSIGNED_PATIENTS: UnassignedPatient[] = [
+  {
+    id: 'U001',
+    name: '河野 信一',
+    age: 56,
+    gender: 'M',
+    designatedWardId: 'ward1',
+    designatedRoomNumber: 'tentative',
+    designatedBedLabel: 'tentative',
+    scheduledAdmitAt: '2026-05-03 10:00',
+    doctorName: '田村 医師',
+    notes: '病棟のみ確定（病室・ベッド未定）',
+  },
+  {
+    id: 'U002',
+    name: '柴田 美香',
+    age: 33,
+    gender: 'F',
+    designatedWardId: 'ward1',
+    designatedRoomNumber: '105',
+    designatedBedLabel: 'tentative',
+    scheduledAdmitAt: '2026-05-04 13:30',
+    doctorName: '岸本 医師',
+    notes: '病室確定、ベッド未定',
+  },
+  {
+    id: 'U003',
+    name: '岩崎 拓海',
+    age: 28,
+    gender: 'M',
+    designatedWardId: 'tentative',
+    designatedRoomNumber: 'tentative',
+    designatedBedLabel: 'tentative',
+    scheduledAdmitAt: '2026-05-05 09:00',
+    doctorName: '森田 医師',
+    notes: '病棟未定',
+  },
+];
+
 // ===== 患者マスタ =====
 export const PATIENTS: Patient[] = [
   // 第１病棟
-  { id: 'P001', name: '山田 太郎',     age: 52, gender: 'M', wardId: 'ward1', roomNumber: '101', bedLabel: 'A', status: 'stable',      admitDate: '2026-01-10', doctorName: '田村 医師', diagnosis: '統合失調症' },
+  { id: 'P001', name: '山田 太郎',     age: 52, gender: 'M', wardId: 'ward1', roomNumber: '101', bedLabel: 'A', status: 'stable',      admitDate: '2026-01-10', doctorName: '田村 医師', diagnosis: '統合失調症', primaryRecordType: 'nursing-record' },
   { id: 'P002', name: '佐藤 花子',     age: 67, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: 'B', status: 'observation',  admitDate: '2026-01-15', doctorName: '岸本 医師', diagnosis: 'うつ病' },
   { id: 'P021', name: '後藤 幸子',     age: 46, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: 'C', status: 'stable',       admitDate: '2026-01-18', doctorName: '岸本 医師', diagnosis: 'うつ病' },
   { id: 'P022', name: '小川 浩',       age: 39, gender: 'M', wardId: 'ward1', roomNumber: '101', bedLabel: 'D', status: 'stable',       admitDate: '2026-02-05', doctorName: '田村 医師', diagnosis: '適応障害' },
@@ -540,9 +595,192 @@ export const generateFlowsheetDaily = (patientId: string, days: number = 7): Flo
 
 // ===== 入退院関連 =====
 export const ADMISSION_ORDERS: AdmissionOrder[] = [
-  { id: 'ADM001', patientId: 'P019', patientName: '新井 太一',     type: '入院', status: '指示済',   scheduledDate: '2026-02-24', doctorName: '田村 医師', roomNumber: '—',   bedLabel: '—', wardId: 'ward1' },
-  { id: 'ADM002', patientId: 'P003', patientName: '鈴木 一郎',     type: '退院', status: '手続中',   scheduledDate: '2026-02-25', doctorName: '岸本 医師', roomNumber: '102', bedLabel: 'A', wardId: 'ward1' },
-  { id: 'ADM003', patientId: 'P020', patientName: '藤田 明日香',   type: '入院', status: '手続完了', scheduledDate: '2026-02-23', doctorName: '森田 医師', roomNumber: '201', bedLabel: 'B', wardId: 'ward2' },
+  // 当月（2026-05）周辺：入院指示／退院指示が確定済・未確定で混在
+  { id: 'ADM001', patientId: 'U001', patientName: '河野 信一',     type: '入院', status: '指示済',   scheduledDate: '2026-05-03', doctorName: '田村 医師', roomNumber: '—',   bedLabel: '—', wardId: 'ward1' },
+  { id: 'ADM002', patientId: 'U002', patientName: '柴田 美香',     type: '入院', status: '指示済',   scheduledDate: '2026-05-04', doctorName: '岸本 医師', roomNumber: '105', bedLabel: '—', wardId: 'ward1' },
+  { id: 'ADM003', patientId: 'P019', patientName: '新井 太一',     type: '入院', status: '手続完了', scheduledDate: '2026-05-02', doctorName: '田村 医師', roomNumber: '107', bedLabel: 'A', wardId: 'ward1' },
+  { id: 'ADM004', patientId: 'P020', patientName: '藤田 明日香',   type: '入院', status: '手続完了', scheduledDate: '2026-05-01', doctorName: '森田 医師', roomNumber: '205', bedLabel: 'B', wardId: 'ward2' },
+  { id: 'ADM005', patientId: 'P003', patientName: '鈴木 一郎',     type: '退院', status: '指示済',   scheduledDate: '2026-05-08', doctorName: '岸本 医師', roomNumber: '102', bedLabel: 'A', wardId: 'ward1' },
+  { id: 'ADM006', patientId: 'P006', patientName: '伊藤 幸子',     type: '退院', status: '指示済',   scheduledDate: '2026-05-12', doctorName: '森田 医師', roomNumber: '104', bedLabel: 'A', wardId: 'ward1' },
+  { id: 'ADM007', patientId: 'P007', patientName: '渡辺 大輔',     type: '退院', status: '手続完了', scheduledDate: '2026-05-02', doctorName: '田村 医師', roomNumber: '104', bedLabel: 'B', wardId: 'ward1' },
+  { id: 'ADM008', patientId: 'U003', patientName: '岩崎 拓海',     type: '入院', status: '指示済',   scheduledDate: '',           doctorName: '森田 医師', roomNumber: '—',   bedLabel: '—', wardId: 'ward1' },
+  { id: 'ADM009', patientId: 'P017', patientName: '清水 翔太',     type: '退院', status: '指示済',   scheduledDate: '',           doctorName: '岸本 医師', roomNumber: '204', bedLabel: 'B', wardId: 'ward2' },
+  { id: 'ADM010', patientId: 'P013', patientName: '松本 拓也',     type: '退院', status: '指示済',   scheduledDate: '2026-05-20', doctorName: '森田 医師', roomNumber: '202', bedLabel: 'A', wardId: 'ward2' },
+];
+
+// ===========================================================================
+// MASTER セクション
+// ---------------------------------------------------------------------------
+// 参考システムの各種マスタ（医療機関情報マスタ・期限管理マスタ・帳票定義情報
+// マスタ等）に相当する固定値を集約。本来は別エピック（マスタメンテナンス）で
+// 保守する想定の値だが、モックではここに集約して各ダイアログから参照する。
+//
+// 参照箇所がトレースしやすいよう、 `MASTER_` prefix で命名する。
+// 既存の関連定義（医療機関一覧・紹介経路・入院形態など）は本セクション末尾の
+// 「入退院指示用マスタ（ep-03）」配下にあるが、命名統一のためそちらも
+// MASTER_ prefix を持つエクスポートを追加で公開する。
+// ===========================================================================
+
+/** 食事時間帯（マスタ：医療機関情報の食事時間設定の代替） */
+export const MASTER_MEAL_TIMES = [
+  { key: '0800', label: '朝食 (08:00)', hh: 8,  mm: 0 },
+  { key: '1200', label: '昼食 (12:00)', hh: 12, mm: 0 },
+  { key: '1800', label: '夕食 (18:00)', hh: 18, mm: 0 },
+] as const;
+
+/** 食事を伴う退院日かどうかの判定境界（マスタ：食事時間設定の代替）。
+ *  この境界 [openHHMM, closeHHMM] 内の退院時刻は食事を伴う扱いとする。 */
+export const MASTER_MEAL_WINDOW = { openHHMM: '08:00', closeHHMM: '18:00' } as const;
+
+/** 食事締め時間（マスタ：医療機関情報／食事配膳の代替）。これを過ぎた変更は確認ダイアログを挟む。 */
+export const MASTER_MEAL_CUTOFF_HHMM = '17:00' as const;
+
+/** 入院定時オーダの中止日設定（マスタ：医療機関情報／処方の中止日設定の代替） */
+export type StopDayPolicy = '当日以降' | '翌日以降';
+export const MASTER_STOP_DAY_POLICY_OPTIONS: StopDayPolicy[] = ['当日以降', '翌日以降'];
+/** 既定値（モック切替対象） */
+export const MASTER_STOP_DAY_POLICY_DEFAULT: StopDayPolicy = '翌日以降';
+
+/** 入院決定理由のテンプレ文例（マスタ：文例マスタの代替） */
+export const MASTER_ADMIT_REASON_TEMPLATES = [
+  '症状増悪のため入院加療が必要',
+  '本人の同意のもと任意入院',
+  '家族同意のもと医療保護入院',
+  '措置入院対象として入院',
+] as const;
+
+/** 退院決定理由のテンプレ文例 */
+export const MASTER_DISCHARGE_REASON_TEMPLATES = [
+  '症状改善により退院可',
+  '転院のため退院',
+  '本人都合による退院',
+  '社会復帰準備のため退院',
+] as const;
+
+/** 紹介経路（入院）のラインナップ（医療観察法オプション利用時の追加分は別配列） */
+// MASTER_REFERRAL_ROUTES_ADMIT_BASE / _OPTIONAL は下記既存定義（REFERRAL_ROUTES_ADMIT_*）の別名として export する。
+// これにより新規ファイルからは MASTER_ prefix で統一参照できる。
+
+// ===== 入退院指示用マスタ（ep-03） =====
+export interface MedicalInstitution {
+  id: string;
+  name: string;
+  type: '病院' | '診療所' | 'クリニック';
+  address: string;
+}
+
+export const MEDICAL_INSTITUTIONS: MedicalInstitution[] = [
+  { id: 'MI001', name: '〇〇医院',           type: '診療所',   address: '東京都新宿区西新宿1-1-1' },
+  { id: 'MI002', name: '△△クリニック',     type: 'クリニック', address: '東京都渋谷区道玄坂2-2-2' },
+  { id: 'MI003', name: '□□総合病院',       type: '病院',     address: '東京都世田谷区三軒茶屋3-3-3' },
+  { id: 'MI004', name: '中央メンタルクリニック', type: 'クリニック', address: '東京都中央区銀座4-4-4' },
+  { id: 'MI005', name: '〜〜こころのクリニック', type: 'クリニック', address: '東京都千代田区神田5-5-5' },
+  { id: 'MI006', name: '東京こころ病院',     type: '病院',     address: '東京都北区赤羽6-6-6' },
+  { id: 'MI007', name: '◎◎メディカルセンター', type: '病院',     address: '東京都杉並区荻窪7-7-7' },
+];
+
+export const REFERRAL_ROUTES_ADMIT_BASE = [
+  '直接入院',
+  '自院通院からの入院',
+  '自院入院からの入院',
+  '他院通院からの転入院',
+  '他院入院からの転入院',
+] as const;
+
+export const REFERRAL_ROUTES_ADMIT_OPTIONAL = '医療観察入院処遇中の転院';
+
+export const REFERRAL_ROUTES_DISCHARGE_BASE = [
+  '退院後通院なし',
+  '退院後自院通院',
+  '退院後自院入院',
+  '退院後他院通院',
+  '退院後他院入院',
+] as const;
+
+export const REFERRAL_ROUTES_DISCHARGE_OPTIONAL = '医療観察入院処遇中の転院';
+
+export type AdmitFormType = '任意入院' | '医療保護入院' | '措置入院' | '応急入院' | '緊急措置入院';
+export const ADMIT_FORM_TYPES: AdmitFormType[] = ['任意入院', '医療保護入院', '措置入院', '応急入院', '緊急措置入院'];
+
+export const ADMIT_DOCS_BY_FORM: Record<AdmitFormType, string[]> = {
+  '任意入院':       ['入院申込書', '同意書（治療）', '同意書（個人情報）', '保険証コピー', '入院案内書'],
+  '医療保護入院':   ['医療保護入院書類', '家族同意書', '入院告知書', '入院案内書'],
+  '措置入院':       ['措置入院通知書', '入院告知書', '指定書写し', '入院案内書'],
+  '応急入院':       ['応急入院書類', '入院告知書', '入院案内書'],
+  '緊急措置入院':   ['緊急措置入院書類', '入院告知書', '指定書写し', '入院案内書'],
+};
+
+export type DischargeCategory = '不要' | '通院' | '転院';
+export const DISCHARGE_DOCS_BY_CATEGORY: Record<DischargeCategory, string[]> = {
+  '不要': ['退院サマリ'],
+  '通院': ['退院サマリ', '紹介状（通院）', '通院精神指示書'],
+  '転院': ['退院サマリ', '紹介状（転院）', '転院連絡票', '訪問看護指示書'],
+};
+
+export const DELETE_REASON_CATEGORIES = [
+  '入力誤り',
+  '医師判断による中止',
+  '患者意向による中止',
+  'システム障害',
+  'その他',
+] as const;
+
+export const REHAB_OUTCOME_OPTIONS = [
+  { value: '治癒',   label: '治癒',   selectable: true },
+  { value: '転院',   label: '転院',   selectable: true },
+  { value: '中止',   label: '中止',   selectable: true },
+  { value: '中断',   label: '中断',   selectable: true },
+  { value: '継続',   label: '継続（選択不可）', selectable: false },
+] as const;
+
+export interface TherapyHistoryEntry {
+  patientId: string;
+  /** 直近入院の退院紹介医療機関ID（紹介元複写元の優先順1） */
+  lastDischargeReferralId?: string;
+  /** 入院時の紹介元医療機関ID（複写元の優先順2） */
+  admitReferralId?: string;
+}
+
+export const THERAPY_HISTORY_SAMPLES: TherapyHistoryEntry[] = [
+  { patientId: 'P001', lastDischargeReferralId: 'MI004', admitReferralId: 'MI001' },
+  { patientId: 'P003', lastDischargeReferralId: 'MI003', admitReferralId: 'MI002' },
+  { patientId: 'P006', admitReferralId: 'MI005' },
+  { patientId: 'U001', admitReferralId: 'MI001' },
+  { patientId: 'U002', admitReferralId: 'MI004' },
+];
+
+// ===== MASTER 別名（命名統一のため、上記既存定義を MASTER_ prefix で再 export） =====
+export const MASTER_MEDICAL_INSTITUTIONS = MEDICAL_INSTITUTIONS;
+export const MASTER_REFERRAL_ROUTES_ADMIT_BASE = REFERRAL_ROUTES_ADMIT_BASE;
+export const MASTER_REFERRAL_ROUTES_ADMIT_OPTIONAL = REFERRAL_ROUTES_ADMIT_OPTIONAL;
+export const MASTER_REFERRAL_ROUTES_DISCHARGE_BASE = REFERRAL_ROUTES_DISCHARGE_BASE;
+export const MASTER_REFERRAL_ROUTES_DISCHARGE_OPTIONAL = REFERRAL_ROUTES_DISCHARGE_OPTIONAL;
+export const MASTER_ADMIT_FORM_TYPES = ADMIT_FORM_TYPES;
+export const MASTER_ADMIT_DOCS_BY_FORM = ADMIT_DOCS_BY_FORM;
+export const MASTER_DISCHARGE_DOCS_BY_CATEGORY = DISCHARGE_DOCS_BY_CATEGORY;
+export const MASTER_DELETE_REASON_CATEGORIES = DELETE_REASON_CATEGORIES;
+export const MASTER_REHAB_OUTCOME_OPTIONS = REHAB_OUTCOME_OPTIONS;
+
+// ===== 確定処理時に表示する未実施オーダのサンプル =====
+export interface PendingOrderSample {
+  id: string;
+  patientId: string;
+  category: '外来専用' | '入院専用' | '移動' | '給食' | 'リハビリ';
+  content: string;
+  scheduledAt: string;
+}
+
+export const PENDING_ORDERS_SAMPLES: PendingOrderSample[] = [
+  // 入院確定時に出る外来専用オーダ
+  { id: 'PO001', patientId: 'U001', category: '外来専用', content: '外来採血（HbA1c, CBC）',           scheduledAt: '2026-05-03 09:00' },
+  { id: 'PO002', patientId: 'U001', category: '外来専用', content: '外来心電図',                       scheduledAt: '2026-05-03 10:00' },
+  { id: 'PO003', patientId: 'U002', category: '外来専用', content: '外来胸部 X-P',                     scheduledAt: '2026-05-04 11:00' },
+  // 退院確定時に出る入院専用オーダ + 移動・給食 + リハビリ
+  { id: 'PO101', patientId: 'P003', category: '入院専用', content: '夜間血糖チェック',                 scheduledAt: '2026-05-08 22:00' },
+  { id: 'PO102', patientId: 'P003', category: '給食',     content: '5/8 朝食（軟菜食）',               scheduledAt: '2026-05-08 08:00' },
+  { id: 'PO103', patientId: 'P003', category: '移動',     content: '外来診察室への移送',               scheduledAt: '2026-05-08 13:00' },
+  { id: 'PO104', patientId: 'P006', category: 'リハビリ', content: '作業療法（5/12 14:00 個別 30分）', scheduledAt: '2026-05-12 14:00' },
+  { id: 'PO105', patientId: 'P006', category: '給食',     content: '5/12 昼食',                        scheduledAt: '2026-05-12 12:00' },
 ];
 
 export const TRANSFER_HISTORY: TransferHistory[] = [

@@ -23,6 +23,28 @@ export interface StatusConfig {
   muiColor: "success" | "warning" | "error" | "info" | "default";
 }
 
+/** ベッド/患者付与の運用フラグ（複数同時付与可） */
+export type BedFlag =
+  | "isolation"      // 隔離
+  | "restraint"      // 拘束
+  | "outing"         // 外出
+  | "overnight"      // 外泊
+  | "reportRequired" // 要報告
+  | "deposit";       // 預り金
+
+export interface BedFlagConfig {
+  key: BedFlag;
+  label: string;
+  short: string; // 1文字略号
+  color: string;
+}
+
+/** 標準診療種類（カルテ初期表示分岐用） */
+export type PrimaryRecordType = "karte" | "nursing-record";
+
+/** 入院ステータス（入院／外来／退院の判定用） */
+export type AdmissionState = "inpatient" | "outpatient" | "discharged";
+
 /** 性別 */
 export type Gender = "M" | "F";
 
@@ -36,6 +58,29 @@ export interface Bed {
   status: PatientStatus;
   gender: Gender | null;
   age: number | null;
+  /** 運用フラグ（隔離・拘束・外出・外泊・要報告・預り金 など、複数付与可） */
+  flags?: BedFlag[];
+  /** マスタで使用不可指定されたベッド（網掛け表示・操作不可） */
+  disabled?: boolean;
+  /** 移動予定が登録されている場合 */
+  hasScheduledMove?: boolean;
+}
+
+/** 未割当患者（病棟・病室・ベッドのいずれかが「仮」） */
+export interface UnassignedPatient {
+  id: string;
+  name: string;
+  age: number;
+  gender: Gender;
+  /** 指定病棟（'tentative' = 仮） */
+  designatedWardId: WardId | "tentative";
+  /** 指定病室（'tentative' = 仮） */
+  designatedRoomNumber: string | "tentative";
+  /** 指定ベッド（'tentative' = 仮） */
+  designatedBedLabel: string | "tentative";
+  scheduledAdmitAt: string;
+  doctorName: string;
+  notes?: string;
 }
 
 /** 病室情報 */
@@ -66,6 +111,10 @@ export interface Patient {
   wardName?: string;
   nurse?: string;
   daycare?: string;
+  /** カルテ初期表示の標準診療種類。未設定時は 'karte' とみなす */
+  primaryRecordType?: PrimaryRecordType;
+  /** 入院ステータス。未設定時は 'inpatient' とみなす（PATIENTS は基本入院中なため） */
+  admissionState?: AdmissionState;
 }
 
 /** オーダ種別 */
