@@ -9,6 +9,7 @@ import FlowsheetHeader from '../components/FlowsheetHeader';
 import MovementBar from '../components/MovementBar';
 import FlowsheetGrid from '../components/FlowsheetGrid';
 import VitalEditDialog from '../components/VitalEditDialog';
+import FlowsheetEditDialog from '../components/FlowsheetEditDialog';
 
 const daysBetween = (from: ISODate, to: ISODate): number => {
   const a = new Date(from).getTime();
@@ -35,6 +36,7 @@ const FlowsheetPage: React.FC = () => {
   const [endDate, setEndDate] = useState<ISODate>(TODAY);
   const [tab, setTab] = useState<FlowsheetTab>('flowsheet');
   const [vitalDialog, setVitalDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
+  const [flowsheetDialog, setFlowsheetDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
 
   const dates = useMemo(() => last7Dates(endDate), [endDate]);
 
@@ -118,7 +120,7 @@ const FlowsheetPage: React.FC = () => {
             nursingRecords={nursingRecords}
             staffName={staffName}
             isFutureDisabled={isFutureDisabled}
-            onClickFlowsheetIcon={todo('フローシート編集ダイアログ')}
+            onClickFlowsheetIcon={(d) => setFlowsheetDialog({ open: true, date: d })}
             onClickVitalIcon={(d) => setVitalDialog({ open: true, date: d })}
             onClickSignCell={(_, shift) => todo(`サイン(${shift})入力`)()}
             onClickOrderCell={todo('実施確認表ダイアログ')}
@@ -150,6 +152,12 @@ const FlowsheetPage: React.FC = () => {
         patientId={patientId}
         date={vitalDialog.date}
         onClose={() => setVitalDialog((s) => ({ ...s, open: false }))}
+      />
+      <FlowsheetEditDialog
+        open={flowsheetDialog.open}
+        patientId={patientId}
+        date={flowsheetDialog.date}
+        onClose={() => setFlowsheetDialog((s) => ({ ...s, open: false }))}
       />
     </Box>
   );
