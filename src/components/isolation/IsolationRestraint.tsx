@@ -9,6 +9,7 @@ import { Print, Description as DescriptionIcon, Settings as SettingsIcon } from 
 import {
   ISOLATION_ORDERS, generateObservationRecords,
   MASTER_STAFF_FOR_SIGN, MASTER_BEHAVIOR_RESTRICT_WARDS,
+  MASTER_OBSERVATION_FREQUENCY, MASTER_OBSERVATION_STATES,
   PATIENTS,
   type AdmitFormType,
 } from '../../data/mockData';
@@ -21,6 +22,8 @@ import RestraintOrderDialog from './RestraintOrderDialog';
 import SignInputDialog from './SignInputDialog';
 import IsolationFilterDialog from './IsolationFilterDialog';
 import RestraintNursingRecordStub from './RestraintNursingRecordStub';
+import ObservationBulkDialog from './ObservationBulkDialog';
+import ObservationRecordDialog from './ObservationRecordDialog';
 import BedMoveDialog, { type BedMoveTarget } from '../wardMap/BedMoveDialog';
 
 const OBS_COLORS: Record<ObservationState, string> = {
@@ -575,7 +578,290 @@ const IsolationOrderListTab: React.FC = () => {
   );
 };
 
-// ===== 既存タブ（ep-07/ep-08 で再構成予定）=====
+// ===== ep-07 観察記録: 「記録」タブ本体 =====
+
+interface ObservationCellInfo {
+  state: ObservationState;
+  count: number;
+}
+
+const SUB_3SEG: Array<IsolationSubtype | 'その他'> = ['隔離', '拘束', 'その他'];
+
+const ObservationListTab: React.FC = () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const dynamicIsolationOrders = useAppStore((s) => s.dynamicIsolationOrders);
+  const dynamicObservationRecords = useAppStore((s) => s.dynamicObservationRecords);
+  const futureBlock = useAppStore((s) => s.optionalFeatures.observationFutureBlock);
+
+  const [date, setDate] = useState(today);
+  const [ward, setWard] = useState<WardId | 'all'>('all');
+  const [admitForms, setAdmitForms] = useState<AdmitFormType[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const [bulkDialog, setBulkDialog] = useState<{
+    open: boolean; subtype: IsolationSubtype | 'その他'; hour: number; occurrence: number;
+    candidates: Array<{ patient: Patient; order: IsolationOrder }>;
+  } | null>(null);
+
+  const [individualDialog, setIndividualDialog] = useState<{
+    open: boolean; patient: Patient; subtype: IsolationSubtype | 'その他'; hour: number; isolationOrderId?: string;
+  } | null>(null);
+
+  // 一覧データ算出: 候補患者 (active 指示あり OR その他区分病棟在棟)
+  const rows = React.useMemo(() => {
+    const merged = new Map<string, IsolationOrder>();
+    [...ISOLATION_ORDERS, ...dynamicIsolationOrders].forEach((o) => merged.set(o.id, o));
+    const ordersByPatient = new Map<string, IsolationOrder[]>();
+    for (const o of merged.values()) {
+      // 当該日に active な指示のみ
+      const start = o.startDatetime.slice(0, 10);
+      if (start > date) continue;
+      if (o.endDatetime && o.endDatetime.slice(0, 10) < date) continue;
+      if (ward !== 'all' && o.wardId !== ward) continue;
+      const arr = ordersByPatient.get(o.patientId) ?? [];
+      arr.push(o);
+      ordersByPatient.set(o.patientId, arr);
+    }
+    const orderedRows: Array<{ patient: Patient; orders: IsolationOrder[]; isOther: false }> = [];
+    for (const p of PATIENTS) {
+      const ords = ordersByPatient.get(p.id);
+      if (!ords) continue;
+      orderedRows.push({ patient: p, orders: ords, isOther: false });
+    }
+    // その他区分（行動制限判定対象病棟の在棟患者で、上記に居ない者）
+    const otherRows: Array<{ patient: Patient; orders: IsolationOrder[]; isOther: true }> = [];
+    const includedIds = new Set(orderedRows.map((r) => r.patient.id));
+    for (const p of PATIENTS) {
+      if (includedIds.has(p.id)) continue;
+      if (!(MASTER_BEHAVIOR_RESTRICT_WARDS as readonly WardId[]).includes(p.wardId)) continue;
+      if (ward !== 'all' && p.wardId !== ward) continue;
+      if (p.admissionState && p.admissionState !== 'inpatient') continue;
+      if (admitForms.length > 0 && !admitForms.includes(patientAdmitForm(p.id))) continue;
+      otherRows.push({ patient: p, orders: [], isOther: true });
+    }
+    return [...orderedRows, ...otherRows];
+  }, [date, ward, admitForms, dynamicIsolationOrders]);
+
+  // 観察記録の集計（patientId × subtype × hour × occurrence → state）
+  const observationsByKey = React.useMemo(() => {
+    const map = new Map<string, ObservationCellInfo>();
+    dynamicObservationRecords.forEach((r) => {
+      if (r.date !== date) return;
+      const hour = parseInt(r.time.slice(0, 2), 10);
+      const key = `${r.patientId}|${r.subtype ?? 'その他'}|${hour}|${r.occurrence ?? 1}`;
+      const exist = map.get(key);
+      map.set(key, { state: r.state, count: (exist?.count ?? 0) + 1 });
+    });
+    return map;
+  }, [dynamicObservationRecords, date]);
+
+  // タイトル回数枠クリック → 一括ダイアログ起動
+  const openBulk = (subtype: IsolationSubtype | 'その他', hour: number, occurrence: number) => {
+    const cands: Array<{ patient: Patient; order: IsolationOrder }> = [];
+    rows.forEach((row) => {
+      if (subtype === 'その他') {
+        if (row.isOther) {
+          cands.push({
+            patient: row.patient,
+            order: {
+              id: `OTHER-${row.patient.id}`,
+              patientId: row.patient.id, patientName: row.patient.name,
+              type: '隔離', startDatetime: '',
+              wardId: row.patient.wardId,
+              roomNumber: `${row.patient.roomNumber}-${row.patient.bedLabel}`,
+              doctorName: row.patient.doctorName,
+            },
+          });
+        }
+      } else {
+        const matched = row.orders.find((o) => {
+          const sub = o.subtype ?? (o.type === '隔離' ? '隔離' : '拘束');
+          return sub === subtype || (subtype === '拘束' && sub === '隔離拘束');
+        });
+        if (matched) cands.push({ patient: row.patient, order: matched });
+      }
+    });
+    setBulkDialog({ open: true, subtype, hour, occurrence, candidates: cands });
+  };
+
+  // セルクリック → 個別ダイアログ起動
+  const openIndividual = (patient: Patient, subtype: IsolationSubtype | 'その他', hour: number, isolationOrderId?: string) => {
+    setIndividualDialog({ open: true, patient, subtype, hour, isolationOrderId });
+  };
+
+  return (
+    <Box>
+      {/* 検索条件 */}
+      <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
+        <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+          <TextField
+            type="date" size="small" label="日付"
+            value={date} onChange={(e) => setDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            select size="small" label="病棟" sx={{ minWidth: 120 }}
+            value={ward} onChange={(e) => setWard(e.target.value as WardId | 'all')}
+          >
+            <MenuItem value="all">全病棟</MenuItem>
+            <MenuItem value="ward1">第１病棟</MenuItem>
+            <MenuItem value="ward2">第２病棟</MenuItem>
+          </TextField>
+          <Tooltip title={admitForms.length > 0 ? `入院形態: ${admitForms.join('、')}` : '入院形態フィルタなし'}>
+            <Button size="small" variant="outlined" startIcon={<SettingsIcon />} onClick={() => setFilterOpen(true)}>
+              条件設定 {admitForms.length > 0 && `(${admitForms.length})`}
+            </Button>
+          </Tooltip>
+          {futureBlock && <Chip label="未来日入力抑止 ON" size="small" color="warning" variant="outlined" />}
+          <Box sx={{ flex: 1 }} />
+          <Stack direction="row" spacing={1} alignItems="center">
+            {MASTER_OBSERVATION_STATES.filter((s) => s.state !== '未記入').map((s) => (
+              <Stack key={s.state} direction="row" spacing={0.3} alignItems="center">
+                <Box sx={{ width: 10, height: 10, bgcolor: s.bgColor, border: '1px solid #cbd5e1' }} />
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
+                  {s.state}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+        </Stack>
+      </Paper>
+
+      {/* 一覧マトリクス */}
+      <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <Table size="small" stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell rowSpan={2} sx={{ minWidth: 140, position: 'sticky', left: 0, zIndex: 4, bgcolor: '#f8fafc' }}>患者</TableCell>
+              <TableCell rowSpan={2} sx={{ width: 60 }}>区分</TableCell>
+              {Array.from({ length: 24 }, (_, h) => h).map((h) => (
+                <TableCell key={h} colSpan={Math.max(...SUB_3SEG.map((s) => MASTER_OBSERVATION_FREQUENCY[s === '隔離拘束' ? '拘束' : (s as '隔離' | '拘束' | 'その他')] ?? 1))}
+                  align="center" sx={{ fontSize: '0.55rem', p: 0, borderLeft: '1px solid #e2e8f0' }}>
+                  {h}時
+                </TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              {/* 1 時間内の回数枠タイトル（区分ごとに最大回数を取り、クリックで一括起動） */}
+              {Array.from({ length: 24 }, (_, h) => h).flatMap((h) => {
+                const maxFreq = Math.max(...SUB_3SEG.map((s) => MASTER_OBSERVATION_FREQUENCY[s === '隔離拘束' ? '拘束' : (s as '隔離' | '拘束' | 'その他')] ?? 1));
+                return Array.from({ length: maxFreq }, (_, occ) => (
+                  <TableCell key={`${h}-${occ}`} align="center" sx={{ p: 0, fontSize: '0.5rem', cursor: 'pointer' }}>
+                    <Tooltip title={`${h}時 ${occ + 1}回目（クリックで一括入力）`}>
+                      <Box
+                        onClick={() => {
+                          // デフォルト: 拘束区分（最も回数多い前提）。実 UX では区分タイトルを別行に分けるが、簡略化
+                          openBulk('拘束', h, occ + 1);
+                        }}
+                        sx={{ p: 0.2, '&:hover': { bgcolor: '#dbeafe' } }}
+                      >
+                        {occ + 1}
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                ));
+              })}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} align="center" sx={{ py: 3 }}>
+                  <Typography variant="caption" color="text.secondary">該当する患者はいません</Typography>
+                </TableCell>
+              </TableRow>
+            )}
+            {rows.map((row) => {
+              const subtypesToShow: Array<IsolationSubtype | 'その他'> = row.isOther
+                ? ['その他']
+                : Array.from(new Set(row.orders.map((o) => (o.subtype ?? (o.type === '隔離' ? '隔離' : '拘束'))))) as IsolationSubtype[];
+              return subtypesToShow.map((sub, subIdx) => (
+                <TableRow key={`${row.patient.id}-${sub}`} hover>
+                  {subIdx === 0 && (
+                    <TableCell rowSpan={subtypesToShow.length} sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: '#fff', verticalAlign: 'top' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                        [{row.patient.id}] {row.patient.name}（{row.patient.age}）
+                      </Typography>
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ verticalAlign: 'middle' }}>
+                    <Chip label={sub} size="small" variant="outlined"
+                      color={sub === '隔離' ? 'error' : sub === '拘束' || sub === '隔離拘束' ? 'warning' : 'default'} />
+                  </TableCell>
+                  {Array.from({ length: 24 }, (_, h) => h).flatMap((h) => {
+                    const maxFreq = Math.max(...SUB_3SEG.map((s) => MASTER_OBSERVATION_FREQUENCY[s === '隔離拘束' ? '拘束' : (s as '隔離' | '拘束' | 'その他')] ?? 1));
+                    return Array.from({ length: maxFreq }, (_, occ) => {
+                      const target = new Date(`${date}T${String(h).padStart(2, '0')}:00:00`).getTime();
+                      const isFuture = futureBlock && target > Date.now();
+                      const key = `${row.patient.id}|${sub}|${h}|${occ + 1}`;
+                      const cell = observationsByKey.get(key);
+                      const stateConf = cell ? MASTER_OBSERVATION_STATES.find((s) => s.state === cell.state) : undefined;
+                      const order = !row.isOther
+                        ? row.orders.find((o) => (o.subtype ?? (o.type === '隔離' ? '隔離' : '拘束')) === sub)
+                        : undefined;
+                      return (
+                        <TableCell
+                          key={`${h}-${occ}`}
+                          align="center"
+                          onClick={isFuture ? undefined : () => openIndividual(row.patient, sub, h, order?.id)}
+                          sx={{
+                            p: 0, fontSize: '0.5rem', cursor: isFuture ? 'not-allowed' : 'pointer',
+                            bgcolor: isFuture ? '#e2e8f0' : (stateConf?.bgColor ?? '#fff'),
+                            color: stateConf?.color, borderLeft: '1px solid #f1f5f9',
+                            '&:hover': isFuture ? {} : { boxShadow: 'inset 0 0 0 1px #2563eb' },
+                          }}
+                        >
+                          {cell && cell.state !== '未記入' ? cell.state.substring(0, 1) : ''}
+                        </TableCell>
+                      );
+                    });
+                  })}
+                </TableRow>
+              ));
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* ダイアログ */}
+      <IsolationFilterDialog
+        open={filterOpen}
+        selected={admitForms}
+        onClose={() => setFilterOpen(false)}
+        onApply={(forms) => setAdmitForms(forms)}
+      />
+      {bulkDialog && (
+        <ObservationBulkDialog
+          open={bulkDialog.open}
+          onClose={() => setBulkDialog(null)}
+          subtype={bulkDialog.subtype}
+          date={date}
+          hour={bulkDialog.hour}
+          occurrence={bulkDialog.occurrence}
+          candidates={bulkDialog.candidates}
+        />
+      )}
+      {individualDialog && (
+        <ObservationRecordDialog
+          open={individualDialog.open}
+          onClose={() => setIndividualDialog(null)}
+          patient={{
+            id: individualDialog.patient.id,
+            name: individualDialog.patient.name,
+            age: individualDialog.patient.age,
+            wardId: individualDialog.patient.wardId,
+          }}
+          date={date}
+          hour={individualDialog.hour}
+          subtype={individualDialog.subtype}
+          isolationOrderId={individualDialog.isolationOrderId}
+        />
+      )}
+    </Box>
+  );
+};
+
+// ===== 既存タブ（ep-08 で再構成予定）=====
 
 const IsolationRestraint: React.FC = () => {
   const [tab, setTab] = useState(0);
@@ -601,65 +887,8 @@ const IsolationRestraint: React.FC = () => {
       {/* ===== ep-06 隔離拘束一覧: tab=0 改修済 ===== */}
       {tab === 0 && <IsolationOrderListTab />}
 
-      {tab === 1 && (
-        <Box>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              本日の観察記録対象者（15分単位）— 2026/02/24
-            </Typography>
-          </Stack>
-          <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
-            <Table size="small" stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ position: 'sticky', left: 0, zIndex: 3, minWidth: 110, bgcolor: '#f8fafc' }}>患者</TableCell>
-                  {obsSlots.slice(0, 24).map((s) => (
-                    <TableCell key={s} align="center" sx={{ minWidth: 38, fontSize: '0.5625rem', p: 0.5 }}>{s}</TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {activeOrders.map((order) => {
-                  const obsRecords = generateObservationRecords(order.id, order.patientId);
-                  return (
-                    <TableRow key={order.id}>
-                      <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: '#fff', fontWeight: 600, fontSize: '0.75rem' }}>
-                        {order.patientName}
-                        <Typography variant="caption" display="block" color="text.secondary">{order.type}</Typography>
-                      </TableCell>
-                      {obsSlots.slice(0, 24).map((slot) => {
-                        const rec = obsRecords.find((r) => r.time === slot);
-                        const state = rec?.state || '未記入';
-                        return (
-                          <TableCell
-                            key={slot}
-                            align="center"
-                            sx={{
-                              p: 0.3, fontSize: '0.5625rem', cursor: 'pointer',
-                              bgcolor: OBS_COLORS[state] || '#fff',
-                              borderRight: '1px solid #f1f5f9',
-                            }}
-                          >
-                            {state !== '未記入' ? state.substring(0, 2) : ''}
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Stack direction="row" spacing={1.5} sx={{ mt: 1.5, flexWrap: 'wrap' }}>
-            {Object.entries(OBS_COLORS).map(([state, color]) => (
-              <Stack key={state} direction="row" spacing={0.5} alignItems="center">
-                <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: color, border: '1px solid #e2e8f0' }} />
-                <Typography variant="caption" color="text.secondary">{state}</Typography>
-              </Stack>
-            ))}
-          </Stack>
-        </Box>
-      )}
+      {/* ===== ep-07 観察記録: tab=1 改修済 ===== */}
+      {tab === 1 && <ObservationListTab />}
 
       {tab === 2 && (
         <TableContainer component={Paper} variant="outlined">

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
-  AdmissionHistory, IsolationConfirmSignKind, IsolationOrder,
-  MedicalRecord, OrderConfirmSign, Patient, WardId,
+  AdmissionHistory, IsolationConfirmSignKind, IsolationHistoryAudit, IsolationOrder,
+  MedicalRecord, ObservationRecord, OrderConfirmSign, Patient, WardId,
 } from '../types';
 
 /** 操作者ロール（ep-02 代行入力認証フローの分岐用） */
@@ -18,6 +18,8 @@ export interface OptionalFeatures {
   psychiatricLink: boolean;
   /** ep-05 隔離拘束変更（マスタ「隔離拘束変更=する」相当。継続/変更指示リンクの表示制御） */
   restraintChange: boolean;
+  /** ep-07 観察記録の未来日入力抑止（マスタ validate.future 相当） */
+  observationFutureBlock: boolean;
 }
 
 /** 病床移動の予定（ep-01 us-02 用） */
@@ -136,6 +138,25 @@ interface AppState {
   upsertConfirmSign: (orderId: string, kind: IsolationConfirmSignKind, sign: OrderConfirmSign) => void;
   removeConfirmSign: (orderId: string, kind: IsolationConfirmSignKind) => void;
 
+  // ===== ep-07 観察記録 =====
+  // 動的観察記録（個別／一括どちらの入力経路でも同じ配列に保存、永続化対象）
+  dynamicObservationRecords: ObservationRecord[];
+  addObservationRecord: (record: ObservationRecord) => void;
+  addObservationRecordsBulk: (records: ObservationRecord[]) => void;
+  updateObservationRecord: (id: string, patch: Partial<ObservationRecord>) => void;
+  removeObservationRecord: (id: string) => void;
+
+  // ===== ep-08 隔離拘束歴 =====
+  // 削除監査ログ（永続化対象）
+  isolationHistoryAudits: IsolationHistoryAudit[];
+  // 削除順序チェックは呼び出し側（IsolationHistoryView）で実施し、確定済みの削除のみ通知する。
+  // store はバリデーション責務を持たず、dynamicIsolationOrders から filter + audit append のみ実行する。
+  deleteIsolationOrderWithAudit: (
+    orderId: string,
+    reason: { category: string; text?: string },
+    deletedBy: string,
+  ) => void;
+
   // ===== ep-09 患者情報 Phase 2 =====
   // 診察終了状態（永続化対象）。patientId → 終了情報のマップ。
   // 値が undefined または存在しないキー = 未終了。トグル時に終了 / 解除を切替。
@@ -214,6 +235,7 @@ export const useAppStore = create<AppState>()(
         regionalCooperation: false,
         psychiatricLink: false,
         restraintChange: false,
+        observationFutureBlock: false,
       },
       toggleOptionalFeature: (key) =>
         set((state) => ({
@@ -320,6 +342,55 @@ export const useAppStore = create<AppState>()(
           }),
         })),
 
+      // ===== ep-07 観察記録 =====
+      dynamicObservationRecords: [],
+      addObservationRecord: (record) =>
+        set((state) => ({
+          dynamicObservationRecords: [...state.dynamicObservationRecords, record],
+        })),
+      addObservationRecordsBulk: (records) =>
+        set((state) => ({
+          dynamicObservationRecords: [...state.dynamicObservationRecords, ...records],
+        })),
+      updateObservationRecord: (id, patch) =>
+        set((state) => ({
+          dynamicObservationRecords: state.dynamicObservationRecords.map((r) =>
+            r.id === id ? { ...r, ...patch } : r,
+          ),
+        })),
+      removeObservationRecord: (id) =>
+        set((state) => ({
+          dynamicObservationRecords: state.dynamicObservationRecords.filter((r) => r.id !== id),
+        })),
+
+      // ===== ep-08 隔離拘束歴 =====
+      isolationHistoryAudits: [],
+      // 削除順序チェックは呼び出し側で実施前提。ここでは指示削除＋監査ログ追加のみ。
+      // マスタの ISOLATION_ORDERS 由来の指示は dynamicIsolationOrders に存在しなくても
+      // 削除済とみなすため、audit にスナップショットを残しておく。
+      deleteIsolationOrderWithAudit: (orderId, reason, deletedBy) =>
+        set((state) => {
+          const target = state.dynamicIsolationOrders.find((o) => o.id === orderId);
+          const audit: IsolationHistoryAudit = {
+            id: `AUDIT-${Date.now()}`,
+            orderId,
+            deletedAt: new Date().toISOString(),
+            deletedBy,
+            reasonCategory: reason.category,
+            reasonText: reason.text,
+            snapshot: {
+              subtype: target?.subtype,
+              operation: target?.operation,
+              startDatetime: target?.startDatetime ?? '',
+              endDatetime: target?.endDatetime,
+            },
+          };
+          return {
+            dynamicIsolationOrders: state.dynamicIsolationOrders.filter((o) => o.id !== orderId),
+            isolationHistoryAudits: [...state.isolationHistoryAudits, audit],
+          };
+        }),
+
       // ===== ep-09 患者情報 Phase 2 =====
       consultationFinishedMap: {},
       toggleConsultationFinished: (patientId, staff) =>
@@ -377,6 +448,8 @@ export const useAppStore = create<AppState>()(
         addedAdmissionHistory: state.addedAdmissionHistory,
         removedAdmissionHistoryIds: state.removedAdmissionHistoryIds,
         dynamicIsolationOrders: state.dynamicIsolationOrders,
+        dynamicObservationRecords: state.dynamicObservationRecords,
+        isolationHistoryAudits: state.isolationHistoryAudits,
         consultationFinishedMap: state.consultationFinishedMap,
         patientListSearchCondition: state.patientListSearchCondition,
       }),

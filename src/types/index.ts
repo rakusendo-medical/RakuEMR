@@ -354,7 +354,9 @@ export interface IsolationConfirmSigns {
   endSecondary?: OrderConfirmSign;
 }
 
-/** 観察記録 */
+// ===== ep-07 観察記録 =====
+
+/** 観察記録の状態（既存 6 値、ep-07 でも継続利用） */
 export type ObservationState =
   | "未記入"
   | "浅眠"
@@ -362,6 +364,14 @@ export type ObservationState =
   | "不穏"
   | "睡眠"
   | "中途覚醒";
+
+/** 観察記録の連携設定 */
+export interface ObservationLinkSetting {
+  /** 看護記録連携 ON */
+  linkToNursingRecord: boolean;
+  /** 報告先（作成依頼／確認依頼／両方） */
+  reportTo?: '作成依頼' | '確認依頼' | '両方';
+}
 
 export interface ObservationRecord {
   id: string;
@@ -371,6 +381,18 @@ export interface ObservationRecord {
   time: string;
   state: ObservationState;
   note?: string;
+  /** ep-07: 区分（隔離/拘束/隔離拘束/その他） */
+  subtype?: IsolationSubtype | 'その他';
+  /** ep-07: 観察回数（1時間内の何回目か。1 始まり） */
+  occurrence?: number;
+  /** ep-07: 記事タグ（複数） */
+  tags?: string[];
+  /** ep-07: 記録者（職員名） */
+  signedBy?: string;
+  /** ep-07: 連携設定 */
+  linkSetting?: ObservationLinkSetting;
+  /** ep-07: 連携時に作成された NursingRecord（ep-10 側）への参照 */
+  linkedNursingRecordId?: string;
 }
 
 /** 行動範囲 */
@@ -672,4 +694,23 @@ export interface PeriodicEvaluationRecord {
   stages: EvaluationStage[];
   evaluations: EvaluationEntry[];
   nextEvaluationDue: string;
+}
+
+// ===== ep-08 隔離拘束歴 =====
+
+/** 隔離拘束指示の削除監査ログ */
+export interface IsolationHistoryAudit {
+  id: string;
+  /** 削除された IsolationOrder の ID */
+  orderId: string;
+  /** 削除日時（ISO 文字列） */
+  deletedAt: string;
+  /** 削除者識別子（モック: currentUserRole） */
+  deletedBy: string;
+  /** 削除理由分類（MASTER_DELETE_REASON_CATEGORIES） */
+  reasonCategory: string;
+  /** 削除理由テキスト（任意） */
+  reasonText?: string;
+  /** 削除前のスナップショット（参照表示用） */
+  snapshot: { subtype?: string; operation?: string; startDatetime: string; endDatetime?: string };
 }

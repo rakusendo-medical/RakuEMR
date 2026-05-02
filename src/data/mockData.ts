@@ -12,7 +12,7 @@ import {
   Room, Order, NursingRecord, VitalSign, FlowsheetDaily,
   AdmissionOrder, TransferHistory, AdmissionHistory, IsolationOrder,
   IsolationSubtype,
-  ObservationRecord, BehaviorRange, OutingRecord, PatientScheduleEvent,
+  ObservationRecord, ObservationState, BehaviorRange, OutingRecord, PatientScheduleEvent,
   RehabOrder, RehabDailyReport, RehabEvaluation, NursingCareSchedule,
   Document, NursingDiaryEntry, WardDiaryEntry, StatusConfig, PatientStatus,
   OutpatientVisit, NursingPlan, PeriodicEvaluationRecord,
@@ -860,6 +860,45 @@ export const MASTER_STAFF_FOR_SIGN: StaffForSign[] = [
 // 病床管理マスタの「行動制限判定対象」相当（その他区分の判定用）。
 // ここに含まれる病棟の在棟患者は、隔離拘束指示なしでも一覧の「その他」区分で表示される。
 export const MASTER_BEHAVIOR_RESTRICT_WARDS = ['ward1'] as const;
+
+// ===== ep-07 観察記録 マスタ =====
+// 隔離拘束状態マスタ（状態色＋自動記載定型文）
+export interface ObservationStateConfig {
+  state: ObservationState;
+  color: string;       // 文字色（ラベル用）
+  bgColor: string;     // セル背景色
+  prescriptionText: string;  // 状態選択時に処方処置欄へ自動記載される定型文
+}
+export const MASTER_OBSERVATION_STATES: ObservationStateConfig[] = [
+  { state: '未記入',   color: '#475569', bgColor: '#f1f5f9', prescriptionText: '' },
+  { state: '浅眠',     color: '#92400e', bgColor: '#fef3c7', prescriptionText: '浅眠状態。傾眠傾向あり。' },
+  { state: '落ち着き', color: '#166534', bgColor: '#dcfce7', prescriptionText: '落ち着いて過ごしている。バイタル安定。' },
+  { state: '不穏',     color: '#991b1b', bgColor: '#fef2f2', prescriptionText: '不穏状態を観察。声かけ・傾聴対応中。' },
+  { state: '睡眠',     color: '#1e40af', bgColor: '#dbeafe', prescriptionText: '入眠中。呼吸状態安定。' },
+  { state: '中途覚醒', color: '#9d174d', bgColor: '#fce7f3', prescriptionText: '中途覚醒あり。再入眠を促す。' },
+];
+
+/** 区分別観察回数（1時間あたりの記録回数。マスタ：医療機関情報マスタの観察回数代替） */
+export const MASTER_OBSERVATION_FREQUENCY: Record<'隔離' | '拘束' | 'その他', number> = {
+  '隔離':   2,  // 30分毎
+  '拘束':   4,  // 15分毎
+  'その他': 1,  // 60分毎
+};
+
+/** 観察記録の文例（マスタ：文例マスタの代替） */
+export const MASTER_OBSERVATION_TEMPLATES = [
+  '室内で穏やかに過ごしている。バイタル安定。',
+  '自力体位変換可。皮膚状態異常なし。循環障害なし。',
+  '不穏あり。傾聴対応。30分後に落ち着く。',
+  '入眠中。呼吸状態安定。',
+  '声かけに反応あり。意思疎通可能。',
+] as const;
+
+/** 観察記録の記事タグ（マスタ：記事タグマスタの代替） */
+export const MASTER_OBSERVATION_TAGS = [
+  '巡回', '声かけ', '傾聴', '体位変換', 'バイタル測定',
+  '排泄介助', '食事介助', '清拭', '内服確認', '皮膚観察',
+] as const;
 
 // ===== 確定処理時に表示する未実施オーダのサンプル =====
 export interface PendingOrderSample {

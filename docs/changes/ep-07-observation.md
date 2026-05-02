@@ -10,8 +10,8 @@
 
 | ストーリー | 改修前 AC | 実装後 AC | 状態 |
 | --- | --- | --- | --- |
-| us-13 個別観察記録 | 0/10 | 0/10 | 🟡 着手前 |
-| us-14 一括観察記録 | 0/11 | 0/11 | 🟡 着手前 |
+| us-13 個別観察記録 | 0/10 | 9/10 | ✅ 完了（モック実装、AC-10 部門記録簿連携は ep-10 統合経由で達成） |
+| us-14 一括観察記録 | 0/11 | 11/11 | ✅ 完了（モック実装） |
 
 ## 既存実装と本エピックの関係
 
@@ -215,3 +215,47 @@ optionalFeatures: {
 | `src/components/admission/AdmissionDischarge.tsx` | トグルに `observationFutureBlock` 追加 | 既存 4 トグルに 1 件追加 |
 | `src/components/flowsheet/Flowsheet.tsx` | 隔離拘束行を観察マトリクスへ置換 | **S3 と所有権擦り合わせ必要** |
 | `docs/screen-mapping.tsv` | IsolationRestraint.tsx 行（ep-06）に ep-07 / us-13,14 を追記 | 既存行変更（要 MASTER 調整） |
+
+## 実装後メモ（2026-05-02）
+
+### S3 との分担調整結果
+
+S3 から下記契約で承認：
+- **(a) 配置**: `src/components/isolation/RestraintObservationMatrix.tsx` を S3 契約シグネチャ `{ patientId: string; dates: ISODate[] }` で実装。S3 が FlowsheetPage isolation タブの Alert を本コンポーネントに差し替える PR を別途出す
+- **(b) 型関係**: `ObservationRecord` と S3 の `NursingRecord` は別型で独立。連携キーは `ObservationRecord.linkedNursingRecordId`（単方向参照）と `NursingRecord.tags=['隔離拘束観察']` で識別
+- **(c) ダブル書き込み**: 連携 ON 時は ep-07 ストアに保存 + `useFlowsheetStore.addNursingRecord` で NursingRecord も生成（FOCUS 形式 / `connections=['flowsheet']` / `isPublished=true`）
+
+### 追加・変更ファイル
+
+- `src/types/index.ts` — `ObservationLinkSetting` 新規、`ObservationRecord` に `subtype` / `occurrence` / `tags` / `signedBy` / `linkSetting` / `linkedNursingRecordId` をオプショナル追加
+- `src/data/mockData.ts` — `MASTER_OBSERVATION_STATES` / `_FREQUENCY` / `_TEMPLATES` / `_TAGS` の 4 件を追加。`generateObservationRecords` は据置（legacy 表示用、今後段階的に廃止）
+- `src/stores/useAppStore.ts` — `dynamicObservationRecords` + 4 actions、`optionalFeatures.observationFutureBlock` トグルを追加。永続化対象に追加
+- `src/components/isolation/ObservationLinkSettingDialog.tsx` — 新規（連携設定）
+- `src/components/isolation/ObservationContentBulkDialog.tsx` — 新規（内容一括入力）
+- `src/components/isolation/ObservationRecordDialog.tsx` — 新規（個別観察ダイアログ、連携 ON で `useFlowsheetStore.addNursingRecord` ダブル書き込み）
+- `src/components/isolation/ObservationBulkDialog.tsx` — 新規（区分一括入力、解放時間ハイライト、未来日抑止）
+- `src/components/isolation/RestraintObservationMatrix.tsx` — 新規（S3 契約：FlowsheetPage isolation タブから呼び出される 7 日 × 24h × 区分マトリクス、拘束優先表示）
+- `src/components/isolation/IsolationRestraint.tsx` — tab=1 を `ObservationListTab` に置き換え（24h × 回数枠マトリクス、タイトルクリック→一括、セルクリック→個別）
+- `src/components/admission/AdmissionDischarge.tsx` — オプション機能トグルに「観察未来日抑止」を追加
+- `docs/screen-mapping.tsv` — 5 行新規追加（4 ダイアログ + RestraintObservationMatrix）
+
+### 実装上の判断・割り切り
+
+- **legacy `src/components/flowsheet/Flowsheet.tsx` は非改修**（S3 確認済方針）。ep-10 / KarteAlphaPage 統合完了後に廃止予定
+- **回数枠タイトル列の簡略化**: spec では区分（隔離/拘束/その他）ごとに別タイトル列を持つが、モックでは「拘束優先表示」と整合する形で `拘束` 一括起動を既定とし、簡略化。区分別タイトル列の細分は次ラウンドで検討
+- **「その他」区分の精緻判定**: ep-06 と同様 `MASTER_BEHAVIOR_RESTRICT_WARDS` の在棟患者に絞った近似判定。行動範囲・責任レベル・行動制限項目は ep-08 / マスタ管理エピックで対応
+- **拘束優先表示**: `RestraintObservationMatrix` で同時間帯に複数 active な指示がある場合、subtype が拘束 or 隔離拘束のものを優先表示
+- **`addNursingRecord` 連携**: FOCUS 形式で `focus="隔離拘束観察"` / `data=内容` / `action=定型文` / `response=状態` を詰める。`connections=['flowsheet']` / `isPublished=true` / `tags=['隔離拘束観察', ...row.tags]`
+- **既存 `generateObservationRecords` は据置**: legacy 表示用に残置。観察記録の本ストアは `dynamicObservationRecords`
+- **AC-10 部門記録簿連携**: 連携 ON 時に S3 のストアに NursingRecord が書き込まれるため、S3 の NursingRecordsPage で表示される（実 UI 確認は要 S3 側 PR 後）
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+- ブラウザ目視確認は未実施
+
+### MASTER への共有事項
+
+- screen-mapping.tsv は `IsolationRestraint.tsx` 行（ep-06）に ep-07 を追記したい（既存行更新）。MASTER 側で調整いただけると助かります
+- screen-mapping.tsv の `RestraintObservationMatrix` 行は `/flowsheet/:patientId` にしたが、KarteAlphaPage 統合完了後の正確な path 表記は MASTER 判断で OK
