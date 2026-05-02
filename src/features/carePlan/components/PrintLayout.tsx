@@ -71,7 +71,12 @@ const PrintLayout: React.FC<Props> = ({ patient, carePlan, planAuthor, items }) 
                 <Typography variant="body2"><strong>状態:</strong> {STATUS_LABEL[item.status]}</Typography>
               </Box>
               <Box sx={{ mb: 0.5 }}>
-                <Typography variant="body2"><strong>看護診断:</strong> {nandaName(item.nandaCode)} ({item.nandaCode})</Typography>
+                <Typography variant="body2"><strong>問題点:</strong> {item.problemStatement || nandaName(item.nandaCode)}</Typography>
+              </Box>
+              <Box sx={{ mb: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8125rem', color: '#444' }}>
+                  <strong>看護診断 (NANDA):</strong> {nandaName(item.nandaCode)} ({item.nandaCode})
+                </Typography>
               </Box>
               <Box sx={{ mb: 0.5 }}>
                 <Typography variant="body2"><strong>短期目標:</strong> {item.shortTermGoal}</Typography>

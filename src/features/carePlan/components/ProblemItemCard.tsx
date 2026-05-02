@@ -86,9 +86,15 @@ const ProblemItemCard: React.FC<Props> = ({
         </Stack>
         <Stack spacing={0.5}>
           <Box>
-            <Typography variant="caption" color="text.secondary">看護診断</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {nanda ? `${nanda.name} (${nanda.code})` : item.nandaCode}
+            <Typography variant="caption" color="text.secondary">問題点</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {item.problemStatement || nanda?.name || item.nandaCode}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">看護診断 (NANDA)</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>
+              {nanda ? `${nanda.name} (${nanda.code})` : item.nandaCode || '—'}
             </Typography>
           </Box>
           <Box>

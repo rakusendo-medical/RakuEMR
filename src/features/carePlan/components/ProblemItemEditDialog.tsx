@@ -15,6 +15,8 @@ type DraftItem = {
   domain: ProblemDomain;
   priority: Priority;
   nandaCode: string;
+  /** 問題点（手入力可・必須）。NANDA 診断名をベースに患者個別事情を加味して記述 */
+  problemStatement: string;
   shortTermGoal: string;
   ote: OteContent;
 };
@@ -23,6 +25,7 @@ const EMPTY: DraftItem = {
   domain: '精神',
   priority: 'medium',
   nandaCode: '',
+  problemStatement: '',
   shortTermGoal: '',
   ote: { observation: [''], therapy: [''], education: [''] },
 };
@@ -47,10 +50,13 @@ const ProblemItemEditDialog: React.FC<Props> = ({
   useEffect(() => {
     if (open) {
       if (initial) {
+        // 既存データに problemStatement が無い場合は NANDA 名で補完してから編集モードへ
+        const fallback = nandaMaster.find((n) => n.code === initial.nandaCode)?.name ?? '';
         setDraft({
           domain: initial.domain,
           priority: initial.priority,
           nandaCode: initial.nandaCode,
+          problemStatement: initial.problemStatement ?? fallback,
           shortTermGoal: initial.shortTermGoal,
           ote: initial.ote,
         });
@@ -58,7 +64,7 @@ const ProblemItemEditDialog: React.FC<Props> = ({
         setDraft(EMPTY);
       }
     }
-  }, [open, initial]);
+  }, [open, initial, nandaMaster]);
 
   const selectedNanda = useMemo(
     () => nandaMaster.find((n) => n.code === draft.nandaCode),
@@ -70,7 +76,7 @@ const ProblemItemEditDialog: React.FC<Props> = ({
     onClose_?.(status, reason);
   };
 
-  const isValid = draft.nandaCode && draft.shortTermGoal.trim();
+  const isValid = draft.nandaCode && draft.problemStatement.trim() && draft.shortTermGoal.trim();
 
   return (
     <>
@@ -139,6 +145,27 @@ const ProblemItemEditDialog: React.FC<Props> = ({
             </Box>
 
             <Box>
+              <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">問題点（手入力可・必須）</Typography>
+                <Tooltip title="NANDA 診断名をベースに、患者個別の事情を加味して記述します（例: 「[NANDA] により夜間 2 時間ごとに目覚める」）" placement="right">
+                  <InfoIcon sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
+                </Tooltip>
+              </Stack>
+              <TextField
+                fullWidth
+                multiline
+                minRows={2}
+                maxRows={5}
+                value={draft.problemStatement}
+                onChange={(e) => setDraft((d) => ({ ...d, problemStatement: e.target.value }))}
+                placeholder="患者個別の問題点を記述（NANDA 選択時は診断名が初期値、編集可）"
+                inputProps={{ maxLength: 500 }}
+                helperText={`${draft.problemStatement.length} / 500 文字`}
+                error={!draft.problemStatement.trim() && !!draft.nandaCode}
+              />
+            </Box>
+
+            <Box>
               <Typography variant="caption" color="text.secondary">短期目標</Typography>
               <TextField
                 fullWidth
@@ -202,12 +229,14 @@ const ProblemItemEditDialog: React.FC<Props> = ({
       <NandaSelectDialog
         open={nandaDialogOpen}
         initialCode={draft.nandaCode}
+        initialProblemStatement={draft.problemStatement}
         onClose={() => setNandaDialogOpen(false)}
-        onSelect={(code) => {
+        onSelect={(code, problemStatement) => {
           const item = nandaMaster.find((n) => n.code === code);
           setDraft((d) => ({
             ...d,
             nandaCode: code,
+            problemStatement,
             domain: item?.domain ?? d.domain,
           }));
         }}

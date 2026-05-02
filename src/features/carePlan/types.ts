@@ -70,6 +70,9 @@ export interface ProblemItem {
   domain: ProblemDomain;
   priority: Priority;
   nandaCode: string;
+  /** 問題点（手入力テキスト）。NANDA 診断名をベースに患者個別の事情を加味して記述する。
+   *  未設定の既存データは NANDA マスタ名にフォールバック表示。新規/編集時は必須。 */
+  problemStatement?: string;
   shortTermGoal: string;
   ote: OteContent;
   status: ProblemItemStatus;
