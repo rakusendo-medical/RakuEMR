@@ -11,6 +11,7 @@ import FlowsheetGrid from '../components/FlowsheetGrid';
 import VitalEditDialog from '../components/VitalEditDialog';
 import FlowsheetEditDialog from '../components/FlowsheetEditDialog';
 import SignInputDialog from '../components/SignInputDialog';
+import PatternChangeDialog from '../components/PatternChangeDialog';
 
 const daysBetween = (from: ISODate, to: ISODate): number => {
   const a = new Date(from).getTime();
@@ -39,6 +40,7 @@ const FlowsheetPage: React.FC = () => {
   const [vitalDialog, setVitalDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
   const [flowsheetDialog, setFlowsheetDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
   const [signDialog, setSignDialog] = useState<{ open: boolean; date: ISODate; shift: ShiftType }>({ open: false, date: TODAY, shift: 'day' });
+  const [patternDialogOpen, setPatternDialogOpen] = useState(false);
 
   const dates = useMemo(() => last7Dates(endDate), [endDate]);
 
@@ -102,7 +104,7 @@ const FlowsheetPage: React.FC = () => {
           showObservationTab={showObservationTab}
           patternName={activePattern?.name ?? null}
           daysOfStay={daysOfStay}
-          onClickPatternChange={todo('パターン変更ダイアログ起動')}
+          onClickPatternChange={() => setPatternDialogOpen(true)}
         />
       </Paper>
 
@@ -167,6 +169,11 @@ const FlowsheetPage: React.FC = () => {
         date={signDialog.date}
         shift={signDialog.shift}
         onClose={() => setSignDialog((s) => ({ ...s, open: false }))}
+      />
+      <PatternChangeDialog
+        open={patternDialogOpen}
+        patientId={patientId}
+        onClose={() => setPatternDialogOpen(false)}
       />
     </Box>
   );
