@@ -23,8 +23,23 @@ const daysBetween = (from: ISODate, to: ISODate): number => {
   return Math.floor((b - a) / (1000 * 60 * 60 * 24));
 };
 
-const FlowsheetPage: React.FC = () => {
-  const { patientId = '' } = useParams<{ patientId: string }>();
+interface FlowsheetPageProps {
+  /**
+   * 親コンポーネント（例: `KarteAlphaPage` のフローシートタブ）から埋め込みで使うときに true。
+   * - 親側で患者ヘッダーが既に表示されている前提なので、本コンポーネント上部の Paper（氏名・年齢・主病名）を非表示にする
+   * - 単独ルート (/flowsheet/:patientId) では false（既定）で、患者ヘッダーを表示
+   */
+  embedded?: boolean;
+  /**
+   * 親から patientId を直接渡したい場合に指定（例: `/karte-alpha/:patientId` のパラメータをそのまま流用）。
+   * 未指定時は `useParams` の `:patientId` を使う。
+   */
+  patientId?: string;
+}
+
+const FlowsheetPage: React.FC<FlowsheetPageProps> = ({ embedded = false, patientId: patientIdProp }) => {
+  const params = useParams<{ patientId: string }>();
+  const patientId = patientIdProp ?? params.patientId ?? '';
   const patient = PATIENTS.find((p) => p.id === patientId);
 
   const property = useFlowsheetStore((s) => s.property);
@@ -88,17 +103,19 @@ const FlowsheetPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      <Paper variant="outlined" sx={{ p: 1.5 }}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Typography variant="h6">{patient.name}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {patient.age}歳 / {patient.gender === 'M' ? '男' : '女'} / {patient.roomNumber}-{patient.bedLabel}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            主病名: {patient.diagnosis ?? '—'} / 主治医: {patient.doctorName ?? '—'}
-          </Typography>
-        </Stack>
-      </Paper>
+      {!embedded && (
+        <Paper variant="outlined" sx={{ p: 1.5 }}>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Typography variant="h6">{patient.name}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {patient.age}歳 / {patient.gender === 'M' ? '男' : '女'} / {patient.roomNumber}-{patient.bedLabel}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              主病名: {patient.diagnosis ?? '—'} / 主治医: {patient.doctorName ?? '—'}
+            </Typography>
+          </Stack>
+        </Paper>
+      )}
 
       <Paper variant="outlined" sx={{ p: 1.5 }}>
         <FlowsheetHeader
