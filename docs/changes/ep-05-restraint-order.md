@@ -20,13 +20,15 @@
 - カルテ画面の `KarteAlphaPage.tsx` には診療録セクションがあるが、隔離拘束指示リンクは未実装。フッタクイック操作には ep-03 の入退院指示ボタンのみ
 - 既存 `useAppStore.appendMedicalRecord` は ep-03 で導入済み。隔離拘束指示の確定時にも同経路でカルテ記事追加が可能
 
-## 共有ファイル変更（要 MASTER 確認）
+## 共有ファイル変更（MASTER 承認済 — 2026-05-02）
 
-実装着手前に MASTER と擦り合わせる項目。
+MASTER との擦り合わせ結果に基づく確定方針。命名指摘 2 件を反映済。
 
 ### `src/types/index.ts`
 
 `IsolationOrder` の **後方互換オプショナル拡張**（既存フィールドはそのまま、追加のみ）:
+
+> **コメント方針:** 既存 `type` フィールドには「将来 deprecated 予定。新コードは `subtype` を参照」と JSDoc で明記する。
 
 ```ts
 export type IsolationSubtype = '隔離' | '拘束' | '隔離拘束';
@@ -98,28 +100,31 @@ export const MASTER_INTERVIEW_FORMS = ['標準（精神科）', '措置入院告
 
 ### `src/stores/useAppStore.ts`
 
+> **MASTER 指摘:** 既存 `dynamicMedicalRecords` と prefix 揃えるため `dynamicIsolationOrders`、optionalFeatures は他 3 トグル（`medicalProtection` / `regionalCooperation` / `psychiatricLink`）と揃えて Enabled suffix を付けず `restraintChange` とする。
+
 ```ts
 // ep-05 隔離拘束指示
-isolationOrdersDynamic: IsolationOrder[];
+dynamicIsolationOrders: IsolationOrder[];
 addIsolationOrder: (o: IsolationOrder) => void;
 updateIsolationOrder: (id: string, patch: Partial<IsolationOrder>) => void;
 releaseIsolationOrder: (id: string, endDatetime: string) => void;
 
-// optionalFeatures に restraintChangeEnabled を追加（マスタ「隔離拘束変更=する」相当）
+// optionalFeatures に restraintChange を追加（マスタ「隔離拘束変更=する」相当）
 optionalFeatures: {
   ...
-  restraintChangeEnabled: boolean;
+  restraintChange: boolean;
 };
 
-// 永続化対象に isolationOrdersDynamic を追加
+// 永続化対象に dynamicIsolationOrders を追加
 ```
 
 ### `src/components/karteAlpha/KarteAlphaPage.tsx`
 
 - 診療録セクションヘッダ右側に **指示リンクエリア** を追加（隔離拘束指示の 6 / 12 リンク）
 - リンク群はタイトル固定で隔離拘束指示ダイアログを開く
-- マスタ「隔離拘束変更=する」（`optionalFeatures.restraintChangeEnabled`）有効時のみ継続／変更系リンクを表示
+- マスタ「隔離拘束変更=する」（`optionalFeatures.restraintChange`）有効時のみ継続／変更系リンクを表示
 - 解除／継続／変更系リンクは現在 active な区分が無ければグレー化
+- **配置注意 (MASTER 指摘):** リンク数が多いため `Stack` の `flexWrap` + `useFlexGap` で折り返し表示。既存 `SectionHeader` の高さは維持し、はみ出さない
 
 ### `src/components/wardMap/BedFlagIcons.tsx` ※凡例追加程度
 
