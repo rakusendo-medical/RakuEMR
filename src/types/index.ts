@@ -115,6 +115,13 @@ export interface Patient {
   primaryRecordType?: PrimaryRecordType;
   /** 入院ステータス。未設定時は 'inpatient' とみなす（PATIENTS は基本入院中なため） */
   admissionState?: AdmissionState;
+  // ===== ep-09 患者情報 Phase 2 =====
+  /** 担当職員1〜10 のID列（職員マスタ参照、最大10名）。空配列または未設定で「担当なし」 */
+  assignedStaffIds?: string[];
+  /** 責任レベル（区分マスタ）。一覧画面の責任レベル列で表示 */
+  responsibilityLevel?: string;
+  /** 診察医ID列（主治医とは別）。「診察医登録分も表示」フィルタで利用 */
+  examinerIds?: string[];
 }
 
 /** オーダ種別 */
