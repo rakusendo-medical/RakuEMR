@@ -11,6 +11,7 @@ import type {
 import {
   Room, Order, NursingRecord, VitalSign, FlowsheetDaily,
   AdmissionOrder, TransferHistory, AdmissionHistory, IsolationOrder,
+  IsolationSubtype,
   ObservationRecord, BehaviorRange, OutingRecord, PatientScheduleEvent,
   RehabOrder, RehabDailyReport, RehabEvaluation, NursingCareSchedule,
   Document, NursingDiaryEntry, WardDiaryEntry, StatusConfig, PatientStatus,
@@ -761,6 +762,78 @@ export const MASTER_DISCHARGE_DOCS_BY_CATEGORY = DISCHARGE_DOCS_BY_CATEGORY;
 export const MASTER_DELETE_REASON_CATEGORIES = DELETE_REASON_CATEGORIES;
 export const MASTER_REHAB_OUTCOME_OPTIONS = REHAB_OUTCOME_OPTIONS;
 
+// ===== ep-05 隔離拘束指示 マスタ =====
+// 拘束部位マスタ（区分マスタの代替）
+export const MASTER_RESTRAINT_PARTS = [
+  '右手首', '左手首', '右足首', '左足首', '体幹', '右肩', '左肩', 'ミトン（右）', 'ミトン（左）',
+] as const;
+
+// 開放時間テンプレート（マスタ：開放時間テンプレートマスタの代替）
+export interface ReleaseTimeTemplate {
+  name: string;
+  entries: Array<{ start: string; end: string }>;
+}
+export const MASTER_RELEASE_TIME_TEMPLATES: ReleaseTimeTemplate[] = [
+  {
+    name: '日中3回',
+    entries: [
+      { start: '10:00', end: '10:30' },
+      { start: '13:00', end: '13:30' },
+      { start: '16:00', end: '16:30' },
+    ],
+  },
+  {
+    name: '食事時のみ',
+    entries: [
+      { start: '07:30', end: '08:30' },
+      { start: '11:30', end: '12:30' },
+      { start: '17:30', end: '18:30' },
+    ],
+  },
+];
+
+// 入院形態 × 区分 → 隔離拘束時文書マスタ（期限管理マスタの代替）
+// タイトル「開始」時の文書チェック群を入院形態と区分から引く
+export const MASTER_ISOLATION_DOCS_BY_CONTEXT: Record<AdmitFormType, Partial<Record<IsolationSubtype, string[]>>> = {
+  '任意入院': {
+    '隔離':     ['隔離開始時告知書', '隔離開始書類'],
+    '拘束':     ['身体拘束に関する説明書・同意書', '拘束開始時記録'],
+    '隔離拘束': ['隔離拘束併用書類', '身体拘束に関する説明書・同意書'],
+  },
+  '医療保護入院': {
+    '隔離':     ['隔離告知書', '隔離開始書類', '行動制限実施記録'],
+    '拘束':     ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
+    '隔離拘束': ['隔離拘束併用書類', '行動制限実施記録'],
+  },
+  '措置入院': {
+    '隔離':     ['隔離告知書', '措置時隔離記録'],
+    '拘束':     ['身体拘束に関する説明書・同意書', '措置時拘束記録'],
+    '隔離拘束': ['措置時隔離拘束記録'],
+  },
+  '応急入院': {
+    '隔離':     ['隔離告知書'],
+    '拘束':     ['身体拘束に関する説明書・同意書'],
+    '隔離拘束': ['応急時隔離拘束記録'],
+  },
+  '緊急措置入院': {
+    '隔離':     ['隔離告知書'],
+    '拘束':     ['身体拘束に関する説明書・同意書'],
+    '隔離拘束': ['緊急措置時隔離拘束記録'],
+  },
+};
+
+// 面接書式マスタ（隔離拘束指示箋印刷ダイアログの面接フォーム）
+export const MASTER_INTERVIEW_FORMS = [
+  '標準（精神科）', '措置入院告知用', '医療保護入院告知用',
+] as const;
+
+// 隔離拘束指示箋の文例（マスタ：文例マスタの代替）
+export const MASTER_NOTICE_TEMPLATES = [
+  '医師の判断により隔離を開始します。安全確保のため必要な期間、隔離室にて療養いただきます。',
+  '医師の判断により拘束を開始します。離床による転倒・自己抜去のリスクが高いため必要な部位を一時的に拘束します。',
+  '症状改善に伴い隔離・拘束を解除します。今後も定期的な観察を継続します。',
+] as const;
+
 // ===== 確定処理時に表示する未実施オーダのサンプル =====
 export interface PendingOrderSample {
   id: string;
@@ -853,11 +926,43 @@ export const ADMISSION_HISTORY: AdmissionHistory[] = [
 ];
 
 // ===== 隔離拘束 =====
+// ===== ep-05 隔離拘束指示 =====
+// IsolationOrder には ep-05 で subtype/operation/restraintParts/releaseTimes/linkedDocumentChecks
+// 等のオプショナルフィールドが追加されている。既存サンプルにも順次付与する。
 export const ISOLATION_ORDERS: IsolationOrder[] = [
-  { id: 'ISO001', patientId: 'P003', patientName: '鈴木 一郎', type: '隔離', startDatetime: '2026-02-22 14:00', wardId: 'ward1', roomNumber: '102-A', doctorName: '岸本 医師' },
-  { id: 'ISO002', patientId: 'P004', patientName: '高橋 美咲', type: '拘束', startDatetime: '2026-02-23 09:30', wardId: 'ward1', roomNumber: '103-A', doctorName: '田村 医師' },
-  { id: 'ISO003', patientId: 'P013', patientName: '松本 拓也', type: '拘束', startDatetime: '2026-02-21 20:00', endDatetime: '2026-02-23 08:00', wardId: 'ward2', roomNumber: '202-A', doctorName: '森田 医師' },
-  { id: 'ISO004', patientId: 'P017', patientName: '清水 翔太', type: '隔離', startDatetime: '2026-02-20 10:00', wardId: 'ward2', roomNumber: '204-B', doctorName: '岸本 医師' },
+  {
+    id: 'ISO001', patientId: 'P003', patientName: '鈴木 一郎',
+    type: '隔離', subtype: '隔離', operation: '開始',
+    startDatetime: '2026-02-22 14:00',
+    wardId: 'ward1', roomNumber: '102-A', doctorName: '岸本 医師',
+    linkedDocumentChecks: ['隔離告知書', '隔離開始書類', '行動制限実施記録'],
+  },
+  {
+    id: 'ISO002', patientId: 'P004', patientName: '高橋 美咲',
+    type: '拘束', subtype: '拘束', operation: '開始',
+    startDatetime: '2026-02-23 09:30',
+    wardId: 'ward1', roomNumber: '103-A', doctorName: '田村 医師',
+    restraintParts: ['右手首', '左手首'],
+    releaseTimes: [
+      { start: '10:00', end: '10:30' },
+      { start: '13:00', end: '13:30' },
+      { start: '16:00', end: '16:30' },
+    ],
+    linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
+  },
+  {
+    id: 'ISO003', patientId: 'P013', patientName: '松本 拓也',
+    type: '拘束', subtype: '拘束', operation: '開始',
+    startDatetime: '2026-02-21 20:00', endDatetime: '2026-02-23 08:00',
+    wardId: 'ward2', roomNumber: '202-A', doctorName: '森田 医師',
+    restraintParts: ['右手首', '左手首', '右足首', '左足首'],
+  },
+  {
+    id: 'ISO004', patientId: 'P017', patientName: '清水 翔太',
+    type: '隔離', subtype: '隔離', operation: '開始',
+    startDatetime: '2026-02-20 10:00',
+    wardId: 'ward2', roomNumber: '204-B', doctorName: '岸本 医師',
+  },
 ];
 
 export const generateObservationRecords = (isolationOrderId: string, patientId: string): ObservationRecord[] => {

@@ -47,11 +47,14 @@ import {
 } from "@mui/icons-material";
 import AdmissionOrderDialog from "../admission/AdmissionOrderDialog";
 import DischargeOrderDialog from "../admission/DischargeOrderDialog";
+import RestraintOrderDialog from "../isolation/RestraintOrderDialog";
+import RestraintOrderLinks from "../isolation/RestraintOrderLinks";
 import { PATIENTS, ORDERS, NURSING_RECORDS } from "../../data/mockData";
 import StatusBadge from "../common/StatusBadge";
 import { useAppStore } from "../../stores/useAppStore";
 import FlowsheetView from "../flowsheet/Flowsheet";
 import PatientCarePlan from "../../features/carePlan/pages/PatientCarePlan";
+import type { Patient } from "../../types";
 
 // ===== Mock data for the dense karte view =====
 
@@ -225,6 +228,17 @@ const KarteAlphaPage: React.FC = () => {
   // ep-03 入退院指示ダイアログ
   const [admissionOrderOpen, setAdmissionOrderOpen] = useState(false);
   const [dischargeOrderOpen, setDischargeOrderOpen] = useState(false);
+
+  // ep-05 隔離拘束指示ダイアログ
+  const [restraintDialog, setRestraintDialog] = useState<{ open: boolean; title: string; editId?: string }>({
+    open: false, title: '隔離開始',
+  });
+  const openRestraintDialog = (title: string, editId?: string) => {
+    setRestraintDialog({ open: true, title, editId });
+  };
+  const closeRestraintDialog = () => {
+    setRestraintDialog((prev) => ({ ...prev, open: false }));
+  };
 
   // 病棟マップ経由の隣接患者ナビゲーション
   const fromWardMap = navigationSource === 'ward-map' && !!patient && wardMapPatientOrder.includes(patient.id);
@@ -419,7 +433,11 @@ const KarteAlphaPage: React.FC = () => {
             </Paper>
 
             {/* 診療録 */}
-            <MedicalRecordsDense patientId={patient.id} />
+            <MedicalRecordsDense
+              patientId={patient.id}
+              patient={patient}
+              onRequestRestraintOrder={openRestraintDialog}
+            />
           </>
         )}
 
@@ -502,6 +520,14 @@ const KarteAlphaPage: React.FC = () => {
         patient={patient}
         onClose={() => setDischargeOrderOpen(false)}
       />
+      {/* ===== ep-05 隔離拘束指示 ===== */}
+      <RestraintOrderDialog
+        open={restraintDialog.open}
+        patient={patient}
+        initialTitle={restraintDialog.title}
+        editOrderId={restraintDialog.editId}
+        onClose={closeRestraintDialog}
+      />
     </Box>
   );
 };
@@ -560,21 +586,45 @@ function PatientHeaderDense({ patient }: { patient: any }) {
 }
 
 // ----- Collapsible Section Header -----
-function SectionHeader({ title, color, open, onToggle }: { title: string; color: string; open: boolean; onToggle: () => void }) {
+// rightSlot: ヘッダ右側に追加表示する要素（クリックは onToggle に伝播しない）
+function SectionHeader({
+  title, color, open, onToggle, rightSlot,
+}: { title: string; color: string; open: boolean; onToggle: () => void; rightSlot?: React.ReactNode }) {
   return (
     <Box
-      onClick={onToggle}
       sx={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        bgcolor: color, px: 1.5, py: 0.5, cursor: 'pointer',
+        display: 'flex', alignItems: 'center',
+        bgcolor: color, px: 1.5, py: 0.5,
         borderRadius: open ? '8px 8px 0 0' : '8px',
-        '&:hover': { opacity: 0.9 },
       }}
     >
-      <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>
-        {title}
-      </Typography>
-      {open ? <ExpandLess sx={{ color: '#fff', fontSize: 18 }} /> : <ExpandMore sx={{ color: '#fff', fontSize: 18 }} />}
+      <Box
+        onClick={onToggle}
+        sx={{
+          display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer',
+          '&:hover': { opacity: 0.9 },
+        }}
+      >
+        <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>
+          {title}
+        </Typography>
+        {open ? <ExpandLess sx={{ color: '#fff', fontSize: 18 }} /> : <ExpandMore sx={{ color: '#fff', fontSize: 18 }} />}
+      </Box>
+      {rightSlot && (
+        <Box
+          sx={{
+            ml: 'auto',
+            display: 'flex', alignItems: 'center',
+            // ヘッダ背景上で読みやすいよう白背景の chip 風に
+            bgcolor: 'rgba(255,255,255,0.92)', borderRadius: 1,
+            px: 0.75, py: 0.25, maxWidth: '70%',
+            overflow: 'hidden',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {rightSlot}
+        </Box>
+      )}
     </Box>
   );
 }
@@ -780,7 +830,13 @@ const CATEGORY_COLOR_MAP: Record<string, string> = {
 };
 
 // ----- Medical Records Dense -----
-function MedicalRecordsDense({ patientId }: { patientId: string }) {
+function MedicalRecordsDense({
+  patientId, patient, onRequestRestraintOrder,
+}: {
+  patientId: string;
+  patient: Patient | null;
+  onRequestRestraintOrder: (title: string, editId?: string) => void;
+}) {
   const [filterActive, setFilterActive] = useState("all");
   const [open, setOpen] = useState(true);
   const dynamicRecords = useAppStore((s) => s.dynamicMedicalRecords[patientId] ?? []);
@@ -815,7 +871,17 @@ function MedicalRecordsDense({ patientId }: { patientId: string }) {
     <Card
       sx={{ overflow: 'visible', flexShrink: 0, display: "flex", flexDirection: "column" }}
     >
-      <SectionHeader title="診療録" color="#1e3a5f" open={open} onToggle={() => setOpen(!open)} />
+      <SectionHeader
+        title="診療録"
+        color="#1e3a5f"
+        open={open}
+        onToggle={() => setOpen(!open)}
+        rightSlot={
+          // ===== ep-05 隔離拘束指示 =====
+          // 診療録ヘッダ右側に隔離拘束指示リンク群（6 / 12 リンク、マスタトグルで切替）
+          <RestraintOrderLinks patient={patient} onRequestOrder={onRequestRestraintOrder} />
+        }
+      />
       {open && (
       <CardContent
         sx={{

@@ -10,7 +10,7 @@
 
 | ストーリー | 改修前 AC | 実装後 AC | 状態 |
 | --- | --- | --- | --- |
-| us-11 隔離拘束指示 | 0/12 | 0/12 | 🟡 着手前 |
+| us-11 隔離拘束指示 | 0/12 | 12/12 | ✅ 完了（モック実装） |
 
 ## 既存実装と本エピックの関係
 
@@ -202,3 +202,38 @@ optionalFeatures: {
 - 既存指示の「変更／中止」起点を診療録／指示簿タブに用意（ep-03 と同じ残課題）
 - フローシートの「隔離」「拘束」行への動的反映（オレンジ背景）: ep-07 観察記録と合わせて整理
 - 拘束部位マスタ・開放時間テンプレマスタ・文書マスタの保守 UI（マスタ管理エピック未着手）
+
+## 実装後メモ（2026-05-02）
+
+### 追加・変更ファイル
+
+- `src/types/index.ts` — `IsolationSubtype` / `IsolationOperation` / `ReleaseTimeEntry` / `IsolationNoticePrint` 型を追加。`IsolationOrder` に `subtype` / `operation` / `restraintParts` / `releaseTimes` / `linkedDocumentChecks` / `noticePrint` / `isPending` をオプショナル追加（既存 `type` は `@deprecated` 注記）
+- `src/data/mockData.ts` — `MASTER_RESTRAINT_PARTS` / `MASTER_RELEASE_TIME_TEMPLATES` / `MASTER_ISOLATION_DOCS_BY_CONTEXT` / `MASTER_INTERVIEW_FORMS` / `MASTER_NOTICE_TEMPLATES` を追加。`ISOLATION_ORDERS` サンプルに `subtype` / `operation` / `restraintParts` / `releaseTimes` / `linkedDocumentChecks` を付与
+- `src/stores/useAppStore.ts` — `dynamicIsolationOrders` 状態、`addIsolationOrder` / `updateIsolationOrder` / `releaseIsolationOrder` action、`optionalFeatures.restraintChange` トグルを追加。永続化対象に追加
+- `src/components/isolation/RestraintOrderDialog.tsx` — 新規（us-11）
+- `src/components/isolation/RestraintNoticePrintDialog.tsx` — 新規（us-11、新規／再印刷モード）
+- `src/components/isolation/RestraintOrderLinks.tsx` — 新規（カルテ診療録ヘッダ右側のリンク群）
+- `src/components/karteAlpha/KarteAlphaPage.tsx` — `SectionHeader` に `rightSlot` 引数を追加、`MedicalRecordsDense` 経由で `<RestraintOrderLinks />` を診療録ヘッダ右側に配置。`RestraintOrderDialog` をマウント
+- `src/components/admission/AdmissionDischarge.tsx` — オプション機能トグルに「隔離拘束変更」を追加
+- `docs/screen-mapping.tsv` — RestraintOrderDialog / RestraintNoticePrintDialog / RestraintOrderLinks の 3 行を追加
+
+### 実装上の判断・割り切り
+
+- **入院形態の患者ひも付け**: 患者の入院形態を直接持っていないため、モック値として P003=措置入院 / P006=医療保護入院 / その他=任意入院 とハードコード。ep-04 の `AdmissionHistory.admitForm` を参照するように差し替えるのは別エピック
+- **拘束部位／開放時間／文書マスタ**: モック固定値。実マスタ保守はマスタ管理エピックで対応
+- **告知書印刷の再印刷モード**: ダイアログ自体は実装済み。過去指示記事から再印刷 UI への接続（カルテ記事クリック → 印刷ダイアログ起動）は未配線。既存指示の編集起点と合わせて別ラウンドで配線
+- **`Bed.flags` 自動更新**: 指示確定時に `Bed.flags` の `'isolation'` / `'restraint'` を自動 ON にするロジックは未実装。患者→ベッド逆引き設計が必要のため、ep-08 履歴整備時に検討
+- **active 判定**: `RestraintOrderLinks` では `endDatetime` 未設定の指示を active とみなす単純判定。継続／変更指示の表現は spec 通りだが、解除指示で生成される新カルテ記事と active 指示の関係はモックでは「同 ID 上での endDatetime 上書き」で表現
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+
+### UI 動作確認は未実施
+
+ブラウザでの実操作確認は未実施。各タイトル切替・拘束部位選択・開放時間入力・文書チェック・告知書印刷フローは目視確認推奨です。
+
+### MASTER への共有事項
+
+- `docs/screen-mapping.tsv` 既存行（`/karte-alpha/:patientId` の `KarteAlphaPage.tsx` 行）に `ep-05-restraint-order` を追記する更新は本セッションでは行わず、新規行追加のみで対応。既存行への追記が必要な場合は MASTER 側で調整いただけると助かります

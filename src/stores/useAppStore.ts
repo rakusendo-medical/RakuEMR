@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { AdmissionHistory, MedicalRecord, Patient, WardId } from '../types';
+import type { AdmissionHistory, IsolationOrder, MedicalRecord, Patient, WardId } from '../types';
 
 /** 操作者ロール（ep-02 代行入力認証フローの分岐用） */
 export type UserRole = 'doctor' | 'staff';
@@ -13,6 +13,8 @@ export interface OptionalFeatures {
   regionalCooperation: boolean;
   /** 外部精神科システム連携（入院指示に「精神科入院有無」項目を追加） */
   psychiatricLink: boolean;
+  /** ep-05 隔離拘束変更（マスタ「隔離拘束変更=する」相当。継続/変更指示リンクの表示制御） */
+  restraintChange: boolean;
 }
 
 /** 病床移動の予定（ep-01 us-02 用） */
@@ -27,6 +29,18 @@ export interface ScheduledMove {
   toWardId: WardId;
   toRoom: string;
   toBed: string;
+}
+
+/** ep-09 入院患者一覧の検索条件（セッション永続化対象） */
+export interface PatientListSearchCondition {
+  /** YYYY-MM-DD（基準日。空文字なら未指定） */
+  baseDate: string;
+  wardFilter: WardId | 'all';
+  doctorFilter: string;
+  staffIds: string[];
+  staffMatchMode: 'all' | 'any';
+  includeExaminer: boolean;
+  query: string;
 }
 
 /** 「指示」段階で登録された入退院指示（ep-03 が登録、ep-02 カレンダーが参照） */
@@ -105,6 +119,27 @@ interface AppState {
   addAdmissionHistory: (record: AdmissionHistory) => void;
   removeAdmissionHistory: (id: string) => void;
 
+  // ===== ep-05 隔離拘束指示 =====
+  // 動的に追加・更新された隔離拘束指示（永続化対象）。
+  // 既存の ISOLATION_ORDERS（マスタサンプル）と合成して表示する想定。
+  dynamicIsolationOrders: IsolationOrder[];
+  addIsolationOrder: (order: IsolationOrder) => void;
+  updateIsolationOrder: (id: string, patch: Partial<IsolationOrder>) => void;
+  releaseIsolationOrder: (id: string, endDatetime: string) => void;
+
+  // ===== ep-09 患者情報 Phase 2 =====
+  // 診察終了状態（永続化対象）。patientId → 終了情報のマップ。
+  // 値が undefined または存在しないキー = 未終了。トグル時に終了 / 解除を切替。
+  consultationFinishedMap: Record<string, { staffId: string; staffName: string; finishedAt: string }>;
+  toggleConsultationFinished: (
+    patientId: string,
+    staff: { staffId: string; staffName: string },
+  ) => void;
+
+  // 入院患者一覧の検索条件（永続化対象、ログアウトまで保持）
+  patientListSearchCondition: PatientListSearchCondition;
+  setPatientListSearchCondition: (patch: Partial<PatientListSearchCondition>) => void;
+
   // サイドバー
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -169,6 +204,7 @@ export const useAppStore = create<AppState>()(
         medicalProtection: false,
         regionalCooperation: false,
         psychiatricLink: false,
+        restraintChange: false,
       },
       toggleOptionalFeature: (key) =>
         set((state) => ({
@@ -212,6 +248,54 @@ export const useAppStore = create<AppState>()(
             : [...state.removedAdmissionHistoryIds, id],
         })),
 
+      // ===== ep-05 隔離拘束指示 =====
+      dynamicIsolationOrders: [],
+      addIsolationOrder: (order) =>
+        set((state) => ({ dynamicIsolationOrders: [...state.dynamicIsolationOrders, order] })),
+      updateIsolationOrder: (id, patch) =>
+        set((state) => ({
+          dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
+            o.id === id ? { ...o, ...patch } : o,
+          ),
+        })),
+      releaseIsolationOrder: (id, endDatetime) =>
+        set((state) => ({
+          dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
+            o.id === id ? { ...o, endDatetime, operation: '解除' } : o,
+          ),
+        })),
+
+      // ===== ep-09 患者情報 Phase 2 =====
+      consultationFinishedMap: {},
+      toggleConsultationFinished: (patientId, staff) =>
+        set((state) => {
+          const next = { ...state.consultationFinishedMap };
+          if (next[patientId]) {
+            delete next[patientId];
+          } else {
+            next[patientId] = {
+              staffId: staff.staffId,
+              staffName: staff.staffName,
+              finishedAt: new Date().toISOString(),
+            };
+          }
+          return { consultationFinishedMap: next };
+        }),
+
+      patientListSearchCondition: {
+        baseDate: '',
+        wardFilter: 'all',
+        doctorFilter: 'all',
+        staffIds: [],
+        staffMatchMode: 'all',
+        includeExaminer: false,
+        query: '',
+      },
+      setPatientListSearchCondition: (patch) =>
+        set((state) => ({
+          patientListSearchCondition: { ...state.patientListSearchCondition, ...patch },
+        })),
+
       sidebarOpen: true,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
@@ -237,6 +321,9 @@ export const useAppStore = create<AppState>()(
         admissionHistoryEdits: state.admissionHistoryEdits,
         addedAdmissionHistory: state.addedAdmissionHistory,
         removedAdmissionHistoryIds: state.removedAdmissionHistoryIds,
+        dynamicIsolationOrders: state.dynamicIsolationOrders,
+        consultationFinishedMap: state.consultationFinishedMap,
+        patientListSearchCondition: state.patientListSearchCondition,
       }),
       version: 1,
     },

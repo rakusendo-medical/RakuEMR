@@ -13,3 +13,6 @@ screen_path	component	epic	stories	status	notes
 /nursing/bulk-vitals	src/features/flowsheet/pages/BulkVitalsPage.tsx	ep-10-flowsheet	us-24	planned	一括バイタル入力（病棟・病室単位）。検索条件、項目タイプ別 UI、更新チェック自動付与、フローシートサイン連動、登録済項目クリア、患者番号からの個別フローシート遷移。新規実装。
 /nursing/sleep-table	src/features/flowsheet/pages/SleepTablePage.tsx	ep-10-flowsheet	us-25	planned	睡眠表（病棟・病室単位）。12 時間軸グリッド、個別／連続時間ドラッグ／同一時間枠一括入力、フローシート（睡眠・活動）連携。新規実装。
 /nursing/bulk-records	src/features/flowsheet/pages/BulkNursingRecordsPage.tsx	ep-10-flowsheet	us-26	planned	一括看護記録（病棟・病室単位）。共通設定（タイトル・形式）、勤務帯／時間／本文の一括設定、連携・公開設定、選択チェック登録、記録状態表示、かな順並び替え。新規実装。
+/karte-alpha/:patientId	src/components/isolation/RestraintOrderDialog.tsx	ep-05-restraint-order	us-11	implemented	隔離拘束指示ダイアログ（カルテ記事作成ダイアログ／隔離拘束指示）。タイトル 12 種（隔離/拘束/隔離拘束 × 開始/解除/継続/変更）切替、拘束部位（複数）、開放時間（最大9件・テンプレ）、文書チェック（開始時のみ・入院形態×区分）、告知書印刷チェック。
+/karte-alpha/:patientId	src/components/isolation/RestraintNoticePrintDialog.tsx	ep-05-restraint-order	us-11	implemented	隔離拘束指示箋（告知書）印刷ダイアログ。新規モード=面接書式・内容編集可（文例3件）、再印刷モード=表示のみ。
+/karte-alpha/:patientId	src/components/isolation/RestraintOrderLinks.tsx	ep-05-restraint-order	us-11	implemented	カルテ画面の診療録セクションヘッダ右側に配置する隔離拘束指示リンク群。マスタトグル restraintChange で 6 / 12 リンク切替、解除/継続/変更系は active 区分が無ければグレーアウト。

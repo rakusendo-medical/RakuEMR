@@ -262,20 +262,63 @@ export interface AdmissionHistory {
   returnTo?: string;
 }
 
-/** 隔離拘束種別 */
+// ===== ep-05 隔離拘束指示 =====
+
+/** 隔離拘束種別（旧表現、後方互換）
+ *  @deprecated 将来削除予定。新コードは `IsolationOrder.subtype` を参照すること。 */
 export type IsolationType = "隔離" | "拘束";
+
+/** 隔離拘束区分（隔離・拘束の併用「隔離拘束」も表現） */
+export type IsolationSubtype = "隔離" | "拘束" | "隔離拘束";
+
+/** 隔離拘束指示の操作種別 */
+export type IsolationOperation = "開始" | "解除" | "継続" | "変更";
+
+/** 開放時間 1 件分（最大 9 件入力） */
+export interface ReleaseTimeEntry {
+  /** HH:mm */
+  start: string;
+  /** HH:mm */
+  end: string;
+}
+
+/** 告知書（隔離拘束指示箋）印刷情報 */
+export interface IsolationNoticePrint {
+  printedAt?: string;
+  /** 印刷時の編集後内容（カルテ所見の写し） */
+  content?: string;
+  /** 面接書式（マスタ） */
+  interviewForm?: string;
+}
 
 /** 隔離拘束指示 */
 export interface IsolationOrder {
   id: string;
   patientId: string;
   patientName: string;
+  /** 隔離 or 拘束（旧表現、後方互換）
+   *  @deprecated 将来削除予定。新コードは `subtype` を参照。
+   *  併用「隔離拘束」を表現できないため、ep-05 以降は `subtype` を併記する。 */
   type: IsolationType;
+  /** 区分（隔離拘束併用も表現可。未設定の既存レコードは `type` から導出） */
+  subtype?: IsolationSubtype;
+  /** 操作種別（開始／解除／継続／変更） */
+  operation?: IsolationOperation;
   startDatetime: string;
   endDatetime?: string;
   wardId: WardId;
   roomNumber: string;
   doctorName: string;
+  /** 拘束部位（拘束系・隔離拘束系の開始／継続／変更指示時のみ。解除指示には記載されない） */
+  restraintParts?: string[];
+  /** 開放時間（最大 9 件、開始／継続／変更指示時のみ） */
+  releaseTimes?: ReleaseTimeEntry[];
+  /** 期限管理対象として登録された隔離拘束時文書 */
+  linkedDocumentChecks?: string[];
+  /** 告知書（隔離拘束指示箋）印刷状態 */
+  noticePrint?: IsolationNoticePrint;
+  /** 「指示」段階（即時確定でない）フラグ */
+  isPending?: boolean;
   primaryConfirmedBy?: string;
   secondaryConfirmedBy?: string;
   linkedNursingRecordId?: string;

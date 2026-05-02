@@ -49,6 +49,8 @@ const AdmissionDischarge: React.FC = () => {
             <ToggleButton value="medicalProtection">医療観察法</ToggleButton>
             <ToggleButton value="regionalCooperation">地域連携</ToggleButton>
             <ToggleButton value="psychiatricLink">精神科連携</ToggleButton>
+            {/* ===== ep-05 隔離拘束指示 ===== */}
+            <ToggleButton value="restraintChange">隔離拘束変更</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
       </Stack>
