@@ -1,66 +1,58 @@
 import React, { useState } from 'react';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, Paper, Chip, Typography, TextField, Button, Stack, Grid,
-  FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Select, MenuItem,
+  TableRow, Paper, Chip, Typography, Button, Stack,
+  ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import {
-  ADMISSION_ORDERS, TRANSFER_HISTORY, ADMISSION_HISTORY,
+  TRANSFER_HISTORY, ADMISSION_HISTORY,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
+import AdmissionScheduleCalendar from './AdmissionScheduleCalendar';
 
 const AdmissionDischarge: React.FC = () => {
   const [tab, setTab] = useState(0);
-  const { showSnackbar } = useAppStore();
+  const { currentUserRole, setUserRole, optionalFeatures, toggleOptionalFeature } = useAppStore();
 
   return (
     <Box>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Tab label="入退院一覧" />
-        <Tab label="入院歴" />
-        <Tab label="移動歴" />
-        <Tab label="新規入退院指示" />
-      </Tabs>
+      <Stack direction="row" alignItems="center" sx={{ mb: 1, gap: 1, flexWrap: 'wrap' }}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: 'divider', flex: 1 }}>
+          <Tab label="入退院情報" />
+          <Tab label="入院歴" />
+          <Tab label="移動歴" />
+          <Tab label="新規入退院指示" />
+        </Tabs>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ pr: 1, flexWrap: 'wrap', rowGap: 0.5 }}>
+          <Typography variant="caption" color="text.secondary">操作者ロール</Typography>
+          <ToggleButtonGroup
+            size="small"
+            value={currentUserRole}
+            exclusive
+            onChange={(_, v) => v && setUserRole(v)}
+          >
+            <ToggleButton value="doctor">医師</ToggleButton>
+            <ToggleButton value="staff">事務</ToggleButton>
+          </ToggleButtonGroup>
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>オプション</Typography>
+          <ToggleButtonGroup
+            size="small"
+            value={Object.entries(optionalFeatures).filter(([, v]) => v).map(([k]) => k)}
+            onChange={(_, vals: string[]) => {
+              const next = vals as Array<keyof typeof optionalFeatures>;
+              (Object.keys(optionalFeatures) as Array<keyof typeof optionalFeatures>).forEach((k) => {
+                if (next.includes(k) !== optionalFeatures[k]) toggleOptionalFeature(k);
+              });
+            }}
+          >
+            <ToggleButton value="medicalProtection">医療観察法</ToggleButton>
+            <ToggleButton value="regionalCooperation">地域連携</ToggleButton>
+            <ToggleButton value="psychiatricLink">精神科連携</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+      </Stack>
 
-      {tab === 0 && (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>患者番号</TableCell>
-                <TableCell>患者氏名</TableCell>
-                <TableCell>種別</TableCell>
-                <TableCell>状態</TableCell>
-                <TableCell>予定日</TableCell>
-                <TableCell>主治医</TableCell>
-                <TableCell>病室</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {ADMISSION_ORDERS.map((a) => (
-                <TableRow key={a.id} hover>
-                  <TableCell>{a.patientId}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{a.patientName}</TableCell>
-                  <TableCell>
-                    <Chip label={a.type} size="small" color={a.type === '入院' ? 'primary' : 'error'} variant="outlined" />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={a.status}
-                      size="small"
-                      color={a.status === '手続完了' ? 'success' : a.status === '手続中' ? 'info' : 'warning'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>{a.scheduledDate}</TableCell>
-                  <TableCell>{a.doctorName}</TableCell>
-                  <TableCell>{a.roomNumber === '—' ? '未割当' : `${a.roomNumber}-${a.bedLabel}`}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+      {tab === 0 && <AdmissionScheduleCalendar />}
 
       {tab === 1 && (
         <TableContainer component={Paper} variant="outlined">
@@ -125,49 +117,16 @@ const AdmissionDischarge: React.FC = () => {
       )}
 
       {tab === 3 && (
-        <Paper variant="outlined" sx={{ p: 3, maxWidth: 600 }}>
-          <Typography variant="subtitle1" gutterBottom>入退院指示入力</Typography>
-          <Grid container spacing={2} sx={{ mt: 0 }}>
-            <Grid item xs={12}>
-              <FormControl>
-                <FormLabel sx={{ fontSize: '0.8125rem' }}>種別</FormLabel>
-                <RadioGroup row defaultValue="admission">
-                  <FormControlLabel value="admission" control={<Radio size="small" />} label="入院" />
-                  <FormControlLabel value="discharge" control={<Radio size="small" />} label="退院" />
-                </RadioGroup>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6}><TextField label="患者番号" fullWidth placeholder="患者番号を入力" /></Grid>
-            <Grid item xs={6}><TextField label="患者氏名" fullWidth placeholder="ORCA連携で自動取得" InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={6}><TextField label="予定日" type="date" fullWidth defaultValue="2026-02-24" InputLabelProps={{ shrink: true }} /></Grid>
-            <Grid item xs={6}>
-              <TextField label="主治医" select fullWidth defaultValue="田村 医師">
-                <MenuItem value="田村 医師">田村 医師</MenuItem>
-                <MenuItem value="岸本 医師">岸本 医師</MenuItem>
-                <MenuItem value="森田 医師">森田 医師</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={6}>
-              <TextField label="病棟" select fullWidth defaultValue="ward1">
-                <MenuItem value="ward1">第１病棟</MenuItem>
-                <MenuItem value="ward2">第２病棟</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={6}>
-              <TextField label="病室・ベッド" select fullWidth defaultValue="">
-                <MenuItem value="">選択してください</MenuItem>
-                <MenuItem value="102-B">102号室 B（空床）</MenuItem>
-                <MenuItem value="205-A">205号室 A（空床）</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12}><TextField label="備考" multiline rows={2} fullWidth /></Grid>
-            <Grid item xs={12}>
-              <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                <Button variant="outlined">キャンセル</Button>
-                <Button variant="contained" onClick={() => showSnackbar('入退院指示を登録しました', 'success')}>登録</Button>
-              </Stack>
-            </Grid>
-          </Grid>
+        <Paper variant="outlined" sx={{ p: 3, maxWidth: 720 }}>
+          <Typography variant="subtitle1" gutterBottom>入退院指示について</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            入退院指示（入院指示／退院指示）は<strong>カルテ画面のクイック操作</strong>から発行します。
+            患者を選んでカルテ画面を開き、画面下部のアクションバーから「入院指示」または「退院指示（入院患者のみ）」をクリックしてください。
+            指示登録後は <strong>「入退院情報」タブ</strong>のカレンダーに赤字（未確定）で反映されます。
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" onClick={() => setTab(0)}>入退院情報カレンダーへ</Button>
+          </Stack>
         </Paper>
       )}
     </Box>
