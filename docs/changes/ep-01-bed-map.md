@@ -1,0 +1,143 @@
+# ep-01 病棟マップ — 改修一覧
+
+## 対象
+
+- 画面: `/`、`/karte-alpha/:patientId`
+- 実装: `src/components/wardMap/WardMap.tsx`、`src/components/karteAlpha/KarteAlphaPage.tsx`
+- 参照 spec: [docs/specs/ep-01-bed-map/](../specs/ep-01-bed-map/)
+
+## サマリ
+
+| ストーリー | 改修前 AC | 実装後 AC | 状態 |
+| --- | --- | --- | --- |
+| us-01 病床表示 | 1/5 | 5/5 | ✅ 完了（モック実装） |
+| us-02 病床移動 | 0/8 | 5/8 | 🟡 主要動線のみ（ダイアログ動作 + 範囲外/食事締め確認）。履歴管理・移動アイコン・自動有効化は未実装 |
+| us-03 病床割り当て | 0/5 | 5/5 | ✅ 完了（モック実装） |
+| us-04 カルテ画面遷移 | 1/5 | 5/5 | ✅ 完了（隣接ナビ + 標準診療種類分岐 + 空床抑止） |
+
+## 画面: `src/components/wardMap/WardMap.tsx`
+
+### 既存実装（維持）
+
+- 病棟タブ切替（ward1 / ward2）→ AC us-01-1 充足
+- 病室カードグリッド（号室 + ベッドリスト）
+- ベッドクリック → カルテ画面遷移（直接）
+- 一括入力導線（病室選択チェック + 「一括入力へ」ボタン）
+- ステータスバッジ（単一）
+- 凡例（`STATUS_CONFIG` ベース）
+
+### 改修項目
+
+#### [us-01] 関連機能エントリ群の追加（ヘッダー）
+
+- `空床照会` ボタンを追加 → クリックでカレンダー形式の空床照会ダイアログを開く（中身はモック）
+- `未割当者一覧` ボタンを追加 → 未割当者一覧パネルを開閉（us-03 の入口）
+- `入退院予定一覧` ボタンを追加 → 入院／退院タブ切替の一覧を開く（中身はモック）
+- `不在者一覧` ボタンを追加 → 外出・外泊中患者の一覧を開く（中身はモック）
+- `入退院情報` ボタンを追加 → 表示病棟の入退院情報サマリを開く（中身はモック）
+
+#### [us-01] 使用不可ベッド表現の追加
+
+- `ROOMS` モックデータに「使用不可」属性を追加できるよう拡張
+- 使用不可ベッドはグレー網掛けで表示、`onClick` 無効化
+- 別実装案: `bed.status === 'unavailable'` または `bed.disabled === true` フラグ
+
+#### [us-01] 複数ステータスアイコンの重畳表示
+
+- 現状: `<StatusBadge status={bed.status} />`（単一）
+- 改修: ベッドが複数ステータスを持てるよう `bed.statuses: string[]` に変更、または別フィールド追加
+- 表示対象: 隔離・拘束・外出・外泊・要報告・預り金（最低 6 種類のアイコン定義が必要）
+- 凡例も同 6 種類を表示
+
+#### [us-01] 患者操作メニュー（フッター）
+
+- 患者選択時にフッター固定領域に表示
+- 内容: 患者情報サマリ（氏名・年齢・性別・主治医・病室・ベッド）+ 操作リンク（カルテ遷移、移動）
+- 状態管理: 選択中患者を `useAppStore` または local state に保持
+- 既存の「ベッドクリック → 即遷移」は暫定維持（spec 補足参照）
+
+#### [us-02] 転棟・転室ダイアログの新設
+
+- 新規コンポーネント: `src/components/wardMap/BedMoveDialog.tsx`（仮）
+- モード: 新規 / 履歴選択 / 割当（us-03 と共通化）
+- 構成要素: 患者基本情報 / 病棟・病室・ベッドの段階セレクト / 移動日時 / 配膳先変更日時 / 隔離・拘束チェック（オーダリング時）/ 履歴欄 / 印刷オプション / アクションボタン
+- 確認ダイアログ: 食事締め時間超過 / 範囲外割当（us-03）
+- 移動アイコンの表示（移動予定時）
+
+#### [us-03] 未割当者一覧パネル
+
+- 新規コンポーネント: `src/components/wardMap/UnassignedPatientsPanel.tsx`（仮）
+- モックデータ: 未割当患者の追加（病棟「仮」/病室「仮」/ベッド「仮」のケース）
+- 行アクション: 「移動」ボタン または 患者名ダブルクリック → BedMoveDialog（割当モード）
+
+## 画面: `src/components/karteAlpha/KarteAlphaPage.tsx`
+
+### 改修項目
+
+#### [us-04] 隣接患者ナビゲーション
+
+- ヘッダー領域に `<` `>` ボタンを追加
+- 表示条件: 病棟マップ経由で開かれた かつ 在床患者（外来カルテ・直接アクセスでは非表示）
+- 病棟マップ表示順（病室番号→ベッド番号）を遷移時に共有する仕組み
+  - 案 A: `useAppStore` に `wardMapPatientOrder: string[]` を保持、カルテ遷移時に書き込む
+  - 案 B: URL クエリに `from=ward-map&ward=ward1` を付与し、カルテ側で再計算
+- 推奨: 案 A（カルテ側のロジックがシンプル）
+
+#### [us-04] 標準診療種類による初期表示分岐
+
+- マスタ風の固定値で「標準診療種類」を導入（モックでは `'karte' | 'nursing-record'`）
+- `nursing-record` の場合、カルテ画面の初期タブを「部門記録簿（看護記録）」に切替
+- 現状 KarteAlphaPage に同等タブが無ければ追加（または既存看護記録ビューへリダイレクト）
+
+## モックデータ拡張
+
+`src/data/mockData.ts` への追加項目：
+
+- `Bed.disabled`: 使用不可フラグ
+- `Patient.statuses`: 多ステータス配列（既存 `bed.status` から移行 or 並存）
+- 未割当患者サンプル（少なくとも 2 名、病棟「仮」と病室「仮」のケース）
+- 標準診療種類設定（モックでは `karte` 固定 + 1 名のみ `nursing-record` で確認可能）
+
+## 着手順序（提案）
+
+1. [us-01] 使用不可ベッド + 複数ステータスアイコン + 凡例拡張（モックデータ寄りで影響範囲が小さい）
+2. [us-01] 患者操作メニュー（フッター固定）
+3. [us-01] 関連機能エントリ群（ボタンのみ先に置く、ダイアログは後続）
+4. [us-02 / us-03] BedMoveDialog 共通化実装 + 未割当者パネル
+5. [us-04] 隣接患者ナビ + 標準診療種類分岐
+
+## 完了確認
+
+各 spec の AC チェックリストを全件チェックした時点でクローズ。完了したらこのファイルを `archive/` 移動 or 末尾に「クローズ済み」追記。
+
+## 実装後メモ（2026-05-02）
+
+### 追加・変更ファイル
+
+- `src/types/index.ts` — `BedFlag`, `BedFlagConfig`, `UnassignedPatient`, `PrimaryRecordType` 追加。`Bed.flags` / `Bed.disabled` / `Bed.hasScheduledMove` / `Patient.primaryRecordType` 追加
+- `src/data/mockData.ts` — `BED_FLAG_CONFIG`, `BED_FLAG_ORDER`, `UNASSIGNED_PATIENTS` 追加。サンプルベッド数件に `flags` / `disabled` / `hasScheduledMove` を付与。`P001` を `nursing-record` 標準診療種類に設定
+- `src/stores/useAppStore.ts` — `bedMenuPatientId`, `wardMapPatientOrder`, `navigationSource` を追加
+- `src/components/wardMap/WardMap.tsx` — 全面改修（関連機能ボタン群・複数ステータスアイコン・使用不可表示・フッター操作メニュー・ダイアログ統合）
+- `src/components/wardMap/BedFlagIcons.tsx` — 新規（アイコン群 + 凡例）
+- `src/components/wardMap/RelatedFeatureDialogs.tsx` — 新規（空床照会・入退院予定・不在者・入退院情報のスタブ）
+- `src/components/wardMap/UnassignedPatientsPanel.tsx` — 新規
+- `src/components/wardMap/BedMoveDialog.tsx` — 新規（移動・割当兼用、食事締め超過警告・範囲外警告含む）
+- `src/components/karteAlpha/KarteAlphaPage.tsx` — 病棟マップ経由時のみ `<` `>` ナビ表示。`primaryRecordType === 'nursing-record'` で部門記録簿へ遷移
+
+### 残課題（次イテレーションで検討）
+
+- us-02 履歴欄からの更新／削除フロー（現状は履歴データ無し）
+- us-02 移動取消時の病床自動有効化
+- us-02 移動予定アイコンの動的計算（`hasScheduledMove` フラグ固定値で代替中）
+- us-04 「外来カルテ」ルートでは `<` `>` を出さない要件は `karteOutpatient` 側で別途確認（現状は `KarteAlphaPage` のみ対応）
+- 関連機能ダイアログ群は本実装ではなくスタブ。各エピック（入退院手続き・入退院指示）の進行と合わせて差し替え
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン（バンドル生成成功）
+- `npx vite` 起動 + 主要モジュール `WardMap.tsx`, `KarteAlphaPage.tsx` の HTTP 200 を確認
+
+### UI 動作確認は未実施
+
+ブラウザでの実操作確認は未実施。型・ビルドは通っているが、各ダイアログの開閉・フォーカス挙動、フッター操作メニューの重なりなどは目視確認が必要です。

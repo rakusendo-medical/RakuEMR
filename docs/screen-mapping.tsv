@@ -1,0 +1,8 @@
+screen_path	component	epic	stories	status	notes
+/	src/components/wardMap/WardMap.tsx	ep-01-bed-map	us-01,us-02,us-03,us-04	implemented	病棟マップ。タブ切替・関連機能エントリ群・複数ステータスアイコン・使用不可表示・凡例・患者操作メニュー（フッター）・転棟転室ダイアログ・未割当者一覧パネルを実装。us-02 の履歴欄/自動有効化は未実装。
+/karte-alpha/:patientId	src/components/karteAlpha/KarteAlphaPage.tsx	ep-01-bed-map,ep-03-admission-discharge-order	us-04,us-08,us-09	implemented	病棟マップ経由時のヘッダーに前後ナビ（< >）。クイック操作に「入院指示」「退院指示（入院患者のみ）」ボタンを配置し、入退院指示ダイアログを起動。
+/admission	src/components/admission/AdmissionDischarge.tsx	ep-02-admission-discharge,ep-03-admission-discharge-order	us-05,us-06,us-07	implemented	タブ 0「入退院情報」がカレンダー表示（pendingOrders 反映含む）。ヘッダーに操作者ロール切替＋オプション機能トグル（医療観察法/地域連携/精神科連携）。タブ 3 はカルテ画面の入退院指示への誘導。タブ 1〜2 は ep-04 スコープ。
+/admission	src/components/admission/AdmissionConfirmDialog.tsx	ep-02-admission-discharge	us-05	implemented	入院手続きダイアログ（事務側の確定処理）。仮病棟可、空床照会連携、未来日時抑止、オーダ確認・代行認証連携。
+/admission	src/components/admission/DischargeConfirmDialog.tsx	ep-02-admission-discharge	us-06	implemented	退院手続きダイアログ（事務側の確定処理）。食事終了日連動・編集可否・「食無し」自動生成案内・未実施オーダ確認（リハビリ転帰区分含む）・代行認証連携。
+/karte-alpha/:patientId	src/components/admission/AdmissionOrderDialog.tsx	ep-03-admission-discharge-order	us-08	implemented	入院指示ダイアログ（主治医発行）。入院形態 → 入院時文書連動／紹介元医療機関の検索＋治療歴複写／紹介経路（医療観察法オプション）／空床照会／指示・入院確定／変更・中止（削除理由）。
+/karte-alpha/:patientId	src/components/admission/DischargeOrderDialog.tsx	ep-03-admission-discharge-order	us-09	implemented	退院指示ダイアログ（主治医発行）。退院後診療区分 → 退院時文書連動／食事終了日連動／外出中確定不可／逆紹介設定（地域連携オプション）／入院定時オーダ中止日設定／指示・退院確定／変更・中止（削除コメント）。

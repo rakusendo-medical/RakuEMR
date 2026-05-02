@@ -26,7 +26,6 @@ import PatientRegistration from '../components/patientRegistration/PatientRegist
 import KarteAlphaPage from '../components/karteAlpha/KarteAlphaPage';
 import OutpatientKartePage from '../components/karteOutpatient/OutpatientKartePage';
 import DesignGuide from '../components/designGuide/DesignGuide';
-import DocViewer from '../components/docViewer/DocViewer';
 import { CARE_PLAN_ROUTES } from '../features/carePlan/routes';
 
 const AppRoutes: React.FC = () => (
@@ -57,7 +56,6 @@ const AppRoutes: React.FC = () => (
       <Route path="/ward-management" element={<WardManagement />} />
       <Route path="/patient-registration" element={<PatientRegistration />} />
       <Route path="/design-guide" element={<DesignGuide />} />
-      <Route path="/docs" element={<DocViewer />} />
       {CARE_PLAN_ROUTES}
     </Route>
   </Routes>

@@ -196,7 +196,7 @@ const Dashboard: React.FC = () => {
       </Stack>
 
       <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
-        <StatCard id="overdue" label="評価期限超過" count={byCategory.overdue.length} color="#dc2626" icon={<ErrorIcon />} />
+        <StatCard id="overdue" label="評価期限超過" count={byCategory.overdue.length} color="#b91c1c" icon={<ErrorIcon />} />
         <StatCard id="dueThisMonth" label="今月評価必要" count={byCategory.dueThisMonth.length} color="#d97706" icon={<WarningIcon />} />
         <StatCard id="notPlanned" label="計画未立案" count={byCategory.notPlanned.length} color="#64748b" icon={<InfoIcon />} />
         <StatCard id="evaluating" label="評価中のまま" count={byCategory.evaluating.length} color="#ea580c" icon={<HourglassIcon />} />
@@ -205,7 +205,7 @@ const Dashboard: React.FC = () => {
       <CategorySection
         id="overdue"
         title="評価期限超過"
-        color="#dc2626"
+        color="#b91c1c"
         count={byCategory.overdue.length}
         open={sectionOpen.overdue}
         onToggle={() => toggleSection('overdue')}
@@ -214,7 +214,7 @@ const Dashboard: React.FC = () => {
           <PatientRow
             key={row.patient.id}
             row={row}
-            color="#dc2626"
+            color="#b91c1c"
             subText={`前回評価 ${formatShortDate(row.lastEvaluatedAt)} / 期限 ${formatShortDate(row.nextEvaluationDueAt)} / ${-(row.daysDiff ?? 0)}日超過`}
             action={{ label: '評価する', onClick: () => navigate(`/care-plan/patients/${row.patient.id}/evaluate`) }}
           />
