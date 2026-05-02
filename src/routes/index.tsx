@@ -27,6 +27,7 @@ import KarteAlphaPage from '../components/karteAlpha/KarteAlphaPage';
 import OutpatientKartePage from '../components/karteOutpatient/OutpatientKartePage';
 import DesignGuide from '../components/designGuide/DesignGuide';
 import { CARE_PLAN_ROUTES } from '../features/carePlan/routes';
+import { FLOWSHEET_ROUTES } from '../features/flowsheet/routes';
 
 const AppRoutes: React.FC = () => (
   <Routes>
@@ -57,6 +58,7 @@ const AppRoutes: React.FC = () => (
       <Route path="/patient-registration" element={<PatientRegistration />} />
       <Route path="/design-guide" element={<DesignGuide />} />
       {CARE_PLAN_ROUTES}
+      {FLOWSHEET_ROUTES}
     </Route>
   </Routes>
 );
