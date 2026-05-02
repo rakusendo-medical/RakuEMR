@@ -12,7 +12,7 @@
 | MASTER | マスターセッション | ep-04 入退院歴（us-10）— 実装完了、push 済 | 完了（次タスク待機） | 2026-05-02 |
 | S2 | ワーカー | ep-05 隔離拘束指示（us-11）実装完了・push 済／次は ep-06 隔離拘束一覧 spec 起こしへ | 進行中 | 2026-05-02 |
 | S3 | ワーカー | ep-10 看護実施（フローシート, us-17〜26）— spec 起こしから着手 | 進行中 | 2026-05-02 |
-| S4 | ワーカー | ep-09 患者情報（us-16）Phase 1 完了 / Phase 2 は MASTER 調整待ち | 待機 | 2026-05-02 |
+| S4 | ワーカー | ep-09 患者情報（us-16）Phase 1+2 完了。報告連携の本実装は Phase 3 で別途検討 | 待機 | 2026-05-02 |
 
 **運用ルール:**
 - 新しくセッションを開始する場合は、上記表に **自分の名前と対応中エピックを追記** すること（例: `S2`, `claude-2`, `worker-A` など任意の識別子）
@@ -40,7 +40,6 @@
 | --- | --- | --- | --- | --- |
 | 2026-05-02 | S3（ep-10） | 「フローシート」タブ（現プレースホルダ「準備中」）を `<FlowsheetPage />`（または同等コンポーネント）埋込に差し替えたい。連動して KarteAlphaPage の他タブとの整合（タブ切替時の状態保持等）も確認したい | `src/components/karteAlpha/KarteAlphaPage.tsx` | ep-10 フェーズ 6（個別フローシート／パターン／看護記録／一括入力 系の実装が一通り完了した後） |
 | 2026-05-02 | S3（ep-10） | サイドメニューに看護実施系 4 画面（部門記録簿／一括バイタル／睡眠表／一括看護記録）を追加。フラット化が縦に伸びるため、PM 提案の「セクション分け」（例: 「病床管理」「看護」「マスタ」など見出し or 折り畳み）を導入したい | `src/layouts/MainLayout.tsx` | ep-10 フェーズ 1（ルート骨組み）と同タイミング、または直後 |
-| 2026-05-02 | S4（ep-09） | Phase 2: 入院患者一覧の担当職員1〜10／入院形態／責任レベル／報告／終了／検索条件保持。Patient 型へのフィールド追加と職員マスタ・職員選択ダイアログの新設、useAppStore への診察終了状態と検索条件の追加が必要 | `src/types/index.ts` (Patient 拡張), `src/data/mockData.ts` (MASTER_STAFF・MASTER_RESPONSIBILITY_LEVELS), `src/stores/useAppStore.ts` (consultationFinishedMap・patientListSearchCondition), `src/components/common/StaffSelectDialog.tsx` (新設) | 入院形態は ep-04（入退院歴）の `AdmissionHistory.admitForm` と整合させたい。ep-04 の実装が落ち着き、Patient ↔ 入院形態の参照モデルが固まってから着手するのが安全 |
 
 ---
 
