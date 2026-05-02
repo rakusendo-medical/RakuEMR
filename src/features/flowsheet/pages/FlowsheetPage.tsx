@@ -12,6 +12,9 @@ import VitalEditDialog from '../components/VitalEditDialog';
 import FlowsheetEditDialog from '../components/FlowsheetEditDialog';
 import SignInputDialog from '../components/SignInputDialog';
 import PatternChangeDialog from '../components/PatternChangeDialog';
+import OrderListDialog from '../components/OrderListDialog';
+import ExecutionConfirmDialog from '../components/ExecutionConfirmDialog';
+import LabResultGraphDialog from '../components/LabResultGraphDialog';
 
 const daysBetween = (from: ISODate, to: ISODate): number => {
   const a = new Date(from).getTime();
@@ -33,6 +36,7 @@ const FlowsheetPage: React.FC = () => {
   const scheduledOrders = useFlowsheetStore((s) => s.scheduledOrders);
   const nursingRecords = useFlowsheetStore((s) => s.nursingRecords);
   const movementSegments = useFlowsheetStore((s) => s.movementSegments);
+  const labResults = useFlowsheetStore((s) => s.labResults);
   const staffs = useFlowsheetStore((s) => s.staffs);
 
   const [endDate, setEndDate] = useState<ISODate>(TODAY);
@@ -41,6 +45,9 @@ const FlowsheetPage: React.FC = () => {
   const [flowsheetDialog, setFlowsheetDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
   const [signDialog, setSignDialog] = useState<{ open: boolean; date: ISODate; shift: ShiftType }>({ open: false, date: TODAY, shift: 'day' });
   const [patternDialogOpen, setPatternDialogOpen] = useState(false);
+  const [orderListOpen, setOrderListOpen] = useState(false);
+  const [execDialog, setExecDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
+  const [labDialog, setLabDialog] = useState<{ open: boolean; ticketName: string | null }>({ open: false, ticketName: null });
 
   const dates = useMemo(() => last7Dates(endDate), [endDate]);
 
@@ -121,14 +128,16 @@ const FlowsheetPage: React.FC = () => {
             careRecords={careRecords}
             signs={signs}
             scheduledOrders={scheduledOrders}
+            labResults={labResults}
             nursingRecords={nursingRecords}
             staffName={staffName}
             isFutureDisabled={isFutureDisabled}
             onClickFlowsheetIcon={(d) => setFlowsheetDialog({ open: true, date: d })}
             onClickVitalIcon={(d) => setVitalDialog({ open: true, date: d })}
             onClickSignCell={(d, shift) => setSignDialog({ open: true, date: d, shift })}
-            onClickOrderCell={todo('実施確認表ダイアログ')}
-            onClickOrderListLink={todo('指示状況ダイアログ')}
+            onClickOrderCell={(d) => setExecDialog({ open: true, date: d })}
+            onClickOrderListLink={() => setOrderListOpen(true)}
+            onClickLabTicket={(name) => setLabDialog({ open: true, ticketName: name })}
             onClickNursingRecord={(id) => todo(`看護記録閲覧 ${id}`)()}
             onClickNewNursingRecord={todo('看護記録新規作成')}
           />
@@ -174,6 +183,24 @@ const FlowsheetPage: React.FC = () => {
         open={patternDialogOpen}
         patientId={patientId}
         onClose={() => setPatternDialogOpen(false)}
+      />
+      <OrderListDialog
+        open={orderListOpen}
+        patientId={patientId}
+        baseDate={endDate}
+        onClose={() => setOrderListOpen(false)}
+      />
+      <ExecutionConfirmDialog
+        open={execDialog.open}
+        patientId={patientId}
+        date={execDialog.date}
+        onClose={() => setExecDialog((s) => ({ ...s, open: false }))}
+      />
+      <LabResultGraphDialog
+        open={labDialog.open}
+        patientId={patientId}
+        ticketName={labDialog.ticketName}
+        onClose={() => setLabDialog((s) => ({ ...s, open: false }))}
       />
     </Box>
   );

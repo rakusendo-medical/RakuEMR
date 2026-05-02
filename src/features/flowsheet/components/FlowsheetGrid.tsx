@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Stack, Tooltip, Typography, IconButton, Link as MuiLink } from '@mui/material';
 import { Edit as EditIcon, Thermostat as ThermoIcon } from '@mui/icons-material';
 import type {
-  CareItemMaster, CareRecord, ISODate, NursingRecord, ScheduledOrder,
+  CareItemMaster, CareRecord, ISODate, LabResultEntry, NursingRecord, ScheduledOrder,
   SignEntry, ShiftType, VitalEntry,
 } from '../types';
 
@@ -15,6 +15,7 @@ interface Props {
   careRecords: CareRecord[];
   signs: SignEntry[];
   scheduledOrders: ScheduledOrder[];
+  labResults: LabResultEntry[];
   nursingRecords: NursingRecord[];
   staffName: (id: string) => string;
   isFutureDisabled: (date: ISODate) => boolean;
@@ -23,6 +24,7 @@ interface Props {
   onClickSignCell: (date: ISODate, shift: ShiftType) => void;
   onClickOrderCell: (date: ISODate) => void;
   onClickOrderListLink: () => void;
+  onClickLabTicket: (ticketName: string) => void;
   onClickNursingRecord: (recordId: string) => void;
   onClickNewNursingRecord: (date: ISODate) => void;
 }
@@ -71,9 +73,9 @@ const Cell: React.FC<{ children?: React.ReactNode; onClick?: () => void; disable
 
 const FlowsheetGrid: React.FC<Props> = ({
   patientId, dates, careItemIds, careItemMaster, vitals, careRecords, signs,
-  scheduledOrders, nursingRecords, staffName, isFutureDisabled,
+  scheduledOrders, labResults, nursingRecords, staffName, isFutureDisabled,
   onClickFlowsheetIcon, onClickVitalIcon, onClickSignCell, onClickOrderCell,
-  onClickOrderListLink, onClickNursingRecord, onClickNewNursingRecord,
+  onClickOrderListLink, onClickLabTicket, onClickNursingRecord, onClickNewNursingRecord,
 }) => {
   const careItemMap = new Map(careItemMaster.map((c) => [c.id, c]));
 
@@ -208,6 +210,41 @@ const FlowsheetGrid: React.FC<Props> = ({
     );
   };
 
+  // 検査結果行（available な伝票名のみ表示、クリックでグラフ）
+  const renderLabResultRow = () => {
+    const byDate = new Map<string, LabResultEntry[]>();
+    dates.forEach((d) => byDate.set(d, []));
+    labResults
+      .filter((r) => r.patientId === patientId && r.status === 'available' && byDate.has(r.date))
+      .forEach((r) => byDate.get(r.date)!.push(r));
+    const totalAvailable = Array.from(byDate.values()).reduce((s, v) => s + v.length, 0);
+    if (totalAvailable === 0) return null;
+    return (
+      <Row label="検査結果">
+        {dates.map((d) => {
+          const list = byDate.get(d) ?? [];
+          return (
+            <Cell key={d}>
+              <Stack spacing={0}>
+                {list.map((r) => (
+                  <MuiLink
+                    key={r.id}
+                    component="button"
+                    type="button"
+                    onClick={() => onClickLabTicket(r.ticketName)}
+                    sx={{ textAlign: 'left', fontSize: 11 }}
+                  >
+                    {r.ticketName}
+                  </MuiLink>
+                ))}
+              </Stack>
+            </Cell>
+          );
+        })}
+      </Row>
+    );
+  };
+
   // 看護記録行
   const renderNursingRecordRow = () => {
     const byDate = new Map<string, NursingRecord[]>();
@@ -280,6 +317,7 @@ const FlowsheetGrid: React.FC<Props> = ({
       {renderVitalRow()}
       {renderOrderRow()}
       {careItemIds.map((id) => renderCareItemRow(id))}
+      {renderLabResultRow()}
       {renderNursingRecordRow()}
       {renderSignRow('night')}
       {renderSignRow('day')}
