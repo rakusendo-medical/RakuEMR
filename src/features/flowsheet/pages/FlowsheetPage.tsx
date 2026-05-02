@@ -10,6 +10,7 @@ import MovementBar from '../components/MovementBar';
 import FlowsheetGrid from '../components/FlowsheetGrid';
 import VitalEditDialog from '../components/VitalEditDialog';
 import FlowsheetEditDialog from '../components/FlowsheetEditDialog';
+import SignInputDialog from '../components/SignInputDialog';
 
 const daysBetween = (from: ISODate, to: ISODate): number => {
   const a = new Date(from).getTime();
@@ -37,6 +38,7 @@ const FlowsheetPage: React.FC = () => {
   const [tab, setTab] = useState<FlowsheetTab>('flowsheet');
   const [vitalDialog, setVitalDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
   const [flowsheetDialog, setFlowsheetDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
+  const [signDialog, setSignDialog] = useState<{ open: boolean; date: ISODate; shift: ShiftType }>({ open: false, date: TODAY, shift: 'day' });
 
   const dates = useMemo(() => last7Dates(endDate), [endDate]);
 
@@ -122,7 +124,7 @@ const FlowsheetPage: React.FC = () => {
             isFutureDisabled={isFutureDisabled}
             onClickFlowsheetIcon={(d) => setFlowsheetDialog({ open: true, date: d })}
             onClickVitalIcon={(d) => setVitalDialog({ open: true, date: d })}
-            onClickSignCell={(_, shift) => todo(`サイン(${shift})入力`)()}
+            onClickSignCell={(d, shift) => setSignDialog({ open: true, date: d, shift })}
             onClickOrderCell={todo('実施確認表ダイアログ')}
             onClickOrderListLink={todo('指示状況ダイアログ')}
             onClickNursingRecord={(id) => todo(`看護記録閲覧 ${id}`)()}
@@ -158,6 +160,13 @@ const FlowsheetPage: React.FC = () => {
         patientId={patientId}
         date={flowsheetDialog.date}
         onClose={() => setFlowsheetDialog((s) => ({ ...s, open: false }))}
+      />
+      <SignInputDialog
+        open={signDialog.open}
+        patientId={patientId}
+        date={signDialog.date}
+        shift={signDialog.shift}
+        onClose={() => setSignDialog((s) => ({ ...s, open: false }))}
       />
     </Box>
   );
