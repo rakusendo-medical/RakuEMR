@@ -8,9 +8,9 @@
 
 ## サマリ
 
-| ストーリー | 改修前 AC | 想定実装後 AC | 改修ボリューム |
+| ストーリー | 改修前 AC | 実装後 AC | 状態 |
 | --- | --- | --- | --- |
-| us-10 入院歴・退院歴 | 0/11 | 11/11 | 大（左右ペイン UI + 5 ダイアログ + 形態変更ロジック） |
+| us-10 入院歴・退院歴 | 0/11 | 11/11 | ✅ 完了（モック実装） |
 
 ## 既存実装と本エピックの関係
 
@@ -98,3 +98,40 @@ ep-01/02/03 の改修で本エピックに振った項目を、本実装と並�
 ## 完了確認
 
 各 spec の AC チェックリストを全件チェックした時点でクローズ。
+
+## 実装後メモ（2026-05-02）
+
+### 追加・変更ファイル
+
+- `src/types/index.ts` — `AdmissionHistory` を ep-04 仕様に拡張（periodId / admitForm / admitReason / dischargeReason / dischargeCategory / outcome / postDischargeAction / returnTo / isAdmitFormChange）
+- `src/data/mockData.ts` — `MASTER_RESIDENCE_TYPES` を追加。`ADMISSION_HISTORY` を新スキーマで再構成（P001 山田／P003 鈴木の形態変更チェーン／P006 伊藤）
+- `src/stores/useAppStore.ts` — `admissionHistoryEdits` / `addedAdmissionHistory` / `removedAdmissionHistoryIds` と CRUD アクションを追加。`partialize` に追加して localStorage 永続化対象に含める
+- `src/components/admission/AdmissionHistoryView.tsx` — 新規。左ペイン履歴リスト + 右ペイン詳細 + ヘッダー（患者選択 + 入院時/退院時タブ + 関連履歴リンク）
+- `src/components/admission/AdmitFormChangeDialog.tsx` — 新規。新形態セレクト + 形態変更日時 + 入院時文書チェック群
+- `src/components/admission/AdmissionDischarge.tsx` — タブ 1「入院歴」を `AdmissionHistoryView` に置換、タブ 2「移動歴」へのリンク経路を `onNavigateToTransferHistory` で渡す
+
+### 実装上の判断・割り切り
+
+- **動的編集の保持**: `admissionHistoryEdits` / `addedAdmissionHistory` / `removedAdmissionHistoryIds` は localStorage 永続化（リロード後も状態保持）
+- **取消時の連動操作**: 入院取消で「入院確定オーダ・食事療法も連動取消」「期限管理文書削除」はスナックバー文言で表現、データ反映はモック範囲外
+- **入院日時・退院日時は本画面では変更不可**: spec 通り、表示のみ。形態変更日時のみ AdmitFormChangeDialog で設定
+- **入院固有オーダ残留チェック**: 仕様にあるが、本モックではオーダデータが入院取消フローに反映されないため、警告 UI のみ用意（実データ判定はオーダ管理エピックで実装）
+- **食事歴・隔離歴リンク**: スナックバー通知（食事歴は別エピック未割当、隔離歴は ep-08 で本実装予定）
+- **移動歴リンク**: 同画面のタブ 2「移動歴」への切替で実装（`onNavigateToTransferHistory` プロパティ）
+
+### 後回し項目（ep-01 から引き受け分）の状況
+
+| 項目 | 状況 |
+| --- | --- |
+| us-02 履歴欄からの更新／削除フロー | 移動歴タブをリンク先として残置。専用編集 UI は別途検討（移動履歴の編集 UI が必要なら ep-01 に戻して再開） |
+| us-02 移動取消時の病床自動有効化 | 同上、移動歴の編集 UI 整備時に実装 |
+| `Patient.admissionState` の動的切替 | 本実装ではローカル state でのみ管理、Patient データのミューテーションは行わず。`admissionHistoryEdits` から `Patient.admissionState` を派生計算する経路が必要なら別途追加 |
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+
+### UI 動作確認は未実施
+
+ブラウザでの実操作確認は未実施。左右ペインのレイアウト、形態変更ダイアログ、取消フローのスナックバー連動などは目視確認推奨です。
