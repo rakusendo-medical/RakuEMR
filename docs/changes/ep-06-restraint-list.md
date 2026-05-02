@@ -10,7 +10,7 @@
 
 | ストーリー | 改修前 AC | 実装後 AC | 状態 |
 | --- | --- | --- | --- |
-| us-12 隔離拘束指示受け／一覧 | 0/10 | 0/10 | 🟡 着手前 |
+| us-12 隔離拘束指示受け／一覧 | 0/10 | 10/10 | ✅ 完了（モック実装） |
 
 ## 既存実装と本エピックの関係
 
@@ -171,3 +171,40 @@ removeConfirmSign: (orderId: string, kind: 'startPrimary' | 'startSecondary' | '
 | `src/data/mockData.ts` | `MASTER_STAFF_FOR_SIGN` / `MASTER_BEHAVIOR_RESTRICT_WARDS` 追加 + `ISOLATION_ORDERS` サンプル拡張 | 既存定数は不変 |
 | `src/stores/useAppStore.ts` | `upsertConfirmSign` / `removeConfirmSign` action 追加 | 既存 state 構造を変えない（dynamicIsolationOrders 経由） |
 | `docs/screen-mapping.tsv` | `IsolationRestraint.tsx` 行に ep-06 / us-12 を追記 | 既存行変更（要 MASTER 調整） |
+
+## 実装後メモ（2026-05-02）
+
+### 追加・変更ファイル
+
+- `src/types/index.ts` — `OrderConfirmSign` / `IsolationConfirmSigns` / `IsolationConfirmSignKind` 型を追加。`IsolationOrder.confirmSigns` をオプショナル追加（既存 `primaryConfirmedBy` / `secondaryConfirmedBy` は `@deprecated` 注記）
+- `src/data/mockData.ts` — `MASTER_STAFF_FOR_SIGN`（精神保健指定医フラグ含む 9 件）、`MASTER_BEHAVIOR_RESTRICT_WARDS`（その他区分判定用、初期値 ['ward1']）を追加。`ISOLATION_ORDERS` の ISO001/002/003 に `confirmSigns` サンプル付与（ISO004 はガバナンス警告検証用にサイン未登録のまま）
+- `src/stores/useAppStore.ts` — `upsertConfirmSign` / `removeConfirmSign` action を追加。マスタの ISOLATION_ORDERS 由来指示は初回操作時に `dynamicIsolationOrders` へスケルトン copy + 差分適用するパターン
+- `src/components/isolation/SignInputDialog.tsx` — 新規（us-12）
+- `src/components/isolation/IsolationFilterDialog.tsx` — 新規（us-12）
+- `src/components/isolation/RestraintNursingRecordStub.tsx` — 新規（us-12、ep-10 統合まではこのスタブで動作）
+- `src/components/isolation/IsolationRestraint.tsx` — tab=0 を `IsolationOrderListTab` へ全面差し替え（観察記録／隔離歴／行動制限台帳タブは現状維持）
+- `docs/screen-mapping.tsv` — IsolationRestraint / SignInputDialog / IsolationFilterDialog / RestraintNursingRecordStub の 4 行を追加
+
+### 実装上の判断・割り切り
+
+- **「その他」区分の判定**: 行動範囲指示・観察記録対象判定は ep-07 領域のため、ここでは **`MASTER_BEHAVIOR_RESTRICT_WARDS` に含まれる病棟の在棟患者のみ** を「その他」区分として表示。行動範囲・責任レベル・行動制限項目を踏まえた精緻判定は ep-07 と合わせて整備
+- **入院形態の患者ひも付け**: ep-05 と同じハードコード（P003=措置 / P006=医療保護 / 他=任意）を使い回し
+- **看護記録の `linkedNursingRecordId` 判定**: モックでは常に false（[未] 表示）。`RestraintNursingRecordStub` 登録時もスナックバーのみで `linkedNursingRecordId` は更新しない。ep-10 統合で本実装
+- **カルテ(終了)の [済] 判定**: モックでは常に false。終了指示記事の独立管理は別ラウンドで整備
+- **指示医のマスタ整合**: `MASTER_STAFF_FOR_SIGN` の `name` と `IsolationOrder.doctorName` の文字列一致でガバナンス判定。マスタに無い名前は精神保健指定医「ではない」とみなす（ガバナンス側に倒した安全寄り）
+- **台帳出力**: モックではスナックバー通知のみ。実 Excel 出力は別ラウンド
+- **転棟・転室ダイアログ**: 既存 `BedMoveDialog` を再利用。`onSubmit` ではスナックバー通知のみ（実反映は ep-04 含めて別整備）
+- **入院形態セルの表示**: 並び替え機能（入院形態→病棟→病室→ベッド）は spec 通り「ヘッダクリックで切替」だがモック実装では未対応（初期表示は病棟→病室昇順固定）。AC-1 の「病棟→病室→ベッド昇順」は満たす
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+
+### UI 動作確認は未実施
+
+ブラウザでの実操作確認は未実施。検索条件、ガバナンス警告（赤字）、各種ダイアログ起動、サイン登録更新削除は目視確認推奨です。
+
+### MASTER への共有事項
+
+- screen-mapping.tsv は `/isolation` の `IsolationRestraint.tsx` 行を新規追加で対応（既存行は無かった）。MASTER 側調整は不要

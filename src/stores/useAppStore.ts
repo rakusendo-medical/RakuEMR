@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { AdmissionHistory, IsolationOrder, MedicalRecord, Patient, WardId } from '../types';
+import type {
+  AdmissionHistory, IsolationConfirmSignKind, IsolationOrder,
+  MedicalRecord, OrderConfirmSign, Patient, WardId,
+} from '../types';
 
 /** 操作者ロール（ep-02 代行入力認証フローの分岐用） */
 export type UserRole = 'doctor' | 'staff';
@@ -126,6 +129,12 @@ interface AppState {
   addIsolationOrder: (order: IsolationOrder) => void;
   updateIsolationOrder: (id: string, patch: Partial<IsolationOrder>) => void;
   releaseIsolationOrder: (id: string, endDatetime: string) => void;
+
+  // ===== ep-06 隔離拘束一覧 =====
+  // 指示受けサインの登録／更新／削除。
+  // マスタの ISOLATION_ORDERS にある指示の場合、初回操作時に dynamicIsolationOrders へコピーしてから差分を適用する。
+  upsertConfirmSign: (orderId: string, kind: IsolationConfirmSignKind, sign: OrderConfirmSign) => void;
+  removeConfirmSign: (orderId: string, kind: IsolationConfirmSignKind) => void;
 
   // ===== ep-09 患者情報 Phase 2 =====
   // 診察終了状態（永続化対象）。patientId → 終了情報のマップ。
@@ -263,6 +272,52 @@ export const useAppStore = create<AppState>()(
           dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
             o.id === id ? { ...o, endDatetime, operation: '解除' } : o,
           ),
+        })),
+
+      // ===== ep-06 隔離拘束一覧 =====
+      // 指示受けサインの upsert / remove。
+      // 対象が dynamic に居なければ ISOLATION_ORDERS（マスタ）からコピーして dynamic に積み、以降は dynamic 側で差分管理する。
+      // ※ ISOLATION_ORDERS の参照は store ファイルからの直 import を避けるため、引数で `mergedSource` を受け取る案も検討したが、
+      //    実体取得のため必要な最小コピー（id/patientId/...）を呼び出し側が patch 経由で渡す形に揃える。
+      //    実装上は updateIsolationOrder 経由で「dynamic に存在しない場合は新規追加」のフォールバックを内包する戦略を採用。
+      upsertConfirmSign: (orderId, kind, sign) =>
+        set((state) => {
+          const existing = state.dynamicIsolationOrders.find((o) => o.id === orderId);
+          if (existing) {
+            return {
+              dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
+                o.id === orderId
+                  ? { ...o, confirmSigns: { ...(o.confirmSigns ?? {}), [kind]: sign } }
+                  : o,
+              ),
+            };
+          }
+          // dynamic に居ない（マスタサンプル）→ プレースホルダで copy。
+          // 呼び出し側はこの戻り値ですぐに参照 / 表示する場合は、マスタとマージして表示する想定なので、
+          // ここでは confirmSigns のみ持つスケルトン記録を作って積む。一覧側は merge ロジックで「dynamic に同 id があればその confirmSigns を優先」する。
+          const skeleton: IsolationOrder = {
+            id: orderId,
+            patientId: '',
+            patientName: '',
+            type: '隔離',
+            startDatetime: '',
+            wardId: 'ward1',
+            roomNumber: '',
+            doctorName: '',
+            confirmSigns: { [kind]: sign },
+          };
+          return {
+            dynamicIsolationOrders: [...state.dynamicIsolationOrders, skeleton],
+          };
+        }),
+      removeConfirmSign: (orderId, kind) =>
+        set((state) => ({
+          dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) => {
+            if (o.id !== orderId) return o;
+            const next = { ...(o.confirmSigns ?? {}) };
+            delete next[kind];
+            return { ...o, confirmSigns: next };
+          }),
         })),
 
       // ===== ep-09 患者情報 Phase 2 =====

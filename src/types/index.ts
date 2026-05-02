@@ -319,10 +319,39 @@ export interface IsolationOrder {
   noticePrint?: IsolationNoticePrint;
   /** 「指示」段階（即時確定でない）フラグ */
   isPending?: boolean;
+  /** 旧表現：単一サイン者名（後方互換）
+   *  @deprecated 将来削除予定。新コードは `confirmSigns.startPrimary.staffName` を参照。 */
   primaryConfirmedBy?: string;
+  /** 旧表現：単一二次サイン者名（後方互換）
+   *  @deprecated 将来削除予定。新コードは `confirmSigns.startSecondary.staffName` を参照。 */
   secondaryConfirmedBy?: string;
+  /** ep-06 隔離拘束一覧で登録される指示受けサイン（開始／終了 × 一次／二次） */
+  confirmSigns?: IsolationConfirmSigns;
   linkedNursingRecordId?: string;
   linkedMedicalRecordId?: string;
+}
+
+// ===== ep-06 隔離拘束一覧 =====
+
+/** 指示受けサインの区分（開始／終了 × 一次／二次） */
+export type IsolationConfirmSignKind = 'startPrimary' | 'startSecondary' | 'endPrimary' | 'endSecondary';
+
+/** 指示受けサイン 1 件分 */
+export interface OrderConfirmSign {
+  /** 職員 ID（マスタ） */
+  staffId: string;
+  /** 表示用職員氏名 */
+  staffName: string;
+  /** 登録日時（ISO 文字列） */
+  signedAt: string;
+}
+
+/** 隔離拘束指示の指示受けサイン群（開始／終了 × 一次／二次の 4 区分） */
+export interface IsolationConfirmSigns {
+  startPrimary?: OrderConfirmSign;
+  startSecondary?: OrderConfirmSign;
+  endPrimary?: OrderConfirmSign;
+  endSecondary?: OrderConfirmSign;
 }
 
 /** 観察記録 */

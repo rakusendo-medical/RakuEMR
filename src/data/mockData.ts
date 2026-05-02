@@ -834,6 +834,33 @@ export const MASTER_NOTICE_TEMPLATES = [
   '症状改善に伴い隔離・拘束を解除します。今後も定期的な観察を継続します。',
 ] as const;
 
+// ===== ep-06 隔離拘束一覧 マスタ =====
+// 指示受けサイン用の職員マスタ（精神保健指定医フラグ付き）
+export interface StaffForSign {
+  id: string;
+  name: string;
+  /** 精神保健指定医か（true=精神保健指定医、false=指定医以外＝ガバナンス警告対象） */
+  isPsychiatristCertified: boolean;
+}
+export const MASTER_STAFF_FOR_SIGN: StaffForSign[] = [
+  // 医師（精神保健指定医）
+  { id: 'D001', name: '田村 医師', isPsychiatristCertified: true },
+  { id: 'D002', name: '森田 医師', isPsychiatristCertified: true },
+  // 医師（精神保健指定医以外＝ガバナンス警告対象）
+  { id: 'D003', name: '岸本 医師', isPsychiatristCertified: false },
+  // 看護師長・看護師（指示受けサイン用）
+  { id: 'N001', name: '山本 看護師',   isPsychiatristCertified: false },
+  { id: 'N002', name: '佐々木 看護師', isPsychiatristCertified: false },
+  { id: 'N003', name: '中田 看護師',   isPsychiatristCertified: false },
+  { id: 'N004', name: '原田 師長',     isPsychiatristCertified: false },
+  { id: 'N005', name: '木下 師長',     isPsychiatristCertified: false },
+  { id: 'N006', name: '田辺 看護師',   isPsychiatristCertified: false },
+];
+
+// 病床管理マスタの「行動制限判定対象」相当（その他区分の判定用）。
+// ここに含まれる病棟の在棟患者は、隔離拘束指示なしでも一覧の「その他」区分で表示される。
+export const MASTER_BEHAVIOR_RESTRICT_WARDS = ['ward1'] as const;
+
 // ===== 確定処理時に表示する未実施オーダのサンプル =====
 export interface PendingOrderSample {
   id: string;
@@ -929,6 +956,9 @@ export const ADMISSION_HISTORY: AdmissionHistory[] = [
 // ===== ep-05 隔離拘束指示 =====
 // IsolationOrder には ep-05 で subtype/operation/restraintParts/releaseTimes/linkedDocumentChecks
 // 等のオプショナルフィールドが追加されている。既存サンプルにも順次付与する。
+// ===== ep-06 隔離拘束一覧 =====
+// confirmSigns（指示受けサイン）サンプルも一部付与。ガバナンス警告検証用に
+// ISO004 は精神保健指定医ではない指示医（岸本）＋サイン未登録のままにしてある。
 export const ISOLATION_ORDERS: IsolationOrder[] = [
   {
     id: 'ISO001', patientId: 'P003', patientName: '鈴木 一郎',
@@ -936,6 +966,9 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     startDatetime: '2026-02-22 14:00',
     wardId: 'ward1', roomNumber: '102-A', doctorName: '岸本 医師',
     linkedDocumentChecks: ['隔離告知書', '隔離開始書類', '行動制限実施記録'],
+    confirmSigns: {
+      startPrimary: { staffId: 'N001', staffName: '山本 看護師', signedAt: '2026-02-22T14:30' },
+    },
   },
   {
     id: 'ISO002', patientId: 'P004', patientName: '高橋 美咲',
@@ -949,6 +982,10 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
       { start: '16:00', end: '16:30' },
     ],
     linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
+    confirmSigns: {
+      startPrimary:   { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2026-02-23T09:45' },
+      startSecondary: { staffId: 'N003', staffName: '中田 看護師',   signedAt: '2026-02-23T10:00' },
+    },
   },
   {
     id: 'ISO003', patientId: 'P013', patientName: '松本 拓也',
@@ -956,6 +993,11 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     startDatetime: '2026-02-21 20:00', endDatetime: '2026-02-23 08:00',
     wardId: 'ward2', roomNumber: '202-A', doctorName: '森田 医師',
     restraintParts: ['右手首', '左手首', '右足首', '左足首'],
+    confirmSigns: {
+      startPrimary:   { staffId: 'N004', staffName: '原田 師長',     signedAt: '2026-02-21T20:15' },
+      startSecondary: { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2026-02-21T20:30' },
+      endPrimary:     { staffId: 'N001', staffName: '山本 看護師',   signedAt: '2026-02-23T08:10' },
+    },
   },
   {
     id: 'ISO004', patientId: 'P017', patientName: '清水 翔太',
