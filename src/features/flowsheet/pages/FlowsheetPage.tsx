@@ -8,6 +8,7 @@ import { TODAY } from '../mockData';
 import FlowsheetHeader from '../components/FlowsheetHeader';
 import MovementBar from '../components/MovementBar';
 import FlowsheetGrid from '../components/FlowsheetGrid';
+import VitalEditDialog from '../components/VitalEditDialog';
 
 const daysBetween = (from: ISODate, to: ISODate): number => {
   const a = new Date(from).getTime();
@@ -33,6 +34,7 @@ const FlowsheetPage: React.FC = () => {
 
   const [endDate, setEndDate] = useState<ISODate>(TODAY);
   const [tab, setTab] = useState<FlowsheetTab>('flowsheet');
+  const [vitalDialog, setVitalDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
 
   const dates = useMemo(() => last7Dates(endDate), [endDate]);
 
@@ -117,7 +119,7 @@ const FlowsheetPage: React.FC = () => {
             staffName={staffName}
             isFutureDisabled={isFutureDisabled}
             onClickFlowsheetIcon={todo('フローシート編集ダイアログ')}
-            onClickVitalIcon={todo('バイタル編集ダイアログ')}
+            onClickVitalIcon={(d) => setVitalDialog({ open: true, date: d })}
             onClickSignCell={(_, shift) => todo(`サイン(${shift})入力`)()}
             onClickOrderCell={todo('実施確認表ダイアログ')}
             onClickOrderListLink={todo('指示状況ダイアログ')}
@@ -142,6 +144,13 @@ const FlowsheetPage: React.FC = () => {
       {tab === 'observation' && (
         <Alert severity="info">観察タブは医療観察法対象患者向け（本エピックでは枠のみ）。</Alert>
       )}
+
+      <VitalEditDialog
+        open={vitalDialog.open}
+        patientId={patientId}
+        date={vitalDialog.date}
+        onClose={() => setVitalDialog((s) => ({ ...s, open: false }))}
+      />
     </Box>
   );
 };
