@@ -15,6 +15,7 @@ import PatternChangeDialog from '../components/PatternChangeDialog';
 import OrderListDialog from '../components/OrderListDialog';
 import ExecutionConfirmDialog from '../components/ExecutionConfirmDialog';
 import LabResultGraphDialog from '../components/LabResultGraphDialog';
+import NursingRecordDialog from '../components/NursingRecordDialog';
 
 const daysBetween = (from: ISODate, to: ISODate): number => {
   const a = new Date(from).getTime();
@@ -48,6 +49,9 @@ const FlowsheetPage: React.FC = () => {
   const [orderListOpen, setOrderListOpen] = useState(false);
   const [execDialog, setExecDialog] = useState<{ open: boolean; date: ISODate }>({ open: false, date: TODAY });
   const [labDialog, setLabDialog] = useState<{ open: boolean; ticketName: string | null }>({ open: false, ticketName: null });
+  const [nrDialog, setNrDialog] = useState<{ open: boolean; recordId: string | null; defaultDate: ISODate; mode: 'view' | 'new' | 'edit' }>(
+    { open: false, recordId: null, defaultDate: TODAY, mode: 'new' },
+  );
 
   const dates = useMemo(() => last7Dates(endDate), [endDate]);
 
@@ -74,12 +78,6 @@ const FlowsheetPage: React.FC = () => {
 
   const staffName = (id: string): string =>
     staffs.find((s) => s.id === id)?.name ?? id;
-
-  // 暫定ハンドラ（フェーズ 2-2 以降でダイアログに置換）
-  const todo = (label: string) => () => {
-    // eslint-disable-next-line no-console
-    console.log(`[ep-10 TODO] ${label}`);
-  };
 
   // 観察タブ表示条件は将来 Patient 型に isMedicalObservation を持たせる想定。
   // 本モックでは患者 id の prefix 等で判定できないため、現状は false で固定（spec の non-trivial 条件）。
@@ -138,8 +136,8 @@ const FlowsheetPage: React.FC = () => {
             onClickOrderCell={(d) => setExecDialog({ open: true, date: d })}
             onClickOrderListLink={() => setOrderListOpen(true)}
             onClickLabTicket={(name) => setLabDialog({ open: true, ticketName: name })}
-            onClickNursingRecord={(id) => todo(`看護記録閲覧 ${id}`)()}
-            onClickNewNursingRecord={todo('看護記録新規作成')}
+            onClickNursingRecord={(id) => setNrDialog({ open: true, recordId: id, defaultDate: endDate, mode: 'view' })}
+            onClickNewNursingRecord={(d) => setNrDialog({ open: true, recordId: null, defaultDate: d, mode: 'new' })}
           />
 
           {!activePattern && careItemIds.length === 0 && (
@@ -201,6 +199,14 @@ const FlowsheetPage: React.FC = () => {
         patientId={patientId}
         ticketName={labDialog.ticketName}
         onClose={() => setLabDialog((s) => ({ ...s, open: false }))}
+      />
+      <NursingRecordDialog
+        open={nrDialog.open}
+        patientId={patientId}
+        recordId={nrDialog.recordId}
+        defaultDate={nrDialog.defaultDate}
+        initialMode={nrDialog.mode}
+        onClose={() => setNrDialog((s) => ({ ...s, open: false }))}
       />
     </Box>
   );
