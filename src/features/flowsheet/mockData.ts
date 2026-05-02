@@ -315,3 +315,28 @@ export const INITIAL_SLEEP_LOGS: SleepLog[] = [
 
 // ---- 睡眠状態マスタ ----
 export const MASTER_SLEEP_STATES = ['入眠', '覚醒', '離床', '中途覚醒', '不穏'] as const;
+
+// ---- 病棟マスタ（モック内、表示用） ----
+export const FLOWSHEET_WARDS: { id: string; label: string }[] = [
+  { id: 'ward1', label: '第1病棟' },
+  { id: 'ward2', label: '第2病棟' },
+];
+
+// ---- 一括バイタル入力の「種類」マスタ ----
+// spec の「種類」は ケア項目マスタの集合（基本昼／体温のみ 等）。本モックは bp+T+P+R+S を
+// 1 つのセットとして扱い、種類により表示列を制御する。
+export type BulkVitalKindId = 'basic' | 'temp-only' | 'bp-only';
+export interface BulkVitalKindMaster {
+  id: BulkVitalKindId;
+  label: string;
+  defaultTime: string;
+  /** どのバイタル種別の列を表示するか */
+  fields: Array<'bpSys' | 'bpDia' | 'temp' | 'pulse' | 'resp' | 'spo2' | 'weight'>;
+  /** サイン連動対象の勤務帯 */
+  signShift?: 'night' | 'day' | 'evening';
+}
+export const MASTER_BULK_VITAL_KINDS: BulkVitalKindMaster[] = [
+  { id: 'basic',     label: '基本（昼）', defaultTime: '13:00', fields: ['bpSys', 'bpDia', 'temp', 'pulse', 'resp', 'spo2'], signShift: 'day' },
+  { id: 'temp-only', label: '体温のみ',   defaultTime: '07:00', fields: ['temp'], signShift: 'day' },
+  { id: 'bp-only',   label: '血圧のみ',   defaultTime: '08:00', fields: ['bpSys', 'bpDia'], signShift: 'day' },
+];
