@@ -40,6 +40,10 @@ import {
   EventNote,
   VpnKey as VpnKeyIcon,
   Logout as LogoutIcon,
+  ArticleOutlined,
+  MonitorHeart,
+  Bedtime,
+  EditNote,
 } from "@mui/icons-material";
 import { useAppStore } from "../stores/useAppStore";
 
@@ -84,6 +88,31 @@ const NAV_ITEMS: NavItem[] = [
     label: "看護記録",
     icon: <Description />,
     path: "/nursing",
+  },
+  // ep-10 看護実施（フローシート）系の 4 画面（フラット追加。サイドメニュー全体の整理は全エピック完了後）
+  {
+    key: "nursing-records",
+    label: "部門記録簿",
+    icon: <ArticleOutlined />,
+    path: "/nursing/records",
+  },
+  {
+    key: "bulk-vitals",
+    label: "一括バイタル",
+    icon: <MonitorHeart />,
+    path: "/nursing/bulk-vitals",
+  },
+  {
+    key: "sleep-table",
+    label: "睡眠表",
+    icon: <Bedtime />,
+    path: "/nursing/sleep-table",
+  },
+  {
+    key: "bulk-records",
+    label: "一括看護記録",
+    icon: <EditNote />,
+    path: "/nursing/bulk-records",
   },
   { key: "isolation", label: "隔離拘束", icon: <Lock />, path: "/isolation" },
   { key: "behavior", label: "行動範囲", icon: <Lock />, path: "/behavior" },
