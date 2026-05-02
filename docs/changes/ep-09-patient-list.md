@@ -87,6 +87,45 @@ ep-09 は共有ファイル（`src/types/index.ts`、`src/data/mockData.ts`、`s
 
 Phase 1 の AC-1〜AC-9 を全件チェックした時点で本ラウンド完了。Phase 2 は別ラウンドで対応。
 
+## 実装後メモ（2026-05-02 / Phase 1）
+
+### 追加・変更ファイル
+
+- `src/components/patientList/PatientList.tsx` — 既存実装を拡張
+  - 検索条件バーを追加: 基準日（`<input type="date">`）+ 主治医プルダウン
+  - 並び替え対応（MUI `TableSortLabel`、昇順 → 降順 → 解除のサイクル）
+    - 病棟・病室列、入院日列、主治医列
+  - 患者番号セルにクリックハンドラ追加（`stopPropagation` で行クリックと併存）
+  - 氏名列を「性別アイコン + 氏名 + （年齢）」表示に整形
+  - 入院日列に在院日数（基準日基準）を併記
+  - ICD10・病名列を `useMediaQuery('(min-width:1100px)')` で幅 < 1100px 非表示
+  - 在院判定: `admissionState !== 'discharged'` かつ `admitDate <= baseDate`
+
+### 実装上の判断・割り切り
+
+- **病棟フィルタ**: spec の「プルダウン」ではなく既存 `WardFilterTabs`（タブ UI）を維持。他画面との UI 統一性を優先。Phase 2 でプルダウン化を再検討
+- **入院日列の並び替え方向**: MUI の `asc` 矢印を「入院日昇順 = 古い順 = 在院日数降順」と扱う。spec の「ヘッダクリックで日数降順並び替え」は asc クリックで満たす
+- **在院日数表記**: `admitDate` から `baseDate` までの日数 + 1（入院当日を 1 日目とカウント）
+- **検索条件保持**: コンポーネント内 state のため、別画面に遷移して戻ると初期化される。spec の「ログアウトまで保持」は Phase 2 で `useAppStore` に移管
+- **件数表示**: `Typography variant="body2"` + `fontWeight: 600` で視認性向上
+- **「該当なし」表示**: キーワード以外のフィルタでも同じメッセージ（既存の「{query} に一致する患者が見つかりませんでした」を汎用化）
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+
+### UI 動作確認は未実施
+
+ブラウザでの実操作確認（並び替えの動作、ウィンドウリサイズ時の列非表示、患者番号クリック動線、空フィルタ条件の表示）は未実施。Phase 1 の AC は型・ビルドレベルでの整合確認まで。
+
+### Phase 2 引き継ぎ事項
+
+- 担当職員1〜10 フィルタは `Patient.assignedStaffIds` + `MASTER_STAFF` + `StaffSelectDialog` の追加が必要
+- 入院形態列は ep-04（入退院歴）と協調し、`AdmissionHistory.admitForm` から最新の値を引く設計が筋
+- 検索条件保持は `useAppStore.patientListSearchCondition` に集約（既存の `wardFilter` と統合検討）
+- 報告列・終了列は対応するデータストアが現状未整備のため、画面と一体で設計
+
 ## 残課題（Phase 2 で扱う）
 
 - 担当職員1〜10 フィルタ
