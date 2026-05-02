@@ -222,17 +222,37 @@ export interface TransferHistory {
   reason: string;
 }
 
-/** 入院歴 */
+/** 入院歴（ep-04） */
 export interface AdmissionHistory {
   id: string;
   patientId: string;
   patientName: string;
+  /** 入院期間の識別子。同一期間内の形態変更レコードは同じ periodId を持つ */
+  periodId: string;
+  /** この形態の開始日時（最初の形態 = 入院日、形態変更レコード = 形態変更日時） */
   admitDate: string;
+  /** この形態の終了日時。退院済または形態変更前なら値あり、現在の形態なら undefined */
   dischargeDate?: string;
   wardId: WardId;
   roomNumber: string;
   doctorName: string;
   status: "入院中" | "退院済" | "キャンセル";
+  /** 形態変更レコードか（false/undefined = initial 入院レコード） */
+  isAdmitFormChange?: boolean;
+  /** 入院形態（任意入院／医療保護入院 等） */
+  admitForm?: string;
+  /** 入院決定理由（最大 3000 文字） */
+  admitReason?: string;
+  /** 退院決定理由（最大 3000 文字、退院済のみ） */
+  dischargeReason?: string;
+  /** 退院区分 */
+  dischargeCategory?: "退院" | "退院後通院" | "退院後転院";
+  /** 転帰 */
+  outcome?: string;
+  /** 退院後処置（最大 1000 文字） */
+  postDischargeAction?: string;
+  /** 帰住先（住居区分マスタから選択） */
+  returnTo?: string;
 }
 
 /** 隔離拘束種別 */

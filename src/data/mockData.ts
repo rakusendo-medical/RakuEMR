@@ -789,10 +789,67 @@ export const TRANSFER_HISTORY: TransferHistory[] = [
   { id: 'TH003', patientId: 'P010', patientName: '加藤 良子', date: '2026-02-15', fromRoom: '103-B', toRoom: '106-B', reason: '退院準備' },
 ];
 
+// ===== 住居区分マスタ（ep-04 帰住先用） =====
+export const MASTER_RESIDENCE_TYPES = [
+  '自宅',
+  'グループホーム',
+  '老人ホーム',
+  '転院先',
+  '不明',
+  'その他',
+] as const;
+
 export const ADMISSION_HISTORY: AdmissionHistory[] = [
-  { id: 'AH001', patientId: 'P001', patientName: '山田 太郎', admitDate: '2026-01-10', wardId: 'ward1', roomNumber: '101', doctorName: '田村 医師', status: '入院中' },
-  { id: 'AH002', patientId: 'P001', patientName: '山田 太郎', admitDate: '2025-06-15', dischargeDate: '2025-08-20', wardId: 'ward1', roomNumber: '103', doctorName: '田村 医師', status: '退院済' },
-  { id: 'AH003', patientId: 'P003', patientName: '鈴木 一郎', admitDate: '2026-02-01', wardId: 'ward1', roomNumber: '102', doctorName: '森田 医師', status: '入院中' },
+  // P001 山田 太郎: 過去の退院済み入院期間（任意入院）
+  {
+    id: 'AH001-P001-1', patientId: 'P001', patientName: '山田 太郎',
+    periodId: 'AHP-P001-1', admitDate: '2025-06-15', dischargeDate: '2025-08-20',
+    wardId: 'ward1', roomNumber: '103', doctorName: '田村 医師', status: '退院済',
+    admitForm: '任意入院',
+    admitReason: '症状増悪のため任意入院。家族の理解と同意あり。',
+    dischargeReason: '症状改善により退院可。',
+    dischargeCategory: '退院後通院', outcome: '軽快',
+    postDischargeAction: '当院外来にて 2 週ごとに通院。服薬継続。',
+    returnTo: '自宅',
+  },
+  // P001 山田 太郎: 現在の入院期間（任意入院、形態変更なし）
+  {
+    id: 'AH002-P001-current', patientId: 'P001', patientName: '山田 太郎',
+    periodId: 'AHP-P001-2', admitDate: '2026-01-10', wardId: 'ward1', roomNumber: '101',
+    doctorName: '田村 医師', status: '入院中',
+    admitForm: '任意入院',
+    admitReason: '不眠と幻聴の訴えあり、本人同意のもと任意入院。',
+  },
+  // P003 鈴木 一郎: 現在の入院期間（任意入院 → 医療保護入院 → 措置入院 の形態変更チェーン）
+  {
+    id: 'AH003-P003-1', patientId: 'P003', patientName: '鈴木 一郎',
+    periodId: 'AHP-P003-1', admitDate: '2026-02-01T10:00', dischargeDate: '2026-02-15T15:59',
+    wardId: 'ward1', roomNumber: '102', doctorName: '森田 医師', status: '入院中',
+    admitForm: '任意入院',
+    admitReason: '症状増悪により任意入院。',
+  },
+  {
+    id: 'AH003-P003-2', patientId: 'P003', patientName: '鈴木 一郎',
+    periodId: 'AHP-P003-1', admitDate: '2026-02-15T16:00', dischargeDate: '2026-03-01T08:59',
+    wardId: 'ward1', roomNumber: '102', doctorName: '森田 医師', status: '入院中',
+    admitForm: '医療保護入院', isAdmitFormChange: true,
+    admitReason: '本人同意撤回のため家族同意による医療保護入院に切替。',
+  },
+  {
+    id: 'AH003-P003-3', patientId: 'P003', patientName: '鈴木 一郎',
+    periodId: 'AHP-P003-1', admitDate: '2026-03-01T09:00',
+    wardId: 'ward1', roomNumber: '102', doctorName: '森田 医師', status: '入院中',
+    admitForm: '措置入院', isAdmitFormChange: true,
+    admitReason: '自傷他害のおそれが強まったため措置入院に切替。',
+  },
+  // P006 伊藤 幸子: 現在の入院期間（医療保護入院、退院指示済）
+  {
+    id: 'AH006-P006-current', patientId: 'P006', patientName: '伊藤 幸子',
+    periodId: 'AHP-P006-1', admitDate: '2026-01-08', wardId: 'ward1', roomNumber: '104',
+    doctorName: '森田 医師', status: '入院中',
+    admitForm: '医療保護入院',
+    admitReason: '抑うつ症状重度。家族同意のもと医療保護入院。',
+  },
 ];
 
 // ===== 隔離拘束 =====
