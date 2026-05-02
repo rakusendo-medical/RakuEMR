@@ -1268,3 +1268,66 @@ export const PERIODIC_EVALUATIONS: PeriodicEvaluationRecord[] = [
     ],
   },
 ];
+
+// ===== ep-09 患者情報 マスタ =====
+// 職員マスタ（担当職員1〜10、職員選択ダイアログの選択肢）
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: '看護師' | '看護師長' | '主任' | '准看護師' | '看護助手';
+}
+export const MASTER_STAFF: StaffMember[] = [
+  { id: 'STF001', name: '山田 看護師長', role: '看護師長' },
+  { id: 'STF002', name: '佐藤 主任', role: '主任' },
+  { id: 'STF003', name: '鈴木 Ns', role: '看護師' },
+  { id: 'STF004', name: '高橋 Ns', role: '看護師' },
+  { id: 'STF005', name: '田中 Ns', role: '看護師' },
+  { id: 'STF006', name: '伊藤 Ns', role: '看護師' },
+  { id: 'STF007', name: '渡辺 Ns', role: '看護師' },
+  { id: 'STF008', name: '中村 准Ns', role: '准看護師' },
+  { id: 'STF009', name: '小林 准Ns', role: '准看護師' },
+  { id: 'STF010', name: '加藤 助手', role: '看護助手' },
+];
+
+// 責任レベルマスタ（区分マスタ）
+export const MASTER_RESPONSIBILITY_LEVELS = ['L1（軽度）', 'L2（中度）', 'L3（重度）', 'L4（特定）'] as const;
+export type ResponsibilityLevel = typeof MASTER_RESPONSIBILITY_LEVELS[number];
+
+/**
+ * PATIENTS の Phase 2 拡張データ。
+ * 既存の PATIENTS 各レコードに `assignedStaffIds` / `responsibilityLevel` / `examinerIds` を
+ * 別マップで提供し、PatientList Phase 2 では PATIENTS と本マップを合成して扱う。
+ *
+ * 既存 PATIENTS 配列を直接書き換えない理由:
+ * - 既存配列は ep-01〜ep-04 など複数エピックから参照されているため、追加フィールドを
+ *   既存ファイルの全行に書き加えると差分が大きくなり、他セッションとの干渉が増える
+ * - Patient 型自体には optional として追加し、PatientList 側で本マップから上書き合成する
+ */
+export interface PatientPhase2Extras {
+  assignedStaffIds?: string[];
+  responsibilityLevel?: ResponsibilityLevel;
+  /** 診察医ID（主治医とは別。「診察医登録分も表示」で利用） */
+  examinerIds?: string[];
+}
+export const PATIENT_PHASE2_EXTRAS: Record<string, PatientPhase2Extras> = {
+  P001: { assignedStaffIds: ['STF001', 'STF003'], responsibilityLevel: 'L2（中度）', examinerIds: ['STF002'] },
+  P002: { assignedStaffIds: ['STF003', 'STF004'], responsibilityLevel: 'L1（軽度）' },
+  P003: { assignedStaffIds: ['STF005'], responsibilityLevel: 'L3（重度）', examinerIds: ['STF002'] },
+  P004: { assignedStaffIds: ['STF003'], responsibilityLevel: 'L3（重度）' },
+  P005: { assignedStaffIds: ['STF006', 'STF007'], responsibilityLevel: 'L1（軽度）' },
+  P006: { assignedStaffIds: ['STF004'], responsibilityLevel: 'L2（中度）' },
+  P007: { assignedStaffIds: ['STF005', 'STF008'], responsibilityLevel: 'L1（軽度）' },
+  P008: { assignedStaffIds: ['STF001', 'STF002', 'STF004'], responsibilityLevel: 'L2（中度）' },
+  P009: { assignedStaffIds: ['STF006'], responsibilityLevel: 'L1（軽度）' },
+  P010: { assignedStaffIds: ['STF007'], responsibilityLevel: 'L1（軽度）' },
+  P011: { assignedStaffIds: ['STF008', 'STF009'], responsibilityLevel: 'L4（特定）' },
+  P012: { assignedStaffIds: ['STF005'], responsibilityLevel: 'L2（中度）' },
+  P013: { assignedStaffIds: ['STF003'], responsibilityLevel: 'L3（重度）', examinerIds: ['STF002'] },
+  P014: { assignedStaffIds: ['STF004'], responsibilityLevel: 'L1（軽度）' },
+  P015: { assignedStaffIds: ['STF006'], responsibilityLevel: 'L2（中度）' },
+};
+
+export const MASTER_STAFF_BY_ID = MASTER_STAFF.reduce<Record<string, StaffMember>>(
+  (acc, s) => { acc[s.id] = s; return acc; }, {},
+);
+
