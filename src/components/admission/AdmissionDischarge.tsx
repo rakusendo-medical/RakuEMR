@@ -5,10 +5,11 @@ import {
   ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import {
-  TRANSFER_HISTORY, ADMISSION_HISTORY,
+  TRANSFER_HISTORY,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import AdmissionScheduleCalendar from './AdmissionScheduleCalendar';
+import AdmissionHistoryView from './AdmissionHistoryView';
 
 const AdmissionDischarge: React.FC = () => {
   const [tab, setTab] = useState(0);
@@ -54,40 +55,7 @@ const AdmissionDischarge: React.FC = () => {
 
       {tab === 0 && <AdmissionScheduleCalendar />}
 
-      {tab === 1 && (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>患者番号</TableCell>
-                <TableCell>患者氏名</TableCell>
-                <TableCell>入院日</TableCell>
-                <TableCell>退院日</TableCell>
-                <TableCell>病棟</TableCell>
-                <TableCell>病室</TableCell>
-                <TableCell>主治医</TableCell>
-                <TableCell>状態</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {ADMISSION_HISTORY.map((h) => (
-                <TableRow key={h.id} hover>
-                  <TableCell>{h.patientId}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{h.patientName}</TableCell>
-                  <TableCell>{h.admitDate}</TableCell>
-                  <TableCell>{h.dischargeDate || '—'}</TableCell>
-                  <TableCell>{h.wardId === 'ward1' ? '第１病棟' : '第２病棟'}</TableCell>
-                  <TableCell>{h.roomNumber}</TableCell>
-                  <TableCell>{h.doctorName}</TableCell>
-                  <TableCell>
-                    <Chip label={h.status} size="small" color={h.status === '入院中' ? 'primary' : 'default'} variant="outlined" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+      {tab === 1 && <AdmissionHistoryView onNavigateToTransferHistory={() => setTab(2)} />}
 
       {tab === 2 && (
         <TableContainer component={Paper} variant="outlined">

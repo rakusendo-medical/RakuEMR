@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { MedicalRecord, Patient, WardId } from '../types';
+import type { AdmissionHistory, MedicalRecord, Patient, WardId } from '../types';
 
 /** 操作者ロール（ep-02 代行入力認証フローの分岐用） */
 export type UserRole = 'doctor' | 'staff';
@@ -96,6 +96,15 @@ interface AppState {
   dynamicMedicalRecords: Record<string, MedicalRecord[]>;
   appendMedicalRecord: (patientId: string, record: MedicalRecord) => void;
 
+  // ep-04: 入退院歴の動的編集（永続化対象）
+  // ADMISSION_HISTORY（マスタ）に対する差分のみ保持。AdmissionHistoryView 側で計算合成する。
+  admissionHistoryEdits: Record<string, Partial<AdmissionHistory>>;
+  addedAdmissionHistory: AdmissionHistory[];
+  removedAdmissionHistoryIds: string[];
+  editAdmissionHistory: (id: string, edit: Partial<AdmissionHistory>) => void;
+  addAdmissionHistory: (record: AdmissionHistory) => void;
+  removeAdmissionHistory: (id: string) => void;
+
   // サイドバー
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -184,6 +193,25 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
+      admissionHistoryEdits: {},
+      addedAdmissionHistory: [],
+      removedAdmissionHistoryIds: [],
+      editAdmissionHistory: (id, edit) =>
+        set((state) => ({
+          admissionHistoryEdits: {
+            ...state.admissionHistoryEdits,
+            [id]: { ...state.admissionHistoryEdits[id], ...edit },
+          },
+        })),
+      addAdmissionHistory: (record) =>
+        set((state) => ({ addedAdmissionHistory: [...state.addedAdmissionHistory, record] })),
+      removeAdmissionHistory: (id) =>
+        set((state) => ({
+          removedAdmissionHistoryIds: state.removedAdmissionHistoryIds.includes(id)
+            ? state.removedAdmissionHistoryIds
+            : [...state.removedAdmissionHistoryIds, id],
+        })),
+
       sidebarOpen: true,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
@@ -206,6 +234,9 @@ export const useAppStore = create<AppState>()(
         confirmedAdmissionIds: state.confirmedAdmissionIds,
         currentUserRole: state.currentUserRole,
         optionalFeatures: state.optionalFeatures,
+        admissionHistoryEdits: state.admissionHistoryEdits,
+        addedAdmissionHistory: state.addedAdmissionHistory,
+        removedAdmissionHistoryIds: state.removedAdmissionHistoryIds,
       }),
       version: 1,
     },
