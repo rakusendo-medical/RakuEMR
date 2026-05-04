@@ -135,7 +135,7 @@ const BulkNursingRecordsPage: React.FC = () => {
       });
       count += 1;
     });
-    setSavedMsg(`${count} 名分の看護記録を登録しました。`);
+    setSavedMsg(`${count} 名分の看護経過記録を登録しました。`);
     setRows((rs) => rs.map((r) => (r.selected ? { ...r, selected: false, text: '' } : r)));
   };
 
@@ -143,7 +143,7 @@ const BulkNursingRecordsPage: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       <Paper variant="outlined" sx={{ p: 1.5 }}>
         <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
-          <Typography variant="h6">一括看護記録</Typography>
+          <Typography variant="h6">一括看護経過記録</Typography>
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>病棟</InputLabel>
             <Select label="病棟" value={wardId} onChange={(e) => { setWardId(e.target.value); setRoom(''); }}>

@@ -243,9 +243,9 @@ const NursingRecordDialog: React.FC<Props> = ({
   };
 
   const titleText = useMemo(() => {
-    if (mode === 'view') return '看護記録（参照）';
-    if (mode === 'edit') return '看護記録（編集）';
-    return '看護記録（新規作成）';
+    if (mode === 'view') return '看護経過記録（参照）';
+    if (mode === 'edit') return '看護経過記録（編集）';
+    return '看護経過記録（新規作成）';
   }, [mode]);
 
   return (
@@ -471,7 +471,7 @@ const NursingRecordDialog: React.FC<Props> = ({
               </Stack>
             }
           >
-            この看護記録を削除します。よろしいですか？（論理削除）
+            この看護経過記録を削除します。よろしいですか？（論理削除）
           </Alert>
         )}
       </DialogContent>

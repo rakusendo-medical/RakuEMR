@@ -256,7 +256,7 @@ const FlowsheetGrid: React.FC<Props> = ({
         if (byDate.has(date)) byDate.get(date)!.push(n);
       });
     return (
-      <Row label="看護記録">
+      <Row label="看護経過記録">
         {dates.map((d) => {
           const list = byDate.get(d) ?? [];
           const disabled = isFutureDisabled(d);

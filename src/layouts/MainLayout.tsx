@@ -110,7 +110,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     key: "bulk-records",
-    label: "一括看護記録",
+    label: "一括看護経過記録",
     icon: <EditNote />,
     path: "/nursing/bulk-records",
   },
