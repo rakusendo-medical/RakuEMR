@@ -17,7 +17,6 @@ import PatientSchedule from '../components/schedule/PatientSchedule';
 import OrderManagement from '../components/orders/OrderManagement';
 import Rehabilitation from '../components/rehab/Rehabilitation';
 import NursingCarePlan from '../components/nursingCare/NursingCarePlan';
-import NursingPlanPage from '../components/nursingPlan/NursingPlanPage';
 import PeriodicEvaluationPage from '../components/periodicEvaluation/PeriodicEvaluationPage';
 import DocumentManagement from '../components/documents/DocumentManagement';
 import WardManagement from '../components/wardManagement/WardManagement';
@@ -49,7 +48,6 @@ const AppRoutes: React.FC = () => (
       <Route path="/orders" element={<OrderManagement />} />
       <Route path="/rehab" element={<Rehabilitation />} />
       <Route path="/nursing-care" element={<NursingCarePlan />} />
-      <Route path="/nursing-plan" element={<NursingPlanPage />} />
       <Route path="/periodic-evaluation" element={<PeriodicEvaluationPage />} />
       <Route path="/documents" element={<DocumentManagement />} />
       <Route path="/ward-management" element={<WardManagement />} />
