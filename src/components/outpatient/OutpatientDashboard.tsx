@@ -63,7 +63,7 @@ const PRIMARY_TILES: NavTile[] = [
 ];
 
 const SECONDARY_TILES: NavTile[] = [
-  { key: 'basic',     label: '患者基本情報',  icon: <PersonIcon />,          to: '/karte-outpatient' },
+  { key: 'basic',     label: '患者基本情報',  icon: <PersonIcon />,          to: '/outpatient-basic' },
   { key: 'attrs',     label: '患者属性',      icon: <VerifiedUserIcon />,    to: '/karte-outpatient' },
   { key: 'insurance', label: '保険情報',      icon: <PaymentsIcon />,        to: '/karte-outpatient' },
   { key: 'contact',   label: '連絡先情報',    icon: <PhoneIcon />,           to: '/karte-outpatient' },
@@ -98,20 +98,16 @@ const OutpatientDashboard: React.FC = () => {
   }
 
   const handleNavigate = (tile: NavTile) => {
-    const url = tile.newWindow
-      ? `${tile.to}/${visit.patientId}`
-      : tile.to;
-    if (tile.newWindow) {
-      // モックでは同タブ遷移（仕様上は別ウィンドウだが UX 検証目的で簡略化）
-      navigate(`${tile.to}/${visit.patientId}`);
+    if (tile.key === 'basic') {
+      navigate(`/outpatient/${visit.patientId}/basic`);
       return;
     }
-    // 別エピックで実装される画面はトーストで予告
-    if (tile.to === '/orders' || tile.to === '/documents') {
-      showSnackbar(`${tile.label}画面（別ウィンドウ想定）は実装予定`, 'info');
+    if (tile.key === 'karte') {
+      navigate(`/karte-outpatient/${visit.patientId}`);
       return;
     }
-    navigate(url);
+    // 未実装の画面はトーストで予告
+    showSnackbar(`${tile.label}画面は実装予定`, 'info');
   };
 
   // 最新 5 件
