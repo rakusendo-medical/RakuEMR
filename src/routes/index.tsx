@@ -13,13 +13,10 @@ import FlowsheetView from '../components/flowsheet/Flowsheet';
 import IsolationRestraint from '../components/isolation/IsolationRestraint';
 import BehaviorRange from '../components/behaviorRange/BehaviorRange';
 import OutingManagement from '../components/outing/OutingManagement';
-import PatientSchedule from '../components/schedule/PatientSchedule';
 import OrderManagement from '../components/orders/OrderManagement';
-import Rehabilitation from '../components/rehab/Rehabilitation';
 import NursingCarePlan from '../components/nursingCare/NursingCarePlan';
 import DocumentManagement from '../components/documents/DocumentManagement';
 import WardManagement from '../components/wardManagement/WardManagement';
-import PatientRegistration from '../components/patientRegistration/PatientRegistration';
 import KarteAlphaPage from '../components/karteAlpha/KarteAlphaPage';
 import OutpatientKartePage from '../components/karteOutpatient/OutpatientKartePage';
 import DesignGuide from '../components/designGuide/DesignGuide';
@@ -43,13 +40,10 @@ const AppRoutes: React.FC = () => (
       <Route path="/isolation" element={<IsolationRestraint />} />
       <Route path="/behavior" element={<BehaviorRange />} />
       <Route path="/outing" element={<OutingManagement />} />
-      <Route path="/schedule" element={<PatientSchedule />} />
       <Route path="/orders" element={<OrderManagement />} />
-      <Route path="/rehab" element={<Rehabilitation />} />
       <Route path="/nursing-care" element={<NursingCarePlan />} />
       <Route path="/documents" element={<DocumentManagement />} />
       <Route path="/ward-management" element={<WardManagement />} />
-      <Route path="/patient-registration" element={<PatientRegistration />} />
       <Route path="/design-guide" element={<DesignGuide />} />
       {CARE_PLAN_ROUTES}
       {FLOWSHEET_ROUTES}
