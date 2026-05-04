@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>操作マニュアル - EMR Client</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="index.html">トップページ</a>
+      <a href="overview.html">機能一覧・概要</a>
+      <a href="screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="manual.html" class="active">操作マニュアル</a>
+      <a href="spec.html">機能仕様書</a>
+      <a href="api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="features/auth.html">認証</a>
+      <a href="features/patient.html">患者管理</a>
+      <a href="features/diagnosis.html">病名管理</a>
+      <a href="features/medical-records.html">カルテ・診療記録</a>
+      <a href="features/orders.html">オーダー管理</a>
+      <a href="features/documents.html">文書・ファイル管理</a>
+      <a href="features/assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>操作マニュアル</h1>
+      <span class="breadcrumb">トップ &gt; 操作マニュアル</span>
+    </div>
+    <div class="content">
+
+      <!-- 目次 -->
+      <div class="card">
+        <h2>目次</h2>
+        <ol style="margin-left:20px; line-height:2;">
+          <li><a href="#login">ログイン</a></li>
+          <li><a href="#patient-search">患者検索</a></li>
+          <li><a href="#patient-register">患者登録（新規）</a></li>
+          <li><a href="#checkin">チェックイン（ORCA取込）</a></li>
+          <li><a href="#outpatient">外来一覧の操作</a></li>
+          <li><a href="#dashboard">メインダッシュボード</a></li>
+          <li><a href="#patient-info">患者情報の編集</a></li>
+          <li><a href="#medical-records">カルテ記載</a></li>
+          <li><a href="#diagnosis">病名管理</a></li>
+          <li><a href="#orders">オーダー発行</a></li>
+          <li><a href="#documents">文書・ファイル管理</a></li>
+          <li><a href="#assessments">心理検査・評価</a></li>
+          <li><a href="#orca">ORCA連携</a></li>
+        </ol>
+      </div>
+
+      <!-- 1. ログイン -->
+      <div class="card" id="login">
+        <h2>1. ログイン</h2>
+        <p>システムを使用するには、まずログインが必要です。</p>
+
+        <div class="step-box">
+          <span class="step-num">1</span>ブラウザでシステムのURLにアクセスします。ログイン画面が表示されます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>「ユーザーID」欄に、付与されたユーザーIDを入力します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>「パスワード」欄に、パスワードを入力します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">4</span>「ログイン」ボタンをクリックします。認証が成功すると、患者検索画面に遷移します。
+        </div>
+
+        <div class="warning-box">
+          <strong>注意:</strong> パスワードを連続で間違えるとエラーが表示されます。正しいID・パスワードを確認してから再度ログインしてください。
+        </div>
+      </div>
+
+      <!-- 2. 患者検索 -->
+      <div class="card" id="patient-search">
+        <h2>2. 患者検索</h2>
+        <p>ログイン後、患者検索画面が表示されます。患者番号または患者名で検索できます。</p>
+
+        <div class="step-box">
+          <span class="step-num">1</span>検索タイプを選択します。「患者番号」または「患者名」のラジオボタンを選択してください。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>検索欄にキーワードを入力します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>「検索」ボタンをクリックします。該当する患者の一覧が表示されます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">4</span>一覧から患者を選択すると、メインダッシュボード画面に遷移します。
+        </div>
+      </div>
+
+      <!-- 3. 患者登録 -->
+      <div class="card" id="patient-register">
+        <h2>3. 患者登録（新規）</h2>
+        <p>新しい患者を登録する場合の操作手順です。</p>
+
+        <div class="step-box">
+          <span class="step-num">1</span>患者検索画面で、新規登録用の操作を行います。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>患者登録画面が表示されます。左側に患者情報、右側に保険情報を入力します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span><strong>患者情報</strong>を入力します：
+          <ul style="margin:8px 0 0 20px;">
+            <li>患者ID（8桁の数字。次に使用可能なIDが自動表示されます）</li>
+            <li>氏名・氏名（カナ）</li>
+            <li>診療科（プルダウンから選択）</li>
+            <li>性別・生年月日</li>
+            <li>郵便番号（入力すると住所が自動補完されます）</li>
+            <li>住所・住所詳細</li>
+            <li>連絡先（任意）</li>
+          </ul>
+        </div>
+        <div class="step-box">
+          <span class="step-num">4</span><strong>保険情報</strong>を入力します：
+          <ul style="margin:8px 0 0 20px;">
+            <li>法別番号・本人/家族区分</li>
+            <li>自己負担割合</li>
+            <li>保険期間（開始日・終了日）</li>
+            <li>保険者番号・被保険者記号番号・保険番号</li>
+          </ul>
+        </div>
+        <div class="step-box">
+          <span class="step-num">5</span>「登録」ボタンをクリックします。確認ダイアログが表示されるので「OK」を選択します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">6</span>登録が完了すると、外来一覧画面に遷移します。
+        </div>
+
+        <div class="info-box">
+          <strong>ヒント:</strong> 郵便番号を入力すると、住所が自動的に補完されます。住所詳細（番地・建物名等）は手動で入力してください。
+        </div>
+      </div>
+
+      <!-- 4. チェックイン -->
+      <div class="card" id="checkin">
+        <h2>4. チェックイン（ORCA取込）</h2>
+        <p>ORCAに登録されている患者情報を取り込み、チェックインを行います。</p>
+
+        <div class="step-box">
+          <span class="step-num">1</span>患者検索画面で「チェックイン」ボタンをクリックします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>ORCA取込ダイアログが表示されます。患者情報を確認します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>取り込みを実行すると、患者がチェックイン状態になり、外来一覧に表示されます。
+        </div>
+      </div>
+
+      <!-- 5. 外来一覧 -->
+      <div class="card" id="outpatient">
+        <h2>5. 外来一覧の操作</h2>
+        <p>当日の外来患者の一覧を管理する画面です。</p>
+
+        <h3>基本操作</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>一覧から患者をラジオボタンで選択します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>選択した患者に対して各種操作が可能になります。
+        </div>
+
+        <h3>利用可能な操作</h3>
+        <table>
+          <thead><tr><th>操作</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><strong>メイン</strong></td><td>選択患者のメインダッシュボードを開きます</td></tr>
+            <tr><td><strong>オーダー</strong></td><td>選択患者のオーダー管理画面を開きます</td></tr>
+            <tr><td><strong>文書登録</strong></td><td>選択患者の診療文書画面を開きます</td></tr>
+            <tr><td><strong>通知</strong></td><td>通知ダイアログを表示します</td></tr>
+            <tr><td><strong>予約</strong></td><td>予約登録ダイアログを表示します</td></tr>
+            <tr><td><strong>ORCA送信</strong></td><td>オーダー情報をORCAへ送信します</td></tr>
+            <tr><td><strong>会計完了</strong></td><td>チェックイン中の患者の会計を完了します</td></tr>
+            <tr><td><strong>チェックイン取消</strong></td><td>チェックインを取り消します</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 6. メインダッシュボード -->
+      <div class="card" id="dashboard">
+        <h2>6. メインダッシュボード</h2>
+        <p>患者を選択すると表示される中心的な画面です。患者の診療情報が一覧表示され、各機能への入口となります。</p>
+
+        <h3>表示される情報</h3>
+        <ul style="margin-left:20px;">
+          <li>患者基本情報（氏名、年齢、性別等）</li>
+          <li>登録されている病名一覧</li>
+          <li>過去のカルテ記載履歴</li>
+          <li>GAFスコア（初回・最新）</li>
+          <li>開示情報</li>
+          <li>オーダー処理状況</li>
+        </ul>
+
+        <h3>ナビゲーション</h3>
+        <p>画面上のボタンから、以下の各機能画面に移動できます：</p>
+        <ul style="margin-left:20px;">
+          <li>患者情報（基本・属性・保険・連絡先・エピソード・その他・メモ）</li>
+          <li>カルテ記載（新規ウィンドウで開く）</li>
+          <li>病名管理</li>
+          <li>各種オーダー（新規ウィンドウで開く）</li>
+          <li>検査結果・画像結果・各種文書</li>
+          <li>心理検査（バウムテスト・CES-D・GAF）</li>
+        </ul>
+      </div>
+
+      <!-- 7. 患者情報の編集 -->
+      <div class="card" id="patient-info">
+        <h2>7. 患者情報の編集</h2>
+        <p>メインダッシュボードから各種患者情報画面にアクセスして編集します。</p>
+
+        <h3>基本情報の編集</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードの「基本情報」ボタンをクリックします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>主訴、アレルギー情報、感染症情報等を入力・変更します。
+          各項目は「なし/あり/不明」の3段階で設定でき、「あり」の場合は詳細を記述できます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>「登録」ボタンで保存します。確認ダイアログが表示されます。
+        </div>
+
+        <h3>エピソードの追加</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードの「エピソード」ボタンをクリックします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>年月を選択し、内容（最大4000文字）を入力します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>「追加」ボタンでエピソードを登録します。既存エピソードは左の一覧から選択して閲覧・削除できます。
+        </div>
+      </div>
+
+      <!-- 8. カルテ記載 -->
+      <div class="card" id="medical-records">
+        <h2>8. カルテ記載</h2>
+        <p>メインダッシュボードからカルテ記載画面を開きます（新しいウィンドウで表示されます）。</p>
+
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードの「カルテ」ボタンをクリックします。新しいウィンドウでカルテ画面が開きます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>各セクションに診療情報を入力します。テンプレートを選択して定型文を挿入することもできます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>必要に応じて添付ファイル（PDF/JPG/PNG）をアップロードします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">4</span>必要に応じて家系図やシェーマを描画ツールで作成します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">5</span>「保存」で一時保存、「診察終了」で確定します。
+        </div>
+
+        <div class="warning-box">
+          <strong>注意:</strong> 未保存の変更がある状態でウィンドウを閉じようとすると、確認ダイアログが表示されます。
+        </div>
+      </div>
+
+      <!-- 9. 病名管理 -->
+      <div class="card" id="diagnosis">
+        <h2>9. 病名管理</h2>
+
+        <h3>病名の登録</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードから「病名」関連のボタンをクリックし、病名一覧画面を開きます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>「病名追加」ボタンをクリックします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>接頭語を選択します（任意）。例：「急性」「慢性」等
+        </div>
+        <div class="step-box">
+          <span class="step-num">4</span>ICD-10コードを検索・選択します（必須）。コード名の一部を入力して検索できます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">5</span>接尾語を選択します（任意）。例：「の疑い」等
+        </div>
+        <div class="step-box">
+          <span class="step-num">6</span>開始日、診療科等を入力し、「登録」ボタンをクリックします。
+        </div>
+
+        <h3>主病名の設定</h3>
+        <p>病名一覧画面で「主病名」列のチェックボックスをクリックすると、確認ダイアログ表示後に主病名を切り替えられます。</p>
+
+        <h3>ORCAからの病名取込</h3>
+        <p>病名一覧画面の「ORCA取込」ボタンで、ORCAに登録されている病名情報を取り込めます。</p>
+      </div>
+
+      <!-- 10. オーダー発行 -->
+      <div class="card" id="orders">
+        <h2>10. オーダー発行</h2>
+        <p>メインダッシュボードから各種オーダーを発行します。オーダーは新しいウィンドウで開きます。</p>
+
+        <h3>処方オーダー</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードの「処方」ボタンをクリックします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>薬剤を選択します。以下の方法があります：
+          <ul style="margin:8px 0 0 20px;">
+            <li><strong>セット:</strong> 事前に定義された薬剤セットから選択</li>
+            <li><strong>薬剤セット:</strong> セットグループから選択</li>
+            <li><strong>過去処方:</strong> 過去の処方履歴から選択</li>
+            <li><strong>薬剤一覧:</strong> 薬剤マスタから検索して選択</li>
+          </ul>
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>用法を選択し、必要に応じて備考を入力します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">4</span>「登録」ボタンで処方を発行します。
+        </div>
+
+        <h3>注射・検査・テキスト・処置オーダー</h3>
+        <p>基本的な操作は処方と同様です。各オーダーの特徴：</p>
+        <table>
+          <thead><tr><th>オーダー種別</th><th>特徴</th></tr></thead>
+          <tbody>
+            <tr><td>注射</td><td>注射セット/過去注射/注射一覧から選択。印刷機能あり</td></tr>
+            <tr><td>検査</td><td>検査セットからチェックボックスで複数選択</td></tr>
+            <tr><td>テキスト</td><td>テキスト入力とファイル添付（PDF/JPG/PNG）</td></tr>
+            <tr><td>処置</td><td>処置セット選択、シェーマ描画機能、ファイル添付</td></tr>
+          </tbody>
+        </table>
+
+        <h3>オーダーの完了・取消</h3>
+        <p>詳細画面で「完了」または「取消」ボタンを使用してオーダーステータスを変更します。</p>
+      </div>
+
+      <!-- 11. 文書・ファイル管理 -->
+      <div class="card" id="documents">
+        <h2>11. 文書・ファイル管理</h2>
+
+        <h3>ファイルの登録</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードから該当する文書カテゴリのボタンをクリックします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>「ファイル選択」でアップロードするファイルを選びます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>プレビューを確認し、「アップロード」ボタンをクリックします。
+        </div>
+
+        <h3>ファイルの閲覧</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードから該当する文書カテゴリの閲覧ボタンをクリックします。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>ファイル一覧から表示したいファイルを選択します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>プレビュー領域にファイル内容が表示されます。
+        </div>
+
+        <h3>対応文書カテゴリ</h3>
+        <table>
+          <thead><tr><th>カテゴリ</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td>問診票</td><td>患者問診票のスキャン画像等</td></tr>
+            <tr><td>院外証明書</td><td>院外で発行された各種証明書</td></tr>
+            <tr><td>院内証明書</td><td>院内で発行した証明書</td></tr>
+            <tr><td>紹介状</td><td>紹介元からの紹介状</td></tr>
+            <tr><td>既存カルテ</td><td>過去のカルテ画像</td></tr>
+            <tr><td>その他ファイル</td><td>上記に分類されないファイル</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 12. 心理検査 -->
+      <div class="card" id="assessments">
+        <h2>12. 心理検査・評価</h2>
+
+        <h3>GAFスコアの登録</h3>
+        <div class="step-box">
+          <span class="step-num">1</span>ダッシュボードからGAFスコア画面を開きます。
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>初回・前回のスコアが表示されます。現在のスコア（1-100）を入力します。
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>「登録」ボタンでスコアを保存します。
+        </div>
+
+        <div class="info-box">
+          <strong>GAFスコアについて:</strong> GAF（機能の全体的評定）は1-100の範囲で評価します。数値が高いほど心理社会的機能が良好であることを示します。
+        </div>
+
+        <h3>バウムテスト / CES-D</h3>
+        <p>ファイルベースの管理です。検査結果の画像ファイルをアップロードし、閲覧画面で確認します。操作方法は「文書・ファイル管理」と同様です。</p>
+
+        <h3>検査結果 / 画像結果</h3>
+        <p>臨床検査結果やレントゲン等の画像も同様にファイルベースで管理します。</p>
+      </div>
+
+      <!-- 13. ORCA連携 -->
+      <div class="card" id="orca">
+        <h2>13. ORCA連携</h2>
+        <p>ORCA（日医標準レセプトコンピュータ）との連携機能です。</p>
+
+        <h3>患者取込（インポート）</h3>
+        <p>患者検索画面の「チェックイン」ボタンから、ORCAに登録された患者情報を本システムに取り込みます。</p>
+
+        <h3>病名取込（インポート）</h3>
+        <p>病名一覧画面の「ORCA取込」ボタンから、ORCAに登録された病名情報を取り込みます。</p>
+
+        <h3>オーダー送信（エクスポート）</h3>
+        <p>外来一覧画面の「ORCA送信」ボタンから、本システムで登録したオーダー情報をORCAへ送信します。</p>
+
+        <div class="warning-box">
+          <strong>注意:</strong> ORCA連携を使用するには、ORCA側のシステムが正常に稼働している必要があります。接続エラーが発生した場合は、システム管理者に連絡してください。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

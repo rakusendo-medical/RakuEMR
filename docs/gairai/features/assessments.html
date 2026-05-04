@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心理検査・評価 - EMR Client</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="../index.html">トップページ</a>
+      <a href="../overview.html">機能一覧・概要</a>
+      <a href="../screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="../manual.html">操作マニュアル</a>
+      <a href="../spec.html">機能仕様書</a>
+      <a href="../api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="auth.html">認証</a>
+      <a href="patient.html">患者管理</a>
+      <a href="diagnosis.html">病名管理</a>
+      <a href="medical-records.html">カルテ・診療記録</a>
+      <a href="orders.html">オーダー管理</a>
+      <a href="documents.html">文書・ファイル管理</a>
+      <a href="assessments.html" class="active">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>心理検査・評価</h1>
+      <span class="breadcrumb">トップ &gt; 機能詳細 &gt; 心理検査・評価</span>
+    </div>
+    <div class="content">
+
+      <!-- バウムテスト -->
+      <div class="card">
+        <h2>バウムテスト</h2>
+        <p>木の絵の描画による心理検査結果を管理します。ファイルベースの登録・閲覧を行います。</p>
+
+        <h3>登録画面</h3>
+        <p>パス: <code>/:patientId/baumTestRegist</code> | コンポーネント: <code>BaumTestRegistrationPage</code></p>
+        <p>共通コンポーネント <code>FileRegistrationForm</code> を使用（fileType: <code>baumTest</code>）</p>
+        <ul class="field-list">
+          <li><span class="field-name">ファイル選択</span> <span class="field-type">FileInput</span> <span class="field-desc">バウムテスト結果画像をアップロード</span></li>
+        </ul>
+
+        <h3>閲覧画面</h3>
+        <p>パス: <code>/:patientId/baumTestsView</code> | コンポーネント: <code>BaumTestsViewPage</code></p>
+        <p>共通コンポーネント <code>FileViewForm</code> を使用（fileType: <code>baumTest</code>）</p>
+      </div>
+
+      <!-- CES-D -->
+      <div class="card">
+        <h2>CES-Dスコアシート</h2>
+        <p>CES-D（うつ病自己評価尺度）の結果を管理します。ファイルベースの登録・閲覧を行います。</p>
+
+        <h3>登録画面</h3>
+        <p>パス: <code>/:patientId/cesdScoreSheetRegist</code> | コンポーネント: <code>CesdScoreSheetRegistrationPage</code></p>
+        <p>共通コンポーネント <code>FileRegistrationForm</code> を使用（fileType: <code>cesdScoreSheet</code>）</p>
+
+        <h3>閲覧画面</h3>
+        <p>パス: <code>/:patientId/cesdScoreSheetsView</code> | コンポーネント: <code>CesdScoreSheetsViewPage</code></p>
+        <p>共通コンポーネント <code>FileViewForm</code> を使用（fileType: <code>cesdScoreSheet</code>）</p>
+      </div>
+
+      <!-- GAF -->
+      <div class="card">
+        <h2>GAFスコア</h2>
+        <p>GAF（Global Assessment of Functioning / 機能の全体的評定）スコアの登録・履歴管理を行います。</p>
+        <p>パス: <code>/:patientId/:deptId/gafScore</code> | コンポーネント: <code>GafScorePage</code></p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">現在のスコア</span> <span class="field-type">TextField</span> <span class="field-desc">GAFスコア値を入力</span></li>
+          <li><span class="field-name">初回GAFスコア</span> <span class="field-type">表示のみ</span> <span class="field-desc">初回登録時のスコアと日付</span></li>
+          <li><span class="field-name">前回GAFスコア</span> <span class="field-type">表示のみ</span> <span class="field-desc">直近のスコアと日付</span></li>
+          <li><span class="field-name">記録者</span> <span class="field-type">表示のみ</span> <span class="field-desc">登録者名</span></li>
+        </ul>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>条件</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>登録</td><td>スタッフクラスが適格な場合</td><td>GAFスコアを登録</td></tr>
+            <tr><td>キャンセル</td><td>-</td><td>前の画面へ戻る</td></tr>
+          </tbody>
+        </table>
+
+        <h3>使用API</h3>
+        <table>
+          <thead><tr><th>フック</th><th>API</th></tr></thead>
+          <tbody>
+            <tr><td><code>useGafScoreData()</code></td><td>GET /patients/{patientId}/gaf-score</td></tr>
+            <tr><td><code>useGafScoreForm()</code></td><td>POST /patients/{patientId}/gaf-score</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <strong>備考:</strong> GAFスコアは1-100の範囲で評価し、数値が高いほど機能が良好であることを示します。精神科診療において重要な評価指標です。
+        </div>
+      </div>
+
+      <!-- 検査結果 -->
+      <div class="card">
+        <h2>検査結果</h2>
+        <p>臨床検査結果のファイルを管理します。</p>
+
+        <h3>登録画面</h3>
+        <p>パス: <code>/:patientId/medicalTestResultRegist</code></p>
+        <p>共通コンポーネント <code>FileRegistrationForm</code> を使用（fileType: <code>examResult</code>）</p>
+
+        <h3>閲覧画面</h3>
+        <p>パス: <code>/:patientId/medicalTestResultsView</code></p>
+        <p>共通コンポーネント <code>FileViewForm</code> を使用（fileType: <code>examResult</code>）</p>
+      </div>
+
+      <!-- 画像結果 -->
+      <div class="card">
+        <h2>画像結果</h2>
+        <p>レントゲン等の画像検査結果を管理します。</p>
+
+        <h3>登録画面</h3>
+        <p>パス: <code>/:patientId/imageResultRegist</code></p>
+        <p>共通コンポーネント <code>FileRegistrationForm</code> を使用（fileType: <code>xray</code>）</p>
+
+        <h3>閲覧画面</h3>
+        <p>パス: <code>/:patientId/imageResultsView</code></p>
+        <p>共通コンポーネント <code>FileViewForm</code> を使用（fileType: <code>xray</code>）</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

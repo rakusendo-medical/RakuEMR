@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API一覧 - EMR Client</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>EMR Client Docs</h2>
+      <div class="version">v1.14.0</div>
+    </div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="index.html">トップページ</a>
+      <a href="overview.html">機能一覧・概要</a>
+      <a href="screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="manual.html">操作マニュアル</a>
+      <a href="spec.html">機能仕様書</a>
+      <a href="api.html" class="active">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="features/auth.html">認証</a>
+      <a href="features/patient.html">患者管理</a>
+      <a href="features/diagnosis.html">病名管理</a>
+      <a href="features/medical-records.html">カルテ・診療記録</a>
+      <a href="features/orders.html">オーダー管理</a>
+      <a href="features/documents.html">文書・ファイル管理</a>
+      <a href="features/assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>API一覧</h1>
+      <span class="breadcrumb">トップ &gt; API一覧</span>
+    </div>
+    <div class="content">
+
+      <div class="card">
+        <h2>API概要</h2>
+        <p>ベースURL: <code>VITE_API_URL</code> 環境変数で設定。全APIは認証トークン付きリクエスト（<code>fetchBaseQueryWithAuth</code>）で呼び出されます。</p>
+        <p>RTK Queryによるデータフェッチとキャッシュ管理を採用。全31スライス、120以上のエンドポイントで構成されています。</p>
+      </div>
+
+      <!-- 患者API -->
+      <div class="card">
+        <h2>患者 API</h2>
+        <h3>患者基本操作</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients</code></td><td>患者新規登録</td><td>Body: PatientCreateRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients</code></td><td>患者一覧取得</td><td>checkInDate?, searchWholeName?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}</code></td><td>患者詳細取得</td><td>-</td></tr>
+            <tr><td><span class="badge badge-patch">PATCH</span></td><td><code>/patients/{patientId}</code></td><td>患者情報更新</td><td>Body: PatientUpdateRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/max-id</code></td><td>最大患者ID取得</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/accounting/complete</code></td><td>会計完了</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/checkIn/cancel</code></td><td>チェックイン取消</td><td>-</td></tr>
+          </tbody>
+        </table>
+
+        <h3>エピソード</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/episodes</code></td><td>エピソード作成</td><td>Body: PatientEpisodeCreateRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/episodes</code></td><td>エピソード一覧</td><td>-</td></tr>
+            <tr><td><span class="badge badge-delete">DELETE</span></td><td><code>/patients/{patientId}/episodes/{episodeId}</code></td><td>エピソード削除</td><td>-</td></tr>
+          </tbody>
+        </table>
+
+        <h3>その他情報</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/other-info</code></td><td>その他情報作成</td><td>Body: PatientOtherInfoCreateRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/other-info</code></td><td>その他情報一覧</td><td>-</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/other-info/{id}</code></td><td>その他情報詳細</td><td>-</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 病名API -->
+      <div class="card">
+        <h2>病名 API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/diagnoses</code></td><td>病名登録</td><td>Body: DiagnosisCreateRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/diagnoses</code></td><td>病名一覧</td><td>limit?, cursor?, sortOrder?, medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/diagnoses/{id}</code></td><td>病名詳細</td><td>-</td></tr>
+            <tr><td><span class="badge badge-put">PUT</span></td><td><code>/patients/{patientId}/diagnoses/{id}</code></td><td>病名更新</td><td>Body: DiagnosisUpdateRequest</td></tr>
+            <tr><td><span class="badge badge-delete">DELETE</span></td><td><code>/patients/{patientId}/diagnoses/{id}</code></td><td>病名削除</td><td>-</td></tr>
+            <tr><td><span class="badge badge-put">PUT</span></td><td><code>/patients/{patientId}/diagnoses/{id}/set-primary</code></td><td>主病名設定</td><td>-</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/diagnoses/{id}/revisions</code></td><td>リビジョン一覧</td><td>-</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- カルテAPI -->
+      <div class="card">
+        <h2>カルテ（Clinical Notes）API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/clinical-notes</code></td><td>カルテ作成</td><td>Body: ClinicalNoteCreateRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/clinical-notes</code></td><td>カルテ一覧</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-patch">PATCH</span></td><td><code>/patients/{patientId}/clinical-notes/{id}</code></td><td>カルテ更新</td><td>Body: ClinicalNoteUpdateRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/clinical-notes/{id}/revisions</code></td><td>カルテ履歴</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/clinical-notes/temp-files/upload-url</code></td><td>一時ファイルアップロードURL取得</td><td>Body: {fileType, originalFileName}</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/clinical-notes/temp-files/confirm</code></td><td>一時ファイル確定</td><td>Body: RegisterTempFileRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/clinical-notes/{id}/attachments/{attachmentId}/download-url</code></td><td>添付ファイルダウンロードURL</td><td>-</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- オーダーAPI -->
+      <div class="card">
+        <h2>オーダー API</h2>
+
+        <h3>共通</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders</code></td><td>全オーダー一覧</td><td>yearMonth?, medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/{orderType}/{orderId}/prints</code></td><td>印刷作成</td><td>-</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/{orderType}/{orderId}/prints</code></td><td>印刷一覧</td><td>-</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/{orderType}/{orderId}/prints/{printId}/download-url</code></td><td>印刷ダウンロード</td><td>-</td></tr>
+          </tbody>
+        </table>
+
+        <h3>処方</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/prescriptions</code></td><td>処方一覧</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/prescriptions/{id}</code></td><td>処方詳細</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/prescriptions</code></td><td>処方登録</td><td>Body: PrescriptionOrderCreateRequest</td></tr>
+            <tr><td><span class="badge badge-patch">PATCH</span></td><td><code>/patients/{patientId}/orders/prescriptions/{id}</code></td><td>処方更新/ステータス変更</td><td>Body: PrescriptionOrderUpdateRequest</td></tr>
+          </tbody>
+        </table>
+
+        <h3>注射</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/injections</code></td><td>注射一覧</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/injections/{id}</code></td><td>注射詳細</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/injections</code></td><td>注射登録</td><td>Body: InjectionOrderCreateRequest</td></tr>
+            <tr><td><span class="badge badge-patch">PATCH</span></td><td><code>/patients/{patientId}/orders/injections/{id}</code></td><td>注射更新/ステータス変更</td><td>Body: InjectionOrderUpdateRequest</td></tr>
+          </tbody>
+        </table>
+
+        <h3>検査</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/tests</code></td><td>検査一覧</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/tests/{id}</code></td><td>検査詳細</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/tests</code></td><td>検査登録</td><td>Body: TestOrderCreateRequest</td></tr>
+            <tr><td><span class="badge badge-patch">PATCH</span></td><td><code>/patients/{patientId}/orders/tests/{id}</code></td><td>検査更新/ステータス変更</td><td>Body: TestOrderUpdateRequest</td></tr>
+          </tbody>
+        </table>
+
+        <h3>テキスト</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/texts</code></td><td>テキスト一覧</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/texts/{id}</code></td><td>テキスト詳細</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/texts</code></td><td>テキスト登録</td><td>Body: TextOrderCreateRequest</td></tr>
+            <tr><td><span class="badge badge-patch">PATCH</span></td><td><code>/patients/{patientId}/orders/texts/{id}</code></td><td>テキスト更新/ステータス変更</td><td>Body: TextOrderUpdateRequest</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/texts/temp-files/upload-url</code></td><td>ファイルアップロードURL</td><td>Body: TextOrderGetTempFileUploadUrlRequest</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/texts/temp-files/confirm</code></td><td>ファイル確定</td><td>Body: TextOrderRegisterTempFileRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/texts/{id}/attachments/{attachmentId}/download-url</code></td><td>添付ダウンロード</td><td>-</td></tr>
+          </tbody>
+        </table>
+
+        <h3>処置</h3>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/procedures</code></td><td>処置一覧</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/procedures/{id}</code></td><td>処置詳細</td><td>-</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/procedures</code></td><td>処置登録</td><td>Body: ProcedureOrderCreateRequest</td></tr>
+            <tr><td><span class="badge badge-patch">PATCH</span></td><td><code>/patients/{patientId}/orders/procedures/{id}</code></td><td>処置更新/ステータス変更</td><td>Body: ProcedureOrderUpdateRequest</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/procedures/temp-files/upload-url</code></td><td>ファイルアップロードURL</td><td>Body: ProcedureOrderGetTempFileUploadUrlRequest</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/orders/procedures/temp-files/confirm</code></td><td>ファイル確定</td><td>Body: ProcedureOrderRegisterTempFileRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/orders/procedures/{id}/attachments/{attachmentId}/download-url</code></td><td>添付ダウンロード</td><td>-</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ファイルAPI -->
+      <div class="card">
+        <h2>ファイル API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/files/upload-url</code></td><td>アップロードURL取得</td><td>Body: PatientFileUploadUrlRequest</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/files</code></td><td>ファイル一覧</td><td>fileType?</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/files/{fileId}/download-url</code></td><td>ダウンロードURL取得</td><td>-</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 開示API -->
+      <div class="card">
+        <h2>開示（Disclosures）API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/disclosures</code></td><td>開示一覧</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/disclosures</code></td><td>開示作成</td><td>Body: DisclosureCreateRequest</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- GAF API -->
+      <div class="card">
+        <h2>GAFスコア API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/patients/{patientId}/gaf-score</code></td><td>GAFスコア取得</td><td>medicalDepartmentId?</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/patients/{patientId}/gaf-score</code></td><td>GAFスコア登録</td><td>Body: GafScoreCreateRequest</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 通知API -->
+      <div class="card">
+        <h2>通知 API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/notifications/check-in-completed</code></td><td>チェックイン完了通知</td><td>Body: CheckInCompletedNotificationRequest</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ORCA API -->
+      <div class="card">
+        <h2>ORCA連携 API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th><th>パラメータ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/orca/import</code></td><td>患者インポート</td><td>Body: OrcaImportRequest</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/orca/diagnoses/import</code></td><td>病名インポート</td><td>Body: OrcaImportRequest</td></tr>
+            <tr><td><span class="badge badge-post">POST</span></td><td><code>/orca/orders/export</code></td><td>オーダーエクスポート</td><td>Body: OrcaOrderExportRequest</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- マスタAPI -->
+      <div class="card">
+        <h2>マスタデータ API</h2>
+        <table>
+          <thead><tr><th>メソッド</th><th>エンドポイント</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/users</code></td><td>ユーザー（スタッフ）一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/hospitals</code></td><td>病院一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/code-categories</code></td><td>コードカテゴリ一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/icd10-entries</code></td><td>ICD-10コード一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/prefix-entries</code></td><td>病名接頭語一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/suffix-entries</code></td><td>病名接尾語一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/diseases</code></td><td>疾患名一覧（icd10Code?）</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/medications</code></td><td>薬剤一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/medication-set-groups</code></td><td>薬剤セット一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/usages</code></td><td>用法一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/injections</code></td><td>注射薬一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/injection-set-groups</code></td><td>注射セット一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/tests</code></td><td>検査項目一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/test-set-groups</code></td><td>検査セット一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/procedures</code></td><td>処置項目一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/procedure-set-groups</code></td><td>処置セット一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/template-entry-sets</code></td><td>テンプレートセット一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/notification-sets</code></td><td>通知セット一覧</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/referring-physicians</code></td><td>紹介医一覧（referringMedicalFacilityId?）</td></tr>
+            <tr><td><span class="badge badge-get">GET</span></td><td><code>/master/referring-medical-facilities</code></td><td>紹介元医療機関一覧</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

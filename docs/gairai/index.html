@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMR Client - ドキュメント</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>EMR Client Docs</h2>
+      <div class="version">v1.14.0</div>
+    </div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="index.html" class="active">トップページ</a>
+      <a href="overview.html">機能一覧・概要</a>
+      <a href="screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="manual.html">操作マニュアル</a>
+      <a href="spec.html">機能仕様書</a>
+      <a href="api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="features/auth.html">認証</a>
+      <a href="features/patient.html">患者管理</a>
+      <a href="features/diagnosis.html">病名管理</a>
+      <a href="features/medical-records.html">カルテ・診療記録</a>
+      <a href="features/orders.html">オーダー管理</a>
+      <a href="features/documents.html">文書・ファイル管理</a>
+      <a href="features/assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="header">
+      <h1>EMR Client ドキュメント</h1>
+    </div>
+    <div class="content">
+      <div class="card">
+        <h2>概要</h2>
+        <p>本ドキュメントは、EMR Client（電子カルテクライアント）の機能仕様、操作マニュアル、およびAPI仕様をまとめたものです。</p>
+        <p style="margin-top:8px;">精神科・心療内科向けの電子カルテシステムで、患者管理、診療記録、オーダー管理、病名管理、各種文書管理、ORCA連携などの機能を提供します。</p>
+      </div>
+
+      <div class="card">
+        <h2>技術スタック</h2>
+        <table>
+          <thead>
+            <tr><th>カテゴリ</th><th>技術</th><th>バージョン</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>フレームワーク</td><td>React + TypeScript</td><td>18.3 / 5.6</td></tr>
+            <tr><td>ビルドツール</td><td>Vite</td><td>6.0</td></tr>
+            <tr><td>ルーティング</td><td>React Router DOM</td><td>7.1</td></tr>
+            <tr><td>状態管理</td><td>Redux Toolkit + RTK Query</td><td>2.5</td></tr>
+            <tr><td>UI</td><td>Material-UI (MUI)</td><td>6.5</td></tr>
+            <tr><td>描画</td><td>Fabric.js</td><td>6.6</td></tr>
+            <tr><td>国際化</td><td>react-i18next</td><td>15.4</td></tr>
+            <tr><td>テスト</td><td>Vitest + Testing Library</td><td>3.0</td></tr>
+            <tr><td>コンポーネントカタログ</td><td>Storybook</td><td>8.6</td></tr>
+            <tr><td>APIモック</td><td>MSW (Mock Service Worker)</td><td>2.7</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>ドキュメント一覧</h2>
+        <div class="feature-grid">
+          <a href="overview.html" class="feature-card">
+            <div class="icon">&#128203;</div>
+            <h3>機能一覧・概要</h3>
+            <p>システム全体の機能一覧と各機能の概要説明</p>
+          </a>
+          <a href="screen-flow.html" class="feature-card">
+            <div class="icon">&#128260;</div>
+            <h3>画面遷移図</h3>
+            <p>Mermaid.jsによるインタラクティブな画面遷移フロー</p>
+          </a>
+          <a href="manual.html" class="feature-card">
+            <div class="icon">&#128214;</div>
+            <h3>操作マニュアル</h3>
+            <p>ユーザー向けの操作手順書</p>
+          </a>
+          <a href="spec.html" class="feature-card">
+            <div class="icon">&#128736;</div>
+            <h3>機能仕様書</h3>
+            <p>開発者向けの機能仕様・技術仕様</p>
+          </a>
+          <a href="api.html" class="feature-card">
+            <div class="icon">&#128268;</div>
+            <h3>API一覧</h3>
+            <p>バックエンドAPIエンドポイント一覧</p>
+          </a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>機能別詳細</h2>
+        <div class="feature-grid">
+          <a href="features/auth.html" class="feature-card">
+            <div class="icon">&#128274;</div>
+            <h3>認証</h3>
+            <p>ログイン・認証・セッション管理</p>
+          </a>
+          <a href="features/patient.html" class="feature-card">
+            <div class="icon">&#128100;</div>
+            <h3>患者管理</h3>
+            <p>患者登録・検索・基本情報・保険情報・連絡先</p>
+          </a>
+          <a href="features/diagnosis.html" class="feature-card">
+            <div class="icon">&#127973;</div>
+            <h3>病名管理</h3>
+            <p>病名登録・ICD-10・主病名管理・履歴</p>
+          </a>
+          <a href="features/medical-records.html" class="feature-card">
+            <div class="icon">&#128221;</div>
+            <h3>カルテ・診療記録</h3>
+            <p>カルテ記載・テンプレート・添付ファイル</p>
+          </a>
+          <a href="features/orders.html" class="feature-card">
+            <div class="icon">&#128196;</div>
+            <h3>オーダー管理</h3>
+            <p>処方・注射・検査・テキスト・処置オーダー</p>
+          </a>
+          <a href="features/documents.html" class="feature-card">
+            <div class="icon">&#128193;</div>
+            <h3>文書・ファイル管理</h3>
+            <p>各種証明書・紹介状・問診票・既存カルテ</p>
+          </a>
+          <a href="features/assessments.html" class="feature-card">
+            <div class="icon">&#128202;</div>
+            <h3>心理検査・評価</h3>
+            <p>バウムテスト・CES-D・GAF・検査結果・画像</p>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

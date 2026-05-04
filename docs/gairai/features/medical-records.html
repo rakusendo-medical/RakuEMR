@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>カルテ・診療記録 - EMR Client</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="../index.html">トップページ</a>
+      <a href="../overview.html">機能一覧・概要</a>
+      <a href="../screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="../manual.html">操作マニュアル</a>
+      <a href="../spec.html">機能仕様書</a>
+      <a href="../api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="auth.html">認証</a>
+      <a href="patient.html">患者管理</a>
+      <a href="diagnosis.html">病名管理</a>
+      <a href="medical-records.html" class="active">カルテ・診療記録</a>
+      <a href="orders.html">オーダー管理</a>
+      <a href="documents.html">文書・ファイル管理</a>
+      <a href="assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>カルテ・診療記録</h1>
+      <span class="breadcrumb">トップ &gt; 機能詳細 &gt; カルテ・診療記録</span>
+    </div>
+    <div class="content">
+
+      <div class="card">
+        <h2>カルテ記載</h2>
+        <p>パス: <code>/:patientId/:deptId/medicalRecordsRegist</code> | コンポーネント: <code>MedicalRecordsPage</code></p>
+        <p>メインダッシュボードから新規ウィンドウで開かれる、診療記録の入力画面です。テンプレート対応、ファイル添付、描画機能を備えた高機能なカルテエディタです。</p>
+
+        <h3>主な機能</h3>
+        <table>
+          <thead><tr><th>機能</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td>テキスト入力</td><td>複数セクションに分かれた臨床情報テキスト入力</td></tr>
+            <tr><td>テンプレート</td><td>定型文テンプレートのドロップダウン選択・挿入</td></tr>
+            <tr><td>ファイル添付</td><td>PDF/JPG/JPEG/PNGファイルのアップロード・ダウンロード</td></tr>
+            <tr><td>家系図描画</td><td>Fabric.jsベースのキャンバス描画ツール</td></tr>
+            <tr><td>シェーマ描画</td><td>Fabric.jsベースのキャンバス描画ツール</td></tr>
+            <tr><td>オーダー参照</td><td>処方・注射・検査・テキスト・処置オーダーの表示</td></tr>
+            <tr><td>過去カルテ表示</td><td>過去の診療記録の一覧・参照</td></tr>
+            <tr><td>リビジョン管理</td><td>カルテの変更履歴管理</td></tr>
+          </tbody>
+        </table>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>保存</td><td>カルテ内容を一時保存</td></tr>
+            <tr><td>診察終了</td><td>カルテを確定して診察を完了</td></tr>
+            <tr><td>閉じる</td><td>未保存変更がある場合は確認ダイアログ表示</td></tr>
+            <tr><td>予約登録</td><td>予約登録ダイアログ表示</td></tr>
+            <tr><td>印刷</td><td>カルテの印刷</td></tr>
+            <tr><td>添付ファイル</td><td>ファイルアップロード</td></tr>
+            <tr><td>家系図描画</td><td>家系図キャンバスの表示</td></tr>
+            <tr><td>シェーマ描画</td><td>シェーマキャンバスの表示</td></tr>
+          </tbody>
+        </table>
+
+        <h3>使用API</h3>
+        <table>
+          <thead><tr><th>フック</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><code>useFetchClinicalNotesQuery()</code></td><td>カルテ一覧取得</td></tr>
+            <tr><td><code>useUpdateClinicalNoteMutation()</code></td><td>カルテ更新</td></tr>
+            <tr><td><code>useFetchTemplateEntrySetsQuery()</code></td><td>テンプレート一覧取得</td></tr>
+            <tr><td><code>useFetchOrdersQuery()</code></td><td>オーダー情報取得</td></tr>
+            <tr><td><code>useFetchAttachmentDownloadUrlQuery()</code></td><td>添付ファイルダウンロード</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>診療文書</h2>
+        <p>パス: <code>/:patientId/medicalDocuments</code> | コンポーネント: <code>MedicalDocumentsPage</code></p>
+        <p>3つのモードで動作します。</p>
+
+        <h3>モード一覧</h3>
+        <table>
+          <thead><tr><th>モード</th><th>パス</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td>patient</td><td><code>/:patientId/medicalDocuments</code></td><td>患者の診療文書閲覧</td></tr>
+            <tr><td>regist</td><td><code>/:patientId/medicalDocumentsRegist</code></td><td>診療文書の登録</td></tr>
+            <tr><td>revisitRegist</td><td><code>/:patientId/medicalDocumentsRevisitRegist</code></td><td>再来登録時の診療文書</td></tr>
+          </tbody>
+        </table>
+
+        <h3>遷移先</h3>
+        <ul style="margin-left:20px;">
+          <li>patient モード: 戻るボタンで前の画面へ</li>
+          <li>regist / revisitRegist モード: 終了ボタンで外来一覧へ</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

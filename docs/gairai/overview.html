@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>機能一覧・概要 - EMR Client</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>EMR Client Docs</h2>
+      <div class="version">v1.14.0</div>
+    </div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="index.html">トップページ</a>
+      <a href="overview.html" class="active">機能一覧・概要</a>
+      <a href="screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="manual.html">操作マニュアル</a>
+      <a href="spec.html">機能仕様書</a>
+      <a href="api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="features/auth.html">認証</a>
+      <a href="features/patient.html">患者管理</a>
+      <a href="features/diagnosis.html">病名管理</a>
+      <a href="features/medical-records.html">カルテ・診療記録</a>
+      <a href="features/orders.html">オーダー管理</a>
+      <a href="features/documents.html">文書・ファイル管理</a>
+      <a href="features/assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>機能一覧・概要</h1>
+      <span class="breadcrumb">トップ &gt; 機能一覧・概要</span>
+    </div>
+    <div class="content">
+
+      <!-- システム概要 -->
+      <div class="card">
+        <h2>システム概要</h2>
+        <p>EMR Client は精神科・心療内科向けの電子カルテ（EMR: Electronic Medical Records）Webクライアントシステムです。
+        React + TypeScript で構築され、ORCA（日医標準レセプトコンピュータ）との連携機能を備えています。</p>
+        <h3>主な特徴</h3>
+        <ul style="margin:8px 0 0 20px;">
+          <li>Webブラウザベースのシングルページアプリケーション（SPA）</li>
+          <li>患者情報の一元管理（基本情報・保険・連絡先・エピソード）</li>
+          <li>オーダリングシステム（処方・注射・検査・処置・テキスト）</li>
+          <li>カルテ記載（テンプレート対応・ファイル添付・描画機能）</li>
+          <li>病名管理（ICD-10コード対応・接頭語/接尾語・履歴管理）</li>
+          <li>心理検査・評価（バウムテスト・CES-D・GAF）</li>
+          <li>ORCA連携（患者インポート・病名インポート・オーダーエクスポート）</li>
+          <li>多言語対応（i18n）</li>
+        </ul>
+      </div>
+
+      <!-- 機能一覧 -->
+      <div class="card">
+        <h2>機能一覧</h2>
+        <table>
+          <thead>
+            <tr><th>カテゴリ</th><th>機能名</th><th>説明</th><th>画面数</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td rowspan="2"><strong>認証</strong></td>
+              <td>ログイン</td>
+              <td>ユーザーID・パスワードによるログイン認証</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>認証保護</td>
+              <td>未認証ユーザーのリダイレクト、トークン管理</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td rowspan="10"><strong>患者管理</strong></td>
+              <td>患者検索</td>
+              <td>患者番号または患者名での検索</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>患者登録（新規）</td>
+              <td>新規患者の基本情報・保険情報を登録</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>患者登録（編集）</td>
+              <td>既存患者情報の編集・再来登録</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>患者基本情報</td>
+              <td>主訴、アレルギー、感染症、既往歴等の管理</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>患者属性</td>
+              <td>身体情報、住所、担当医・スタッフ情報</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>保険情報</td>
+              <td>保険証情報の表示・編集</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>連絡先情報</td>
+              <td>連絡先・勤務先・郵送先の管理</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>エピソード</td>
+              <td>患者エピソード（経過）の登録・閲覧・削除</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>その他情報</td>
+              <td>来院/電話等の記録</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>患者メモ</td>
+              <td>患者に対する自由記述メモ</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td rowspan="2"><strong>外来管理</strong></td>
+              <td>外来一覧</td>
+              <td>当日の外来患者一覧表示・チェックイン管理</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>メインダッシュボード</td>
+              <td>患者別の診療情報ダッシュボード</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td rowspan="5"><strong>病名管理</strong></td>
+              <td>病名一覧</td>
+              <td>患者の病名一覧表示・主病名設定</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>病名登録</td>
+              <td>ICD-10コード・接頭語/接尾語による病名登録</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>病名更新</td>
+              <td>既存病名の編集・削除</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>病名履歴</td>
+              <td>病名の変更履歴（リビジョン）表示</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>病名通知</td>
+              <td>病名開示情報の登録・表示</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td rowspan="2"><strong>カルテ</strong></td>
+              <td>カルテ記載</td>
+              <td>診療記録の入力（テンプレート・添付・描画対応）</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>診療文書</td>
+              <td>患者の診療文書管理（3モード: 患者/登録/再来）</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td rowspan="5"><strong>オーダー</strong></td>
+              <td>処方オーダー</td>
+              <td>処方箋の登録・編集・詳細表示・ステータス管理</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td>注射オーダー</td>
+              <td>注射の登録・編集・詳細表示・印刷</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td>検査オーダー</td>
+              <td>検査の登録・編集・詳細表示</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td>テキストオーダー</td>
+              <td>テキスト指示の登録・編集・ファイル添付</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td>処置オーダー</td>
+              <td>処置の登録・編集・シェーマ描画・ファイル添付</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td><strong>オーダー管理</strong></td>
+              <td>オーダー管理</td>
+              <td>全オーダーの処理状況一覧</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td rowspan="3"><strong>心理検査</strong></td>
+              <td>バウムテスト</td>
+              <td>バウムテスト結果のファイル登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>CES-Dスコアシート</td>
+              <td>CES-Dうつ病自己評価の登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>GAFスコア</td>
+              <td>機能の全体的評定スコアの登録・履歴</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td rowspan="4"><strong>検査・画像</strong></td>
+              <td>検査結果登録</td>
+              <td>検査結果ファイルのアップロード</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>検査結果閲覧</td>
+              <td>検査結果ファイルの閲覧</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>画像結果登録</td>
+              <td>画像（レントゲン等）ファイルのアップロード</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>画像結果閲覧</td>
+              <td>画像ファイルの閲覧</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td rowspan="6"><strong>文書管理</strong></td>
+              <td>問診票</td>
+              <td>問診票の登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>院外証明書</td>
+              <td>院外証明書の登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>院内証明書</td>
+              <td>院内証明書の登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>紹介状</td>
+              <td>紹介状の登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>既存カルテ</td>
+              <td>既存カルテ画像の登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>その他ファイル</td>
+              <td>その他ファイルの登録・閲覧</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td rowspan="3"><strong>ORCA連携</strong></td>
+              <td>患者インポート</td>
+              <td>ORCAからの患者情報取り込み</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>病名インポート</td>
+              <td>ORCAからの病名情報取り込み</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>オーダーエクスポート</td>
+              <td>ORCAへのオーダー情報送信</td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 画面一覧 -->
+      <div class="card">
+        <h2>画面一覧（全61ルート）</h2>
+        <table>
+          <thead>
+            <tr><th>#</th><th>画面名</th><th>パス</th><th>認証</th><th>患者ID</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>ログイン</td><td><code>/signin</code></td><td><span class="badge badge-public">不要</span></td><td>-</td></tr>
+            <tr><td>2</td><td>患者検索</td><td><code>/patientSearch</code></td><td><span class="badge badge-protected">必要</span></td><td>-</td></tr>
+            <tr><td>3</td><td>患者登録（新規）</td><td><code>/patientRegist</code></td><td><span class="badge badge-protected">必要</span></td><td>-</td></tr>
+            <tr><td>4</td><td>外来一覧</td><td><code>/outpatientList</code></td><td><span class="badge badge-protected">必要</span></td><td>-</td></tr>
+            <tr><td>5</td><td>メインダッシュボード</td><td><code>/:patientId/:medicalDepartmentId</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>6</td><td>患者登録（編集）</td><td><code>/:patientId/patientRegistEdit</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>7</td><td>患者基本情報</td><td><code>/:patientId/patientBasic</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>8</td><td>患者属性</td><td><code>/:patientId/patientAttributes</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>9</td><td>保険情報</td><td><code>/:patientId/patientInsurance</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>10</td><td>連絡先情報</td><td><code>/:patientId/patientContactInfo</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>11</td><td>エピソード</td><td><code>/:patientId/patientEpisode</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>12</td><td>その他情報</td><td><code>/:patientId/patientOther</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>13</td><td>患者メモ</td><td><code>/:patientId/patientNote</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>14</td><td>カルテ記載</td><td><code>/:patientId/:deptId/medicalRecordsRegist</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>15</td><td>カルテ記載（編集）</td><td><code>/:patientId/:deptId/medicalRecordsRegist/:noteId</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>16</td><td>診療文書（患者）</td><td><code>/:patientId/medicalDocuments</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>17</td><td>診療文書（登録）</td><td><code>/:patientId/medicalDocumentsRegist</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>18</td><td>診療文書（再来）</td><td><code>/:patientId/medicalDocumentsRevisitRegist</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>19-21</td><td>処方オーダー（登録/編集/詳細）</td><td><code>/:patientId/:deptId/orders/prescriptions/*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>22-24</td><td>注射オーダー（登録/編集/詳細）</td><td><code>/:patientId/:deptId/orders/injections/*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>25-27</td><td>検査オーダー（登録/編集/詳細）</td><td><code>/:patientId/:deptId/orders/tests/*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>28-30</td><td>テキストオーダー（登録/編集/詳細）</td><td><code>/:patientId/:deptId/orders/texts/*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>31-33</td><td>処置オーダー（登録/編集/詳細）</td><td><code>/:patientId/:deptId/orders/procedures/*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>34</td><td>オーダー管理</td><td><code>/:patientId/:deptId/orderManagement</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>35</td><td>病名一覧</td><td><code>/:patientId/:deptId/diagnosisList</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>36</td><td>病名登録</td><td><code>/:patientId/:deptId/diagnosisRegist</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>37</td><td>病名更新</td><td><code>/:patientId/:deptId/diagnosisUpdate/:id</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>38</td><td>病名履歴</td><td><code>/:patientId/:deptId/diagnosisRevision/:id/:revId</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>39</td><td>病名通知</td><td><code>/:patientId/:deptId/diagnosisNotificationRegist</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>40</td><td>GAFスコア</td><td><code>/:patientId/:deptId/gafScore</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>41-42</td><td>検査結果（登録/閲覧）</td><td><code>/:patientId/medicalTestResult*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>43-44</td><td>画像結果（登録/閲覧）</td><td><code>/:patientId/imageResult*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>45-46</td><td>バウムテスト（登録/閲覧）</td><td><code>/:patientId/baumTest*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>47-48</td><td>CES-D（登録/閲覧）</td><td><code>/:patientId/cesdScoreSheet*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>49-50</td><td>問診票（登録/閲覧）</td><td><code>/:patientId/questionnaire*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>51-52</td><td>院外証明書（登録/閲覧）</td><td><code>/:patientId/externalCertificate*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>53-54</td><td>院内証明書（登録/閲覧）</td><td><code>/:patientId/internalCertificate*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>55-56</td><td>紹介状（登録/閲覧）</td><td><code>/:patientId/referralDocument*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>57-58</td><td>既存カルテ（登録/閲覧）</td><td><code>/:patientId/existingMedicalRecord*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+            <tr><td>59-60</td><td>その他ファイル（登録/閲覧）</td><td><code>/:patientId/otherFile*</code></td><td><span class="badge badge-protected">必要</span></td><td><span class="badge badge-required">必須</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

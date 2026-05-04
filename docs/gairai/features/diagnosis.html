@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>病名管理 - EMR Client</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="../index.html">トップページ</a>
+      <a href="../overview.html">機能一覧・概要</a>
+      <a href="../screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="../manual.html">操作マニュアル</a>
+      <a href="../spec.html">機能仕様書</a>
+      <a href="../api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="auth.html">認証</a>
+      <a href="patient.html">患者管理</a>
+      <a href="diagnosis.html" class="active">病名管理</a>
+      <a href="medical-records.html">カルテ・診療記録</a>
+      <a href="orders.html">オーダー管理</a>
+      <a href="documents.html">文書・ファイル管理</a>
+      <a href="assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>病名管理</h1>
+      <span class="breadcrumb">トップ &gt; 機能詳細 &gt; 病名管理</span>
+    </div>
+    <div class="content">
+
+      <div class="card">
+        <h2>病名一覧</h2>
+        <p>パス: <code>/:patientId/:deptId/diagnosisList</code> | コンポーネント: <code>DiagnosisListPage</code></p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">診療科フィルタ</span> <span class="field-type">SelectField</span> <span class="field-desc">診療科でフィルタリング</span></li>
+          <li><span class="field-name">完了病名表示</span> <span class="field-type">Checkbox</span> <span class="field-desc">完了済み病名の表示/非表示</span></li>
+        </ul>
+
+        <h3>テーブル列</h3>
+        <table>
+          <thead><tr><th>列名</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td>主病名</td><td>チェックボックス（確認ダイアログ付きで切替）</td></tr>
+            <tr><td>開始日</td><td>病名の開始日</td></tr>
+            <tr><td>終了日</td><td>病名の終了日</td></tr>
+            <tr><td>疑いフラグ</td><td>チェックボックス（読み取り専用）</td></tr>
+            <tr><td>病名</td><td>リンク（クリックで更新画面へ遷移）</td></tr>
+            <tr><td>診療科</td><td>-</td></tr>
+            <tr><td>最終更新者 / 最終更新日時</td><td>-</td></tr>
+          </tbody>
+        </table>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>ORCA取込</td><td>ORCAから病名をインポート</td></tr>
+            <tr><td>病名追加</td><td>病名登録画面へ遷移</td></tr>
+            <tr><td>閉じる</td><td>前の画面へ戻る</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>病名登録</h2>
+        <p>パス: <code>/:patientId/:deptId/diagnosisRegist</code> | コンポーネント: <code>DiagnosisRegistPage</code></p>
+
+        <h3>入力項目 - 病名選択</h3>
+        <ul class="field-list">
+          <li><span class="field-name">接頭語</span> <span class="field-type">Dropdown (検索可能)</span> <span class="field-desc">接頭語マスタから選択 <span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">ICD-10コード</span> <span class="field-type">Dropdown (検索可能)</span> <span class="field-desc">ICD-10マスタから選択 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">接尾語</span> <span class="field-type">Dropdown (検索可能)</span> <span class="field-desc">接尾語マスタから選択 <span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">病名表示</span> <span class="field-type">表示のみ</span> <span class="field-desc">選択結果から自動生成</span></li>
+        </ul>
+
+        <h3>入力項目 - 病名情報</h3>
+        <ul class="field-list">
+          <li><span class="field-name">開始日</span> <span class="field-type">DatePicker</span> <span class="field-desc"><span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">終了日</span> <span class="field-type">DatePicker</span> <span class="field-desc"><span class="badge badge-optional">任意</span>（条件付き表示）</span></li>
+          <li><span class="field-name">診療科</span> <span class="field-type">SelectField</span> <span class="field-desc"><span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">疑いフラグ</span> <span class="field-type">Checkbox</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">ステータス</span> <span class="field-type">SelectField</span> <span class="field-desc">外来/入院固有の設定</span></li>
+        </ul>
+
+        <h3>操作フロー</h3>
+        <div class="flow-steps">
+          <span class="flow-step">接頭語選択（任意）</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">ICD-10コード選択</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">接尾語選択（任意）</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">開始日等入力</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">登録ボタン</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">病名一覧へ戻る</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>病名更新</h2>
+        <p>パス: <code>/:patientId/:deptId/diagnosisUpdate/:diagnosisId</code> | コンポーネント: <code>DiagnosisUpdatePage</code></p>
+
+        <h3>タブ構成</h3>
+        <table>
+          <thead><tr><th>タブ</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td>更新</td><td>病名情報の編集フォーム（登録画面と同様の項目）</td></tr>
+            <tr><td>履歴</td><td>リビジョン一覧表示。各リビジョンクリックで詳細表示</td></tr>
+          </tbody>
+        </table>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>更新</td><td>病名を更新（バリデーションエラー時は無効）</td></tr>
+            <tr><td>削除</td><td>病名を削除（確認ダイアログ表示）</td></tr>
+            <tr><td>戻る</td><td>病名一覧へ戻る</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>病名履歴</h2>
+        <p>パス: <code>/:patientId/:deptId/diagnosisRevision/:diagnosisId/:revisionId</code></p>
+        <p>コンポーネント: <code>DiagnosisRevisionPage</code></p>
+        <p>病名の過去リビジョンを読み取り専用で表示します。「戻る」ボタンのみ操作可能です。</p>
+      </div>
+
+      <div class="card">
+        <h2>病名通知（開示情報）</h2>
+        <p>パス: <code>/:patientId/:deptId/diagnosisNotificationRegist</code></p>
+        <p>コンポーネント: <code>DiagnosisNotificationRegistPage</code></p>
+
+        <h3>画面構成</h3>
+        <ul style="margin-left:20px;">
+          <li>タブ0: 新規作成（スタッフクラス0-1のみ作成可能）</li>
+          <li>タブ1-N: 既存の開示情報表示</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

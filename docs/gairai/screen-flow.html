@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>画面遷移図 - EMR Client</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#e3f2fd',
+        primaryTextColor: '#1565c0',
+        primaryBorderColor: '#1976d2',
+        lineColor: '#616161',
+        secondaryColor: '#fff3e0',
+        tertiaryColor: '#e8f5e9'
+      },
+      flowchart: { curve: 'basis', padding: 20 },
+      securityLevel: 'loose'
+    });
+  </script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>EMR Client Docs</h2>
+      <div class="version">v1.14.0</div>
+    </div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="index.html">トップページ</a>
+      <a href="overview.html">機能一覧・概要</a>
+      <a href="screen-flow.html" class="active">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="manual.html">操作マニュアル</a>
+      <a href="spec.html">機能仕様書</a>
+      <a href="api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="features/auth.html">認証</a>
+      <a href="features/patient.html">患者管理</a>
+      <a href="features/diagnosis.html">病名管理</a>
+      <a href="features/medical-records.html">カルテ・診療記録</a>
+      <a href="features/orders.html">オーダー管理</a>
+      <a href="features/documents.html">文書・ファイル管理</a>
+      <a href="features/assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>画面遷移図</h1>
+      <span class="breadcrumb">トップ &gt; 画面遷移図</span>
+    </div>
+    <div class="content">
+
+      <!-- 全体フロー -->
+      <div class="card">
+        <h2>全体画面遷移フロー</h2>
+        <p>システム全体の主要な画面遷移を示します。</p>
+        <div class="mermaid">
+flowchart TD
+    SIGNIN["ログイン画面"]
+    PS["患者検索"]
+    OL["外来一覧"]
+    PR["患者登録"]
+    MAIN["メインダッシュボード"]
+
+    SIGNIN -->|ログイン成功| PS
+    PS -->|患者選択| MAIN
+    PS -->|外来一覧| OL
+    PS -->|新規登録| PR
+    PS -->|ORCA取込| OL
+    OL -->|患者選択| MAIN
+    OL -->|オーダー管理| OM
+    PR -->|登録完了| OL
+
+    subgraph sg_patient ["患者情報"]
+        PB["基本情報"]
+        PA["属性"]
+        PI["保険情報"]
+        PC["連絡先"]
+        PE["エピソード"]
+        PO["その他情報"]
+        PN["患者メモ"]
+        PRE["患者編集"]
+    end
+
+    MAIN --> PB
+    MAIN --> PA
+    MAIN --> PI
+    MAIN --> PC
+    MAIN --> PE
+    MAIN --> PO
+    MAIN --> PN
+    MAIN --> PRE
+
+    subgraph sg_records ["診療記録"]
+        MR["カルテ記載"]
+        MD["診療文書"]
+    end
+
+    MAIN -->|新規Window| MR
+    MAIN --> MD
+
+    subgraph sg_diag ["病名管理"]
+        DL["病名一覧"]
+        DR["病名登録"]
+        DU["病名更新"]
+        DRV["病名履歴"]
+        DN["病名通知"]
+    end
+
+    MAIN --> DL
+    MAIN --> DN
+    DL --> DR
+    DL --> DU
+    DU --> DRV
+
+    subgraph sg_order ["オーダー"]
+        RX["処方"]
+        INJ["注射"]
+        TST["検査"]
+        TXT["テキスト"]
+        PRC["処置"]
+        OM["オーダー管理"]
+    end
+
+    MAIN -->|新規Window| RX
+    MAIN -->|新規Window| INJ
+    MAIN -->|新規Window| TST
+    MAIN -->|新規Window| TXT
+    MAIN -->|新規Window| PRC
+    MAIN --> OM
+
+    subgraph sg_docs ["検査 / 文書"]
+        TR["検査結果"]
+        IR["画像結果"]
+        BT["バウムテスト"]
+        CESD["CES-D"]
+        GAF["GAFスコア"]
+        QS["問診票"]
+        EC["院外証明書"]
+        IC["院内証明書"]
+        RF["紹介状"]
+        EMR2["既存カルテ"]
+        OF["その他ファイル"]
+    end
+
+    MAIN --> TR
+    MAIN --> IR
+    MAIN --> BT
+    MAIN --> CESD
+    MAIN --> GAF
+    MAIN --> QS
+    MAIN --> EC
+    MAIN --> IC
+    MAIN --> RF
+    MAIN --> EMR2
+    MAIN --> OF
+        </div>
+      </div>
+
+      <!-- 認証フロー -->
+      <div class="card">
+        <h2>認証フロー</h2>
+        <div class="mermaid">
+flowchart LR
+    A["ブラウザアクセス"] --> B{"認証済み?"}
+    B -->|Yes| C["患者検索画面"]
+    B -->|No| D["ログイン画面"]
+    D -->|ID/PW入力| E{"認証成功?"}
+    E -->|Yes| C
+    E -->|No| F["エラー表示"]
+    F --> D
+    C -->|未認証でアクセス| D
+        </div>
+      </div>
+
+      <!-- 患者管理フロー -->
+      <div class="card">
+        <h2>患者管理フロー</h2>
+        <div class="mermaid">
+flowchart TD
+    PS["患者検索"] -->|検索結果から選択| MAIN["メインダッシュボード"]
+    PS -->|新規登録| PR["患者登録"]
+    PR -->|登録完了| OL["外来一覧"]
+
+    MAIN --> PB["基本情報"]
+    MAIN --> PA["属性"]
+    MAIN --> PI["保険情報"]
+    MAIN --> PC["連絡先"]
+    MAIN --> PE["エピソード"]
+    MAIN --> PO["その他情報"]
+    MAIN --> PN["患者メモ"]
+    MAIN --> PRE["患者編集"]
+
+    PB -->|保存/戻る| MAIN
+    PA -->|保存/戻る| MAIN
+    PI -->|保存/戻る| MAIN
+    PC -->|保存/戻る| MAIN
+    PE -->|戻る| MAIN
+    PO -->|戻る| MAIN
+    PN -->|保存/戻る| MAIN
+    PRE -->|保存/戻る| MAIN
+        </div>
+      </div>
+
+      <!-- オーダーフロー -->
+      <div class="card">
+        <h2>オーダー管理フロー</h2>
+        <div class="mermaid">
+flowchart TD
+    MAIN["メインダッシュボード"]
+
+    subgraph sg_rx ["処方"]
+        RX_R["処方登録"]
+        RX_D["処方詳細"]
+        RX_E["処方編集"]
+    end
+
+    subgraph sg_inj ["注射"]
+        INJ_R["注射登録"]
+        INJ_D["注射詳細 / 印刷"]
+        INJ_E["注射編集"]
+    end
+
+    subgraph sg_tst ["検査"]
+        TST_R["検査登録"]
+        TST_D["検査詳細"]
+        TST_E["検査編集"]
+    end
+
+    subgraph sg_txt ["テキスト"]
+        TXT_R["テキスト登録"]
+        TXT_D["テキスト詳細"]
+        TXT_E["テキスト編集"]
+    end
+
+    subgraph sg_prc ["処置"]
+        PRC_R["処置登録"]
+        PRC_D["処置詳細"]
+        PRC_E["処置編集"]
+    end
+
+    MAIN -->|新規Window| RX_R
+    MAIN -->|新規Window| INJ_R
+    MAIN -->|新規Window| TST_R
+    MAIN -->|新規Window| TXT_R
+    MAIN -->|新規Window| PRC_R
+
+    RX_R -->|登録完了| RX_D
+    RX_D -->|編集| RX_E
+    RX_D -->|完了/取消| CLOSE1["Window閉じる"]
+
+    INJ_R -->|登録完了| INJ_D
+    INJ_D -->|編集| INJ_E
+    INJ_D -->|完了/取消| CLOSE2["Window閉じる"]
+
+    TST_R -->|登録完了| TST_D
+    TST_D -->|編集| TST_E
+    TST_D -->|完了/取消| CLOSE3["Window閉じる"]
+
+    TXT_R -->|登録完了| TXT_D
+    TXT_D -->|編集| TXT_E
+    TXT_D -->|完了/取消| CLOSE4["Window閉じる"]
+
+    PRC_R -->|登録完了| PRC_D
+    PRC_D -->|編集| PRC_E
+    PRC_D -->|完了/取消| CLOSE5["Window閉じる"]
+
+    OM["オーダー管理"]
+    MAIN --> OM
+        </div>
+      </div>
+
+      <!-- 病名管理フロー -->
+      <div class="card">
+        <h2>病名管理フロー</h2>
+        <div class="mermaid">
+flowchart TD
+    MAIN["メインダッシュボード"] --> DL["病名一覧"]
+    DL -->|新規追加| DR["病名登録"]
+    DL -->|病名クリック| DU["病名更新"]
+    DL -->|ORCA取込| ORCA["ORCA病名取込"]
+    DL -->|主病名切替| DL
+    DR -->|登録完了| DL
+    DU -->|更新完了| DL
+    DU -->|履歴タブ| DRV["病名履歴"]
+    DRV -->|リビジョン選択| DRVD["病名履歴詳細"]
+    DRVD -->|戻る| DU
+    MAIN --> DN["病名通知"]
+    DN -->|登録完了| MAIN
+        </div>
+      </div>
+
+      <!-- 外来一覧フロー -->
+      <div class="card">
+        <h2>外来一覧フロー</h2>
+        <div class="mermaid">
+flowchart TD
+    OL["外来一覧"]
+    OL -->|患者選択 + メイン| MAIN["メインダッシュボード"]
+    OL -->|患者選択 + オーダー| OM["オーダー管理"]
+    OL -->|患者選択 + 文書| MD["診療文書"]
+    OL -->|会計完了| AC["会計完了処理"]
+    OL -->|チェックイン取消| CC["チェックイン取消"]
+    OL -->|通知ボタン| ND["通知ダイアログ"]
+    OL -->|予約ボタン| RD["予約登録ダイアログ"]
+    OL -->|ORCA送信| ORCA["ORCAエクスポート"]
+    AC --> OL
+    CC --> OL
+    ND --> OL
+    RD --> OL
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

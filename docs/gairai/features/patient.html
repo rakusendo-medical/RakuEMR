@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>患者管理 - EMR Client</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="../index.html">トップページ</a>
+      <a href="../overview.html">機能一覧・概要</a>
+      <a href="../screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="../manual.html">操作マニュアル</a>
+      <a href="../spec.html">機能仕様書</a>
+      <a href="../api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="auth.html">認証</a>
+      <a href="patient.html" class="active">患者管理</a>
+      <a href="diagnosis.html">病名管理</a>
+      <a href="medical-records.html">カルテ・診療記録</a>
+      <a href="orders.html">オーダー管理</a>
+      <a href="documents.html">文書・ファイル管理</a>
+      <a href="assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>患者管理</h1>
+      <span class="breadcrumb">トップ &gt; 機能詳細 &gt; 患者管理</span>
+    </div>
+    <div class="content">
+
+      <!-- 患者検索 -->
+      <div class="card">
+        <h2>患者検索</h2>
+        <p>パス: <code>/patientSearch</code> | コンポーネント: <code>PatientSearchPage</code></p>
+        <p>ログイン後の初期画面。患者番号または患者名で患者を検索し、メインダッシュボードへ遷移します。</p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">検索タイプ</span> <span class="field-type">RadioButton</span> <span class="field-desc">「患者番号」または「患者名」を選択</span></li>
+          <li><span class="field-name">検索値</span> <span class="field-type">TextField</span> <span class="field-desc">検索タイプに応じたラベル表示</span></li>
+        </ul>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>検索</td><td>入力値で患者を検索し結果をテーブル表示</td></tr>
+            <tr><td>外来一覧</td><td><code>/outpatientList</code> へ遷移</td></tr>
+            <tr><td>チェックイン（ORCA取込）</td><td>ORCAから患者情報をインポートしてチェックイン</td></tr>
+          </tbody>
+        </table>
+
+        <h3>使用API</h3>
+        <table>
+          <thead><tr><th>フック</th><th>API</th></tr></thead>
+          <tbody>
+            <tr><td><code>usePatientSearchForm()</code></td><td>GET /patients</td></tr>
+            <tr><td><code>useImportPatientFromOrcaMutation()</code></td><td>POST /orca/import</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 外来一覧 -->
+      <div class="card">
+        <h2>外来一覧</h2>
+        <p>パス: <code>/outpatientList</code> | コンポーネント: <code>OutpatientListPage</code></p>
+        <p>当日の外来患者をリスト表示。チェックイン管理、会計、ORCA送信等を行います。</p>
+
+        <h3>画面構成</h3>
+        <p>テーブル表示：チェックイン時刻、患者ID、氏名、カナ、性別、来院種別、ステータス</p>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>条件</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>メイン</td><td>患者選択時</td><td>メインダッシュボードへ遷移</td></tr>
+            <tr><td>オーダー</td><td>患者選択時</td><td>オーダー管理画面へ遷移</td></tr>
+            <tr><td>文書登録</td><td>患者選択時</td><td>診療文書画面へ遷移</td></tr>
+            <tr><td>通知</td><td>患者選択時</td><td>通知ダイアログ表示</td></tr>
+            <tr><td>予約</td><td>患者選択時</td><td>予約登録ダイアログ表示</td></tr>
+            <tr><td>ORCA送信</td><td>患者選択時</td><td>ORCAへオーダーエクスポート</td></tr>
+            <tr><td>会計完了</td><td>ステータス=checked_in</td><td>会計完了処理</td></tr>
+            <tr><td>チェックイン取消</td><td>ステータス=checked_in</td><td>チェックインを取り消し</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- メインダッシュボード -->
+      <div class="card">
+        <h2>メインダッシュボード</h2>
+        <p>パス: <code>/:patientId/:medicalDepartmentId</code> | コンポーネント: <code>MainPage</code></p>
+        <p>患者の診療情報を一覧表示するダッシュボード。各機能への入口です。</p>
+
+        <h3>表示情報</h3>
+        <ul style="margin-left:20px;">
+          <li>患者基本情報（氏名、年齢、性別等）</li>
+          <li>病名情報一覧</li>
+          <li>カルテ記載履歴</li>
+          <li>GAFスコア</li>
+          <li>開示情報</li>
+          <li>オーダー処理状況</li>
+        </ul>
+
+        <h3>ナビゲーション</h3>
+        <table>
+          <thead><tr><th>リンク先</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td>患者基本情報</td><td>主訴・アレルギー・感染症等</td></tr>
+            <tr><td>患者属性</td><td>身体情報・住所・担当スタッフ</td></tr>
+            <tr><td>保険情報</td><td>保険証情報表示・編集</td></tr>
+            <tr><td>連絡先情報</td><td>連絡先・勤務先・郵送先</td></tr>
+            <tr><td>エピソード</td><td>経過記録の管理</td></tr>
+            <tr><td>その他情報</td><td>来院/電話記録</td></tr>
+            <tr><td>患者メモ</td><td>自由記述メモ</td></tr>
+            <tr><td>カルテ記載</td><td>新規ウィンドウで開く</td></tr>
+            <tr><td>各オーダー</td><td>新規ウィンドウで開く</td></tr>
+            <tr><td>病名一覧</td><td>病名管理画面</td></tr>
+            <tr><td>各種文書・検査</td><td>ファイル管理画面</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 患者登録 -->
+      <div class="card">
+        <h2>患者登録（新規/編集）</h2>
+        <p>パス: <code>/patientRegist</code>（新規）/ <code>/:patientId/patientRegistEdit</code>（編集）</p>
+        <p>コンポーネント: <code>PatientRegistPage</code>（modeプロパティで切替）</p>
+
+        <h3>入力項目 - 患者情報</h3>
+        <ul class="field-list">
+          <li><span class="field-name">患者ID</span> <span class="field-type">TextField</span> <span class="field-desc">8桁数値 <span class="badge badge-required">必須</span>（編集時は変更不可）</span></li>
+          <li><span class="field-name">氏名</span> <span class="field-type">TextField</span> <span class="field-desc">1-100文字 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">氏名（カナ）</span> <span class="field-type">TextField</span> <span class="field-desc">1-100文字 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">診療科</span> <span class="field-type">SelectField</span> <span class="field-desc"><span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">性別</span> <span class="field-type">SelectField</span> <span class="field-desc"><span class="badge badge-required">必須</span>（編集時は変更不可）</span></li>
+          <li><span class="field-name">生年月日</span> <span class="field-type">DatePicker</span> <span class="field-desc"><span class="badge badge-required">必須</span>（編集時は変更不可）</span></li>
+          <li><span class="field-name">郵便番号</span> <span class="field-type">TextField</span> <span class="field-desc">7桁数値 <span class="badge badge-required">必須</span>（住所自動補完あり）</span></li>
+          <li><span class="field-name">住所</span> <span class="field-type">TextField</span> <span class="field-desc">最大200文字 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">住所詳細</span> <span class="field-type">TextField</span> <span class="field-desc">最大100文字 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">電話番号1</span> <span class="field-type">TextField</span> <span class="field-desc">最大15文字 <span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">電話番号2</span> <span class="field-type">TextField</span> <span class="field-desc">最大15文字 <span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">携帯番号</span> <span class="field-type">TextField</span> <span class="field-desc">最大15文字 <span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">メールアドレス</span> <span class="field-type">TextField</span> <span class="field-desc">最大50文字 <span class="badge badge-optional">任意</span></span></li>
+        </ul>
+
+        <h3>入力項目 - 保険情報</h3>
+        <ul class="field-list">
+          <li><span class="field-name">法別番号</span> <span class="field-type">SelectField</span> <span class="field-desc"><span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">本人/家族区分</span> <span class="field-type">SelectField</span> <span class="field-desc"><span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">外来自己負担割合</span> <span class="field-type">TextField</span> <span class="field-desc">0-100% <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">保険開始日</span> <span class="field-type">DatePicker</span> <span class="field-desc"><span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">保険終了日</span> <span class="field-type">DatePicker</span> <span class="field-desc"><span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">保険者番号</span> <span class="field-type">TextField</span> <span class="field-desc">最大8文字 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">被保険者記号番号</span> <span class="field-type">TextField</span> <span class="field-desc">最大40文字 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">保険番号</span> <span class="field-type">TextField</span> <span class="field-desc">最大40文字 <span class="badge badge-required">必須</span></span></li>
+          <li><span class="field-name">枝番</span> <span class="field-type">TextField</span> <span class="field-desc">最大8文字 <span class="badge badge-optional">任意</span></span></li>
+        </ul>
+      </div>
+
+      <!-- 患者基本情報 -->
+      <div class="card">
+        <h2>患者基本情報</h2>
+        <p>パス: <code>/:patientId/patientBasic</code> | コンポーネント: <code>PatientBasicPage</code></p>
+
+        <h3>入力項目</h3>
+        <ul class="field-list">
+          <li><span class="field-name">氏名</span> <span class="field-type">OutlinedTextField</span> <span class="field-desc">表示用</span></li>
+          <li><span class="field-name">氏名（カナ）</span> <span class="field-type">OutlinedTextField</span> <span class="field-desc">表示用</span></li>
+          <li><span class="field-name">主訴</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">自由記述</span></li>
+          <li><span class="field-name">アレルギー状態</span> <span class="field-type">SelectToggleButton</span> <span class="field-desc">なし/あり/不明</span></li>
+          <li><span class="field-name">アレルギー詳細</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">自由記述</span></li>
+          <li><span class="field-name">感染症状態</span> <span class="field-type">SelectToggleButton</span> <span class="field-desc">なし/あり/不明</span></li>
+          <li><span class="field-name">感染症詳細</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">自由記述</span></li>
+          <li><span class="field-name">ウイルス性肝炎</span> <span class="field-type">SelectToggleButton + TextField</span> <span class="field-desc">状態と詳細・備考</span></li>
+          <li><span class="field-name">梅毒既往</span> <span class="field-type">SelectToggleButton + TextField</span> <span class="field-desc">状態と詳細</span></li>
+          <li><span class="field-name">他科薬</span> <span class="field-type">SelectToggleButton + TextField</span> <span class="field-desc">状態と詳細</span></li>
+          <li><span class="field-name">喘息</span> <span class="field-type">SelectToggleButton + TextField</span> <span class="field-desc">状態と詳細</span></li>
+          <li><span class="field-name">HIV</span> <span class="field-type">SelectToggleButton + TextField</span> <span class="field-desc">状態と詳細</span></li>
+          <li><span class="field-name">その他備考</span> <span class="field-type">SelectToggleButton + TextField</span> <span class="field-desc">状態と詳細</span></li>
+          <li><span class="field-name">問診表</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">自由記述</span></li>
+          <li><span class="field-name">禁忌薬剤</span> <span class="field-type">TextField[]</span> <span class="field-desc">複数入力可</span></li>
+          <li><span class="field-name">食物アレルギー</span> <span class="field-type">TextField[]</span> <span class="field-desc">複数入力可</span></li>
+          <li><span class="field-name">授乳状態</span> <span class="field-type">SelectToggleButton</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">妊娠状態</span> <span class="field-type">SelectToggleButton</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">フレイル状態</span> <span class="field-type">SelectToggleButton</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">宗教</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">患者メモ</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">預かり金管理</span> <span class="field-type">SelectToggleButton</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">預かり金メモ</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">-</span></li>
+        </ul>
+      </div>
+
+      <!-- 患者属性 -->
+      <div class="card">
+        <h2>患者属性</h2>
+        <p>パス: <code>/:patientId/patientAttributes</code> | コンポーネント: <code>PatientAttributesPage</code></p>
+
+        <h3>入力項目 - 個人情報</h3>
+        <ul class="field-list">
+          <li><span class="field-name">ニックネーム</span> <span class="field-type">TextField</span> <span class="field-desc"><span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">職業</span> <span class="field-type">TextField</span> <span class="field-desc"><span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">初診日</span> <span class="field-type">DatePicker</span> <span class="field-desc"><span class="badge badge-optional">任意</span></span></li>
+          <li><span class="field-name">身長</span> <span class="field-type">TextField</span> <span class="field-desc">小数点入力可</span></li>
+          <li><span class="field-name">体重</span> <span class="field-type">TextField</span> <span class="field-desc">小数点入力可</span></li>
+          <li><span class="field-name">血液型</span> <span class="field-type">SelectField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">死亡フラグ</span> <span class="field-type">SelectField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">死亡日時</span> <span class="field-type">DatePicker + TimePicker</span> <span class="field-desc">死亡フラグON時に表示</span></li>
+        </ul>
+
+        <h3>入力項目 - 住所・連絡先</h3>
+        <ul class="field-list">
+          <li><span class="field-name">郵便番号</span> <span class="field-type">TextField</span> <span class="field-desc">7桁、住所自動補完</span></li>
+          <li><span class="field-name">住所 / 住所詳細</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">住所備考</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">経度 / 緯度</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">実住所 / 実住所備考</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">世帯主名 / 続柄</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">電話番号 / 携帯 / FAX / メール</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+        </ul>
+
+        <h3>入力項目 - 担当スタッフ</h3>
+        <ul class="field-list">
+          <li><span class="field-name">紹介元医療機関</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">マスタ選択</span></li>
+          <li><span class="field-name">紹介医</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">医療機関でフィルタ</span></li>
+          <li><span class="field-name">主治医</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">ユーザーマスタ選択</span></li>
+          <li><span class="field-name">担当医</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">ユーザーマスタ選択</span></li>
+          <li><span class="field-name">看護師1-2</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">ユーザーマスタ選択</span></li>
+          <li><span class="field-name">ソーシャルワーカー</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">ユーザーマスタ選択</span></li>
+          <li><span class="field-name">心理士</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">ユーザーマスタ選択</span></li>
+          <li><span class="field-name">スタッフ1-6</span> <span class="field-type">AutocompleteField</span> <span class="field-desc">ユーザーマスタ選択</span></li>
+        </ul>
+      </div>
+
+      <!-- 保険情報 -->
+      <div class="card">
+        <h2>保険情報</h2>
+        <p>パス: <code>/:patientId/patientInsurance</code> | コンポーネント: <code>PatientInsurancePage</code></p>
+        <p>デフォルトは読み取り専用。編集権限がある場合に編集可能になります。</p>
+
+        <h3>入力項目</h3>
+        <ul class="field-list">
+          <li><span class="field-name">法別番号</span> <span class="field-type">SelectField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">継続区分</span> <span class="field-type">SelectField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">本人/家族区分</span> <span class="field-type">SelectField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">入外区分</span> <span class="field-type">SelectField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">外来/入院自己負担割合</span> <span class="field-type">TextField</span> <span class="field-desc">0-100%</span></li>
+          <li><span class="field-name">有効開始日 / 有効終了日</span> <span class="field-type">DatePicker</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">保険確認日</span> <span class="field-type">DatePicker</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">保険者番号 / 記号 / 番号 / 枝番</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+        </ul>
+      </div>
+
+      <!-- 連絡先 -->
+      <div class="card">
+        <h2>連絡先情報</h2>
+        <p>パス: <code>/:patientId/patientContactInfo</code> | コンポーネント: <code>PatientContactInfoPage</code></p>
+
+        <h3>入力項目 - 連絡先（複数登録可）</h3>
+        <ul class="field-list">
+          <li><span class="field-name">連絡先氏名</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">続柄</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">郵便番号</span> <span class="field-type">TextField</span> <span class="field-desc">7桁、住所自動補完</span></li>
+          <li><span class="field-name">住所 / 住所詳細</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">日中電話 / 夜間電話 / 携帯</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+        </ul>
+
+        <h3>入力項目 - 勤務先（複数登録可）</h3>
+        <ul class="field-list">
+          <li><span class="field-name">勤務先名</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">郵便番号 / 住所 / 住所詳細 / 電話</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+        </ul>
+
+        <h3>入力項目 - 郵送先（複数登録可）</h3>
+        <ul class="field-list">
+          <li><span class="field-name">宛名</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">郵便番号 / 住所 / 住所詳細 / 電話</span> <span class="field-type">TextField</span> <span class="field-desc">-</span></li>
+        </ul>
+      </div>
+
+      <!-- エピソード -->
+      <div class="card">
+        <h2>エピソード</h2>
+        <p>パス: <code>/:patientId/patientEpisode</code> | コンポーネント: <code>PatientEpisodePage</code></p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">エピソード一覧</span> <span class="field-type">ScrollableList</span> <span class="field-desc">選択可能</span></li>
+          <li><span class="field-name">年月</span> <span class="field-type">MonthPicker</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">内容</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">最大4000文字</span></li>
+          <li><span class="field-name">作成者 / 作成日時</span> <span class="field-type">TextField (disabled)</span> <span class="field-desc">読み取り専用</span></li>
+        </ul>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>追加</td><td>エピソード作成/更新</td></tr>
+            <tr><td>削除</td><td>選択エピソード削除（選択時のみ表示）</td></tr>
+            <tr><td>戻る</td><td>前の画面へ戻る</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- その他情報 -->
+      <div class="card">
+        <h2>その他情報</h2>
+        <p>パス: <code>/:patientId/patientOther</code> | コンポーネント: <code>PatientOtherPage</code></p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">情報一覧</span> <span class="field-type">ScrollableList</span> <span class="field-desc">選択可能</span></li>
+          <li><span class="field-name">連絡種別</span> <span class="field-type">SelectField</span> <span class="field-desc">来院(VISIT) / 電話(CALL)</span></li>
+          <li><span class="field-name">内容</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">最大4000文字</span></li>
+        </ul>
+      </div>
+
+      <!-- 患者メモ -->
+      <div class="card">
+        <h2>患者メモ</h2>
+        <p>パス: <code>/:patientId/patientNote</code> | コンポーネント: <code>PatientNotePage</code></p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">メモ</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">自由記述、高さ可変</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

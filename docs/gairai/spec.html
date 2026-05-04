@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>機能仕様書 - EMR Client</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#e3f2fd', primaryTextColor: '#1565c0', primaryBorderColor: '#1976d2', lineColor: '#616161' } });</script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="index.html">トップページ</a>
+      <a href="overview.html">機能一覧・概要</a>
+      <a href="screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="manual.html">操作マニュアル</a>
+      <a href="spec.html" class="active">機能仕様書</a>
+      <a href="api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="features/auth.html">認証</a>
+      <a href="features/patient.html">患者管理</a>
+      <a href="features/diagnosis.html">病名管理</a>
+      <a href="features/medical-records.html">カルテ・診療記録</a>
+      <a href="features/orders.html">オーダー管理</a>
+      <a href="features/documents.html">文書・ファイル管理</a>
+      <a href="features/assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>機能仕様書（開発者向け）</h1>
+      <span class="breadcrumb">トップ &gt; 機能仕様書</span>
+    </div>
+    <div class="content">
+
+      <!-- 目次 -->
+      <div class="card">
+        <h2>目次</h2>
+        <ol style="margin-left:20px; line-height:2;">
+          <li><a href="#architecture">アーキテクチャ概要</a></li>
+          <li><a href="#project-structure">プロジェクト構成</a></li>
+          <li><a href="#auth-spec">認証仕様</a></li>
+          <li><a href="#routing-spec">ルーティング仕様</a></li>
+          <li><a href="#state-management">状態管理</a></li>
+          <li><a href="#api-integration">API連携仕様</a></li>
+          <li><a href="#component-patterns">コンポーネントパターン</a></li>
+          <li><a href="#file-upload">ファイルアップロード仕様</a></li>
+          <li><a href="#canvas-drawing">キャンバス描画仕様</a></li>
+          <li><a href="#orca-integration">ORCA連携仕様</a></li>
+          <li><a href="#i18n">国際化仕様</a></li>
+          <li><a href="#dev-environment">開発環境</a></li>
+        </ol>
+      </div>
+
+      <!-- 1. アーキテクチャ -->
+      <div class="card" id="architecture">
+        <h2>1. アーキテクチャ概要</h2>
+
+        <div class="mermaid">
+flowchart TD
+    subgraph Frontend["フロントエンド (React SPA)"]
+        UI["UI Layer<br/>Material-UI Components"]
+        Pages["Pages Layer<br/>53+ Page Components"]
+        Features["Features Layer<br/>21 Domain Modules"]
+        Store["State Layer<br/>Redux Toolkit + RTK Query"]
+    end
+
+    subgraph Backend["バックエンド"]
+        API["REST API Server"]
+        ORCA["ORCA System"]
+        S3["S3 File Storage"]
+    end
+
+    UI --> Pages
+    Pages --> Features
+    Features --> Store
+    Store -->|HTTP Requests| API
+    Store -->|ORCA Import/Export| ORCA
+    Store -->|File Upload/Download| S3
+        </div>
+
+        <h3>技術スタック詳細</h3>
+        <table>
+          <thead><tr><th>レイヤー</th><th>技術</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>View</td><td>React 18.3 + TypeScript 5.6</td><td>UIレンダリング</td></tr>
+            <tr><td>Routing</td><td>React Router DOM 7.1</td><td>SPA ルーティング</td></tr>
+            <tr><td>State</td><td>Redux Toolkit 2.5</td><td>グローバル状態管理</td></tr>
+            <tr><td>Data Fetching</td><td>RTK Query</td><td>APIデータ取得・キャッシュ</td></tr>
+            <tr><td>UI Framework</td><td>Material-UI 6.5</td><td>UIコンポーネントライブラリ</td></tr>
+            <tr><td>Styling</td><td>Emotion 11.14</td><td>CSS-in-JS</td></tr>
+            <tr><td>Canvas</td><td>Fabric.js 6.6</td><td>描画（家系図・シェーマ）</td></tr>
+            <tr><td>i18n</td><td>react-i18next 15.4</td><td>多言語対応</td></tr>
+            <tr><td>Date</td><td>dayjs 1.11</td><td>日付操作</td></tr>
+            <tr><td>Virtualization</td><td>react-window 1.8</td><td>大量リスト仮想化</td></tr>
+            <tr><td>Build</td><td>Vite 6.0</td><td>ビルド・開発サーバー</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 2. プロジェクト構成 -->
+      <div class="card" id="project-structure">
+        <h2>2. プロジェクト構成</h2>
+        <pre><code>src/
+├── app/                           # アプリケーションブートストラップ
+│   ├── App.tsx                   # ルートコンポーネント（ルーティング設定）
+│   ├── store.ts                  # Redux Store 設定
+│   ├── routes/                   # ルーティング定義
+│   │   ├── AppRoutes.tsx        # 認証済みルート一覧
+│   │   ├── ProtectedRoute.tsx   # 認証チェックガード
+│   │   └── ProtectedRouteNoPatientId.tsx  # patientIdバリデーション
+│   └── components/               # グローバルコンポーネント
+├── pages/                         # ページコンポーネント（53画面）
+│   ├── signinPage/
+│   ├── patientSearchPage/
+│   ├── mainPage/
+│   ├── outpatientListPage/
+│   ├── patientRegistPage/
+│   ├── prescriptionRegisterPage/
+│   └── ...
+├── features/                      # ドメイン別機能モジュール（21モジュール）
+│   ├── auth/                     # 認証（authSlice）
+│   ├── patient/                  # 患者（API + 型定義）
+│   ├── order/                    # オーダー（API + 型定義）
+│   ├── diagnosis/                # 病名（API + 型定義）
+│   ├── clinicalNote/             # カルテ（API + 型定義）
+│   ├── madication/               # 薬剤（API + 型定義）
+│   ├── injection/                # 注射（API + 型定義）
+│   ├── testOrder/                # 検査（API + 型定義）
+│   ├── procedureOrder/           # 処置（API + 型定義）
+│   ├── gafScore/                 # GAF（API + 型定義）
+│   ├── file/                     # ファイル（API + 型定義）
+│   ├── orca/                     # ORCA連携（API + 型定義）
+│   └── ...
+├── common/                        # 共有リソース
+│   ├── components/               # 再利用UIコンポーネント
+│   ├── hooks/                    # カスタムフック
+│   ├── utils/                    # ユーティリティ関数
+│   ├── api/                      # API基盤（fetchBaseQueryWithAuth）
+│   └── types.ts                  # 共通型定義
+├── assets/                        # 静的アセット
+├── locales/                       # i18n翻訳ファイル
+├── mocks/                         # MSWモックデータ
+└── main.tsx                       # エントリポイント</code></pre>
+      </div>
+
+      <!-- 3. 認証仕様 -->
+      <div class="card" id="auth-spec">
+        <h2>3. 認証仕様</h2>
+
+        <h3>認証フロー</h3>
+        <div class="mermaid">
+sequenceDiagram
+    participant U as ユーザー
+    participant C as Client (React)
+    participant S as Server (API)
+
+    U->>C: ログイン画面アクセス
+    U->>C: ID/パスワード入力
+    C->>S: POST /auth/signin
+    S-->>C: 認証トークン
+    C->>C: Redux authSlice にトークン保存
+    C->>C: Redux userSlice にユーザー情報保存
+    C->>C: localStorage に永続化 (redux-persist)
+    C->>U: 患者検索画面へリダイレクト
+        </div>
+
+        <h3>認証保護レイヤー</h3>
+        <table>
+          <thead><tr><th>コンポーネント</th><th>チェック内容</th><th>失敗時の動作</th></tr></thead>
+          <tbody>
+            <tr><td><code>AuthInitializer</code></td><td>アプリ起動時にトークン有効性を確認</td><td>ログイン画面へリダイレクト</td></tr>
+            <tr><td><code>ProtectedRoute</code></td><td>認証状態（トークン有無）のチェック</td><td><code>/signin</code> へリダイレクト</td></tr>
+            <tr><td><code>ProtectedRouteNoPatientId</code></td><td>patientIdパラメータが数値であることを検証</td><td><code>/patientSearch</code> へリダイレクト</td></tr>
+          </tbody>
+        </table>
+
+        <h3>APIリクエスト認証</h3>
+        <p><code>fetchBaseQueryWithAuth</code> が全APIリクエストにAuthorizationヘッダーを自動付与します。トークン失効時は自動的にログアウト処理を行います。</p>
+      </div>
+
+      <!-- 4. ルーティング仕様 -->
+      <div class="card" id="routing-spec">
+        <h2>4. ルーティング仕様</h2>
+
+        <h3>ルート構造</h3>
+        <pre><code>/ (App.tsx)
+├── /signin                          # 認証不要
+└── /* (AuthInitializer → AppRoutes)  # 認証必須
+    ├── /patientSearch               # patientId不要
+    ├── /patientRegist               # patientId不要
+    ├── /outpatientList              # patientId不要
+    ├── /:patientId/...              # patientIdバリデーション
+    │   ├── /:deptId                 # メインダッシュボード
+    │   ├── /patientBasic            # 患者基本情報
+    │   ├── /patientAttributes       # 患者属性
+    │   ├── /:deptId/orders/...      # 各種オーダー
+    │   ├── /:deptId/diagnosisList   # 病名一覧
+    │   └── ...
+    └── * → /patientSearch           # フォールバック</code></pre>
+
+        <h3>パラメータ</h3>
+        <table>
+          <thead><tr><th>パラメータ</th><th>型</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><code>:patientId</code></td><td>number</td><td>患者ID（数値バリデーション付き）</td></tr>
+            <tr><td><code>:medicalDepartmentId</code></td><td>string</td><td>診療科ID</td></tr>
+            <tr><td><code>:diagnosisId</code></td><td>string</td><td>病名ID</td></tr>
+            <tr><td><code>:revisionId</code></td><td>string</td><td>リビジョンID</td></tr>
+            <tr><td><code>:prescriptionId</code></td><td>string</td><td>処方オーダーID</td></tr>
+            <tr><td><code>:injectionId</code></td><td>string</td><td>注射オーダーID</td></tr>
+            <tr><td><code>:testId</code></td><td>string</td><td>検査オーダーID</td></tr>
+            <tr><td><code>:textId</code></td><td>string</td><td>テキストオーダーID</td></tr>
+            <tr><td><code>:procedureId</code></td><td>string</td><td>処置オーダーID</td></tr>
+            <tr><td><code>:clinicalNoteId</code></td><td>string</td><td>カルテID</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 5. 状態管理 -->
+      <div class="card" id="state-management">
+        <h2>5. 状態管理</h2>
+
+        <h3>Redux Store構成</h3>
+        <table>
+          <thead><tr><th>スライス</th><th>永続化</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td><code>auth</code></td><td>-</td><td>認証状態（トークン、ログイン状態）</td></tr>
+            <tr><td><code>user</code></td><td>localStorage</td><td>ユーザー情報（redux-persist）</td></tr>
+          </tbody>
+        </table>
+
+        <h3>RTK Query APIスライス（31スライス）</h3>
+        <p>各ドメインごとにAPIスライスが定義され、自動キャッシュ管理・再フェッチ機能を提供します。</p>
+        <table>
+          <thead><tr><th>カテゴリ</th><th>スライス数</th><th>主なスライス</th></tr></thead>
+          <tbody>
+            <tr><td>患者</td><td>3</td><td>patientsApi, patientEpisodesApi, patientOtherInfoApi</td></tr>
+            <tr><td>病名</td><td>5</td><td>diagnosisApi, icd10EntriesApi, prefixEntriesApi, suffixEntriesApi, diseasesApi</td></tr>
+            <tr><td>カルテ</td><td>2</td><td>clinicalNotesApi, templateEntrySetApi</td></tr>
+            <tr><td>オーダー</td><td>1</td><td>ordersApi（全オーダー種別を統合）</td></tr>
+            <tr><td>薬剤</td><td>3</td><td>medicationsApi, medicationSetApi, usagesApi</td></tr>
+            <tr><td>注射</td><td>2</td><td>injectionsApi, injectionSetApi</td></tr>
+            <tr><td>検査</td><td>2</td><td>testsApi, testSetApi</td></tr>
+            <tr><td>処置</td><td>2</td><td>proceduresApi, procedureSetApi</td></tr>
+            <tr><td>その他</td><td>11</td><td>filesApi, gafScoreApi, disclosuresApi, orcaApi, etc.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 6. API連携仕様 -->
+      <div class="card" id="api-integration">
+        <h2>6. API連携仕様</h2>
+
+        <h3>基盤設定</h3>
+        <pre><code>// src/common/api/fetchBaseQueryWithAuth.ts
+const baseQuery = fetchBaseQuery({
+  baseUrl: import.meta.env.VITE_API_URL,
+  prepareHeaders: (headers) => {
+    // 認証トークンを自動付与
+    const token = getToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return headers;
+  },
+});</code></pre>
+
+        <h3>API命名規則</h3>
+        <table>
+          <thead><tr><th>プレフィックス</th><th>HTTP Method</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>fetch*</code> / <code>get*</code></td><td>GET</td><td>データ取得</td></tr>
+            <tr><td><code>create*</code></td><td>POST</td><td>新規作成</td></tr>
+            <tr><td><code>update*</code></td><td>PUT / PATCH</td><td>更新</td></tr>
+            <tr><td><code>delete*</code></td><td>DELETE</td><td>削除</td></tr>
+          </tbody>
+        </table>
+
+        <h3>RTK Queryフック命名</h3>
+        <pre><code>// Query（GET）: useXxxQuery() / useLazyXxxQuery()
+const { data } = useFetchPatientsQuery({ checkInDate });
+const [trigger] = useLazyFetchAttachmentDownloadUrlQuery();
+
+// Mutation（POST/PUT/PATCH/DELETE）: useXxxMutation()
+const [createPatient] = useCreatePatientMutation();
+const [updateDiagnosis] = useUpdateDiagnosisMutation();</code></pre>
+      </div>
+
+      <!-- 7. コンポーネントパターン -->
+      <div class="card" id="component-patterns">
+        <h2>7. コンポーネントパターン</h2>
+
+        <h3>ページコンポーネント構成</h3>
+        <p>各ページは以下のパターンで構成されています：</p>
+        <pre><code>// 典型的なページ構成
+PageComponent/
+├── index.tsx          # ページコンポーネント本体
+├── hooks/
+│   ├── useXxxData.ts   # データ取得カスタムフック
+│   └── useXxxForm.ts   # フォーム状態管理カスタムフック
+└── components/
+    └── XxxForm.tsx     # フォームUIコンポーネント</code></pre>
+
+        <h3>共通UIコンポーネント</h3>
+        <table>
+          <thead><tr><th>コンポーネント</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>CommonHeader</code></td><td>患者ID・画面タイトルのヘッダー</td></tr>
+            <tr><td><code>CommonFooter</code></td><td>ボタン配置のフッター</td></tr>
+            <tr><td><code>CommonAppBar</code> / <code>MainPageAppBar</code></td><td>ナビゲーションバー</td></tr>
+            <tr><td><code>ConfirmationDialog</code></td><td>確認ダイアログ</td></tr>
+            <tr><td><code>AlertDialog</code></td><td>警告ダイアログ</td></tr>
+            <tr><td><code>ErrorSnackbar</code> / <code>SuccessSnackbar</code></td><td>通知メッセージ</td></tr>
+            <tr><td><code>FullScreenLoader</code></td><td>ローディングスピナー</td></tr>
+            <tr><td><code>FileRegistrationForm</code></td><td>ファイル登録共通フォーム</td></tr>
+            <tr><td><code>FileViewForm</code></td><td>ファイル閲覧共通フォーム</td></tr>
+          </tbody>
+        </table>
+
+        <h3>フォーム入力コンポーネント</h3>
+        <table>
+          <thead><tr><th>コンポーネント</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>TextField</code></td><td>テキスト入力（単一行・複数行）</td></tr>
+            <tr><td><code>OutlinedTextField</code></td><td>アウトライン付きテキスト入力</td></tr>
+            <tr><td><code>LabeledTextField</code></td><td>ラベル付きテキスト入力</td></tr>
+            <tr><td><code>SelectField</code></td><td>プルダウン選択</td></tr>
+            <tr><td><code>AutocompleteField</code></td><td>検索可能なプルダウン選択</td></tr>
+            <tr><td><code>SelectToggleButton</code></td><td>トグルボタン（なし/あり/不明等）</td></tr>
+            <tr><td><code>DatePicker</code></td><td>日付選択</td></tr>
+            <tr><td><code>YearMonthPicker</code></td><td>年月選択</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 8. ファイルアップロード仕様 -->
+      <div class="card" id="file-upload">
+        <h2>8. ファイルアップロード仕様</h2>
+
+        <h3>署名付きURLパターン</h3>
+        <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant API as API Server
+    participant S3 as S3 Storage
+
+    C->>API: POST /files/upload-url<br/>{fileType, originalFileName}
+    API-->>C: {uploadUrl, fileKey}
+    C->>S3: PUT uploadUrl (file binary)
+    S3-->>C: 200 OK
+    C->>API: POST /files/confirm<br/>{fileKey}
+    API-->>C: 200 OK (file registered)
+        </div>
+
+        <h3>対応ファイル形式</h3>
+        <table>
+          <thead><tr><th>形式</th><th>MIME Type</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>PDF</td><td>application/pdf</td><td>文書全般</td></tr>
+            <tr><td>JPG/JPEG</td><td>image/jpeg</td><td>画像（検査結果、写真等）</td></tr>
+            <tr><td>PNG</td><td>image/png</td><td>画像（スキャン等）</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 9. キャンバス描画仕様 -->
+      <div class="card" id="canvas-drawing">
+        <h2>9. キャンバス描画仕様</h2>
+        <p>Fabric.js 6.6 を使用したキャンバス描画機能を提供します。</p>
+
+        <h3>使用箇所</h3>
+        <table>
+          <thead><tr><th>機能</th><th>画面</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>家系図描画</td><td>カルテ記載</td><td>患者の家系図を描画</td></tr>
+            <tr><td>シェーマ描画</td><td>カルテ記載 / 処置オーダー</td><td>身体部位のシェーマを描画</td></tr>
+          </tbody>
+        </table>
+
+        <h3>実装</h3>
+        <ul style="margin-left:20px;">
+          <li>描画データはJSON形式でシリアライズして保存</li>
+          <li>読み取り専用表示は <code>CanvasRenderer</code> コンポーネントを使用</li>
+          <li>編集時は <code>SchemaDrawer</code> コンポーネントを使用</li>
+          <li>カスタムフック <code>useDrawForm()</code> で描画状態を管理</li>
+        </ul>
+      </div>
+
+      <!-- 10. ORCA連携仕様 -->
+      <div class="card" id="orca-integration">
+        <h2>10. ORCA連携仕様</h2>
+
+        <h3>連携機能</h3>
+        <table>
+          <thead><tr><th>機能</th><th>方向</th><th>API</th><th>トリガー</th></tr></thead>
+          <tbody>
+            <tr><td>患者インポート</td><td>ORCA → EMR</td><td>POST /orca/import</td><td>患者検索画面「チェックイン」</td></tr>
+            <tr><td>病名インポート</td><td>ORCA → EMR</td><td>POST /orca/diagnoses/import</td><td>病名一覧画面「ORCA取込」</td></tr>
+            <tr><td>オーダーエクスポート</td><td>EMR → ORCA</td><td>POST /orca/orders/export</td><td>外来一覧画面「ORCA送信」</td></tr>
+          </tbody>
+        </table>
+
+        <h3>共通カスタムフック</h3>
+        <p><code>useOrcaExport()</code> フックでORCA送信ロジックを共通化しています。</p>
+      </div>
+
+      <!-- 11. 国際化仕様 -->
+      <div class="card" id="i18n">
+        <h2>11. 国際化仕様</h2>
+        <p>react-i18next を使用した多言語対応を実装しています。</p>
+
+        <h3>設定</h3>
+        <ul style="margin-left:20px;">
+          <li>翻訳ファイル: <code>src/locales/</code> ディレクトリ</li>
+          <li>ラベル参照: <code>t('namespace.key')</code> 関数を使用</li>
+          <li>全UIテキストは翻訳キー経由で表示</li>
+        </ul>
+      </div>
+
+      <!-- 12. 開発環境 -->
+      <div class="card" id="dev-environment">
+        <h2>12. 開発環境</h2>
+
+        <h3>開発コマンド</h3>
+        <table>
+          <thead><tr><th>コマンド</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><code>npm run dev</code></td><td>標準開発サーバー</td></tr>
+            <tr><td><code>npm run dev:mock</code></td><td>MSWモック付き開発</td></tr>
+            <tr><td><code>npm run dev:mock-openapi</code></td><td>OpenAPIベースモック開発</td></tr>
+            <tr><td><code>npm run dev:staging</code></td><td>ステージング環境向け</td></tr>
+            <tr><td><code>npm run dev:test</code></td><td>テスト環境向け</td></tr>
+            <tr><td><code>npm run build</code></td><td>プロダクションビルド</td></tr>
+            <tr><td><code>npm run test</code></td><td>Vitestでテスト実行</td></tr>
+            <tr><td><code>npm run storybook</code></td><td>Storybook起動</td></tr>
+          </tbody>
+        </table>
+
+        <h3>モック環境</h3>
+        <ul style="margin-left:20px;">
+          <li>MSW (Mock Service Worker) 2.7 でAPIをモック</li>
+          <li>モックデータは <code>src/mocks/</code> に配置</li>
+          <li><code>/debug</code> パスでモック制御画面にアクセス可能（mock環境のみ）</li>
+        </ul>
+
+        <h3>テスト</h3>
+        <ul style="margin-left:20px;">
+          <li>Vitest 3.0: ユニットテスト</li>
+          <li>Testing Library: コンポーネントテスト</li>
+          <li>Storybook 8.6: コンポーネントカタログ・ビジュアルテスト</li>
+        </ul>
+
+        <h3>環境変数</h3>
+        <table>
+          <thead><tr><th>変数名</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><code>VITE_API_URL</code></td><td>バックエンドAPIのベースURL</td></tr>
+            <tr><td><code>VITE_APP_ENV</code></td><td>アプリケーション環境（mock/staging/test/production）</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

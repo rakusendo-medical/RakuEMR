@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>オーダー管理 - EMR Client</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="../index.html">トップページ</a>
+      <a href="../overview.html">機能一覧・概要</a>
+      <a href="../screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="../manual.html">操作マニュアル</a>
+      <a href="../spec.html">機能仕様書</a>
+      <a href="../api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="auth.html">認証</a>
+      <a href="patient.html">患者管理</a>
+      <a href="diagnosis.html">病名管理</a>
+      <a href="medical-records.html">カルテ・診療記録</a>
+      <a href="orders.html" class="active">オーダー管理</a>
+      <a href="documents.html">文書・ファイル管理</a>
+      <a href="assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>オーダー管理</h1>
+      <span class="breadcrumb">トップ &gt; 機能詳細 &gt; オーダー管理</span>
+    </div>
+    <div class="content">
+
+      <!-- 共通説明 -->
+      <div class="card">
+        <h2>オーダー共通仕様</h2>
+        <p>全オーダーはメインダッシュボードから<strong>新規ウィンドウ</strong>で開かれます。各オーダーは登録/編集/詳細の3画面で構成されます。</p>
+
+        <h3>オーダーステータス</h3>
+        <table>
+          <thead><tr><th>ステータス</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td>作成済み</td><td>オーダーが登録された初期状態</td></tr>
+            <tr><td>完了</td><td>オーダーが実施完了</td></tr>
+            <tr><td>取消</td><td>オーダーが取り消された状態</td></tr>
+          </tbody>
+        </table>
+
+        <h3>共通操作フロー</h3>
+        <div class="flow-steps">
+          <span class="flow-step">ダッシュボードからオーダー起動</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">内容入力</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">登録（確認ダイアログ）</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">詳細画面</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">完了 or 取消</span>
+        </div>
+      </div>
+
+      <!-- 処方 -->
+      <div class="card">
+        <h2>処方オーダー</h2>
+        <p>パス: <code>/:patientId/:deptId/orders/prescriptions/register</code></p>
+
+        <h3>登録画面 - タブ構成</h3>
+        <table>
+          <thead><tr><th>タブ</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td>セット</td><td>定義済みの薬剤セットから選択</td></tr>
+            <tr><td>薬剤セット</td><td>薬剤セットグループから選択</td></tr>
+            <tr><td>過去処方</td><td>過去の処方履歴から選択</td></tr>
+            <tr><td>薬剤一覧</td><td>薬剤マスタから検索・選択</td></tr>
+          </tbody>
+        </table>
+
+        <h3>入力項目</h3>
+        <ul class="field-list">
+          <li><span class="field-name">薬剤選択</span> <span class="field-type">タブから選択</span> <span class="field-desc">複数薬剤追加可能</span></li>
+          <li><span class="field-name">用法</span> <span class="field-type">SelectField</span> <span class="field-desc">用法マスタから選択</span></li>
+          <li><span class="field-name">備考</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">3行、自由記述</span></li>
+        </ul>
+
+        <h3>詳細画面 - アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>完了</td><td>処方を完了ステータスに変更</td></tr>
+            <tr><td>取消</td><td>処方を取消ステータスに変更</td></tr>
+            <tr><td>戻る</td><td>ウィンドウを閉じる</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 注射 -->
+      <div class="card">
+        <h2>注射オーダー</h2>
+        <p>パス: <code>/:patientId/:deptId/orders/injections/register</code></p>
+
+        <h3>登録画面 - タブ構成</h3>
+        <table>
+          <thead><tr><th>タブ</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td>セット</td><td>定義済みの注射セットから選択</td></tr>
+            <tr><td>過去注射</td><td>過去の注射履歴から選択</td></tr>
+            <tr><td>注射一覧</td><td>注射マスタから検索・選択</td></tr>
+          </tbody>
+        </table>
+
+        <h3>入力項目</h3>
+        <ul class="field-list">
+          <li><span class="field-name">注射薬選択</span> <span class="field-type">タブから選択</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">用法</span> <span class="field-type">SelectField</span> <span class="field-desc">注射用にフィルタ済み</span></li>
+          <li><span class="field-name">備考</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">3行</span></li>
+        </ul>
+
+        <h3>詳細画面 - 追加機能</h3>
+        <ul style="margin-left:20px;">
+          <li>印刷機能（注射箋PDF出力）</li>
+          <li>印刷履歴表示</li>
+        </ul>
+      </div>
+
+      <!-- 検査 -->
+      <div class="card">
+        <h2>検査オーダー</h2>
+        <p>パス: <code>/:patientId/:deptId/orders/tests/register</code></p>
+
+        <h3>登録画面 - タブ構成</h3>
+        <table>
+          <thead><tr><th>タブ</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td>検査セット</td><td>検査セットグループから選択（チェックボックス複数選択）</td></tr>
+            <tr><td>過去検査</td><td>過去の検査オーダーから選択</td></tr>
+          </tbody>
+        </table>
+
+        <h3>入力項目</h3>
+        <ul class="field-list">
+          <li><span class="field-name">検査項目</span> <span class="field-type">Checkbox (複数)</span> <span class="field-desc">検査セットから複数選択</span></li>
+          <li><span class="field-name">予定日</span> <span class="field-type">DatePicker</span> <span class="field-desc">読み取り専用（自動設定）</span></li>
+        </ul>
+      </div>
+
+      <!-- テキスト -->
+      <div class="card">
+        <h2>テキストオーダー</h2>
+        <p>パス: <code>/:patientId/:deptId/orders/texts/register</code></p>
+
+        <h3>入力項目</h3>
+        <ul class="field-list">
+          <li><span class="field-name">予定日</span> <span class="field-type">DatePicker</span> <span class="field-desc">読み取り専用</span></li>
+          <li><span class="field-name">メモ</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">4行以上、自由記述</span></li>
+          <li><span class="field-name">添付ファイル</span> <span class="field-type">FileInput</span> <span class="field-desc">PDF, JPG, JPEG, PNG対応</span></li>
+        </ul>
+      </div>
+
+      <!-- 処置 -->
+      <div class="card">
+        <h2>処置オーダー</h2>
+        <p>パス: <code>/:patientId/:deptId/orders/procedures/register</code></p>
+
+        <h3>登録画面 - タブ構成</h3>
+        <table>
+          <thead><tr><th>タブ</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td>処置セット</td><td>処置セットグループから選択</td></tr>
+            <tr><td>過去処置</td><td>過去の処置オーダーから選択</td></tr>
+          </tbody>
+        </table>
+
+        <h3>入力項目</h3>
+        <ul class="field-list">
+          <li><span class="field-name">処置項目</span> <span class="field-type">タブから選択</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">予定日</span> <span class="field-type">DatePicker</span> <span class="field-desc">-</span></li>
+          <li><span class="field-name">メモ</span> <span class="field-type">TextField (multiline)</span> <span class="field-desc">4行以上</span></li>
+          <li><span class="field-name">添付ファイル</span> <span class="field-type">FileInput</span> <span class="field-desc">PDF, JPG, JPEG, PNG対応</span></li>
+          <li><span class="field-name">シェーマ描画</span> <span class="field-type">SchemaDrawer</span> <span class="field-desc">Fabric.jsベースの描画ツール</span></li>
+        </ul>
+
+        <h3>詳細画面 - 追加機能</h3>
+        <ul style="margin-left:20px;">
+          <li>シェーマ表示（CanvasRenderer による読み取り専用表示）</li>
+          <li>添付ファイルダウンロード</li>
+        </ul>
+      </div>
+
+      <!-- オーダー管理 -->
+      <div class="card">
+        <h2>オーダー管理</h2>
+        <p>パス: <code>/:patientId/:deptId/orderManagement</code> | コンポーネント: <code>OrderManagementPage</code></p>
+        <p>全オーダーの処理状況を一覧表示する画面です。</p>
+
+        <h3>画面構成</h3>
+        <ul style="margin-left:20px;">
+          <li>OrderProcessingStatusTable: 全オーダー種別のステータス一覧（読み取り専用）</li>
+          <li>OrderStatusLegend: ステータスの凡例表示</li>
+        </ul>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>終了</td><td>前の画面へ戻る</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文書・ファイル管理 - EMR Client</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="../index.html">トップページ</a>
+      <a href="../overview.html">機能一覧・概要</a>
+      <a href="../screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="../manual.html">操作マニュアル</a>
+      <a href="../spec.html">機能仕様書</a>
+      <a href="../api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="auth.html">認証</a>
+      <a href="patient.html">患者管理</a>
+      <a href="diagnosis.html">病名管理</a>
+      <a href="medical-records.html">カルテ・診療記録</a>
+      <a href="orders.html">オーダー管理</a>
+      <a href="documents.html" class="active">文書・ファイル管理</a>
+      <a href="assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>文書・ファイル管理</h1>
+      <span class="breadcrumb">トップ &gt; 機能詳細 &gt; 文書・ファイル管理</span>
+    </div>
+    <div class="content">
+
+      <div class="card">
+        <h2>共通仕様</h2>
+        <p>文書・ファイル管理は共通コンポーネント（<code>FileRegistrationForm</code> / <code>FileViewForm</code>）を使用し、<code>fileType</code>パラメータで文書種別を切り替えて動作します。</p>
+
+        <h3>共通ファイル操作</h3>
+        <table>
+          <thead><tr><th>操作</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td>アップロード</td><td>署名付きURL取得 → S3へ直接アップロード → サーバーに確定通知</td></tr>
+            <tr><td>ダウンロード</td><td>署名付きURL取得 → ブラウザでダウンロード</td></tr>
+            <tr><td>プレビュー</td><td>ファイル一覧から選択して表示</td></tr>
+          </tbody>
+        </table>
+
+        <h3>使用API</h3>
+        <table>
+          <thead><tr><th>操作</th><th>API</th></tr></thead>
+          <tbody>
+            <tr><td>アップロードURL取得</td><td>POST /patients/{patientId}/files/upload-url</td></tr>
+            <tr><td>ファイル一覧</td><td>GET /patients/{patientId}/files?fileType={type}</td></tr>
+            <tr><td>ダウンロードURL取得</td><td>GET /patients/{patientId}/files/{fileId}/download-url</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>文書種別一覧</h2>
+        <table>
+          <thead><tr><th>文書種別</th><th>fileType</th><th>登録パス</th><th>閲覧パス</th><th>ソート機能</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>問診票</td>
+              <td><code>questionnaire</code></td>
+              <td><code>/:patientId/questionnaireRegist</code></td>
+              <td><code>/:patientId/questionnairesView</code></td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>院外証明書</td>
+              <td><code>externalCertificate</code></td>
+              <td><code>/:patientId/externalCertificateRegist</code></td>
+              <td><code>/:patientId/externalCertificatesView</code></td>
+              <td>あり</td>
+            </tr>
+            <tr>
+              <td>院内証明書</td>
+              <td><code>internalCertificate</code></td>
+              <td><code>/:patientId/internalCertificateRegist</code></td>
+              <td><code>/:patientId/internalCertificatesView</code></td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>紹介状</td>
+              <td><code>referralDocument</code></td>
+              <td><code>/:patientId/referralDocumentRegist</code></td>
+              <td><code>/:patientId/referralDocumentsView</code></td>
+              <td>あり</td>
+            </tr>
+            <tr>
+              <td>既存カルテ</td>
+              <td><code>existingMedicalRecord</code></td>
+              <td><code>/:patientId/existingMedicalRecordRegist</code></td>
+              <td><code>/:patientId/existingMedicalRecordsView</code></td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>その他ファイル</td>
+              <td><code>otherFile</code></td>
+              <td><code>/:patientId/otherFileRegist</code></td>
+              <td><code>/:patientId/otherFilesView</code></td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>登録画面（共通）</h2>
+        <p>コンポーネント: <code>FileRegistrationForm</code></p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">ファイル選択</span> <span class="field-type">FileInput</span> <span class="field-desc">アップロードするファイルを選択</span></li>
+          <li><span class="field-name">プレビュー</span> <span class="field-type">表示領域</span> <span class="field-desc">選択ファイルのプレビュー</span></li>
+        </ul>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>アップロード</td><td>ファイルをアップロード。成功時は通知表示</td></tr>
+            <tr><td>キャンセル</td><td>前の画面へ戻る</td></tr>
+          </tbody>
+        </table>
+
+        <h3>操作フロー</h3>
+        <div class="flow-steps">
+          <span class="flow-step">ファイル選択</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">プレビュー確認</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">アップロードボタン</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">成功通知</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">前の画面へ戻る</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>閲覧画面（共通）</h2>
+        <p>コンポーネント: <code>FileViewForm</code></p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">ファイル一覧</span> <span class="field-type">List / Dropdown</span> <span class="field-desc">登録済みファイルの一覧</span></li>
+          <li><span class="field-name">ファイルプレビュー</span> <span class="field-type">表示領域</span> <span class="field-desc">選択ファイルの内容表示</span></li>
+        </ul>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>ファイル選択</td><td>一覧からファイルを選択してプレビュー</td></tr>
+            <tr><td>確認</td><td>ファイル内容の確認完了</td></tr>
+            <tr><td>戻る</td><td>前の画面へ戻る</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

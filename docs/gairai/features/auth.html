@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>認証 - EMR Client</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>EMR Client Docs</h2><div class="version">v1.14.0</div></div>
+    <nav>
+      <div class="nav-section">概要</div>
+      <a href="../index.html">トップページ</a>
+      <a href="../overview.html">機能一覧・概要</a>
+      <a href="../screen-flow.html">画面遷移図</a>
+      <div class="nav-section">ドキュメント</div>
+      <a href="../manual.html">操作マニュアル</a>
+      <a href="../spec.html">機能仕様書</a>
+      <a href="../api.html">API一覧</a>
+      <div class="nav-section">機能詳細</div>
+      <a href="auth.html" class="active">認証</a>
+      <a href="patient.html">患者管理</a>
+      <a href="diagnosis.html">病名管理</a>
+      <a href="medical-records.html">カルテ・診療記録</a>
+      <a href="orders.html">オーダー管理</a>
+      <a href="documents.html">文書・ファイル管理</a>
+      <a href="assessments.html">心理検査・評価</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h1>認証</h1>
+      <span class="breadcrumb">トップ &gt; 機能詳細 &gt; 認証</span>
+    </div>
+    <div class="content">
+
+      <div class="card">
+        <h2>ログイン画面</h2>
+        <p>パス: <code>/signin</code> | コンポーネント: <code>SigninPage</code></p>
+        <p>認証不要でアクセス可能な唯一の画面です。ユーザーID・パスワードによるログイン認証を行います。</p>
+
+        <h3>画面構成</h3>
+        <ul class="field-list">
+          <li><span class="field-name">ユーザーID</span> <span class="field-type">TextField</span> <span class="field-desc">最大16文字</span></li>
+          <li><span class="field-name">パスワード</span> <span class="field-type">TextField (password)</span> <span class="field-desc">最大64文字</span></li>
+        </ul>
+
+        <h3>アクション</h3>
+        <table>
+          <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+          <tbody>
+            <tr><td>ログイン</td><td>認証処理を実行。成功時は患者検索画面へ遷移。失敗時はエラーメッセージ表示。</td></tr>
+          </tbody>
+        </table>
+
+        <h3>操作フロー</h3>
+        <div class="flow-steps">
+          <span class="flow-step">ユーザーID入力</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">パスワード入力</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">ログインボタン</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">患者検索画面へ遷移</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>認証アーキテクチャ</h2>
+
+        <h3>認証保護レイヤー</h3>
+        <table>
+          <thead><tr><th>レイヤー</th><th>コンポーネント</th><th>役割</th></tr></thead>
+          <tbody>
+            <tr><td>レイヤー1</td><td><code>AuthInitializer</code></td><td>アプリ起動時の認証状態初期化</td></tr>
+            <tr><td>レイヤー2</td><td><code>ProtectedRoute</code></td><td>認証状態チェック。未認証時は<code>/signin</code>へリダイレクト</td></tr>
+            <tr><td>レイヤー3</td><td><code>ProtectedRouteNoPatientId</code></td><td>patientIdの数値チェック。不正時は<code>/patientSearch</code>へリダイレクト</td></tr>
+          </tbody>
+        </table>
+
+        <h3>状態管理</h3>
+        <ul style="margin-left:20px;">
+          <li>認証状態: Redux <code>authSlice</code> で管理</li>
+          <li>ユーザー情報: Redux <code>userSlice</code> で管理（redux-persistで永続化）</li>
+          <li>APIリクエスト: <code>fetchBaseQueryWithAuth</code> でトークンを自動付与</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
