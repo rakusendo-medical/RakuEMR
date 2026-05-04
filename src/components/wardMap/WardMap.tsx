@@ -198,8 +198,8 @@ const WardMap: React.FC = () => {
             <>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
               <Typography variant="body2" color="text.secondary">選択中: {selectedRooms.size}室</Typography>
-              <Button variant="contained" size="small" endIcon={<ArrowForward />} onClick={() => navigate('/batch-input')}>
-                一括入力へ
+              <Button variant="contained" size="small" endIcon={<ArrowForward />} onClick={() => navigate('/nursing/bulk-vitals')}>
+                一括バイタル入力へ
               </Button>
               <Button size="small" startIcon={<Clear />} onClick={clearSelectedRooms}>解除</Button>
             </>
