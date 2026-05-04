@@ -114,7 +114,7 @@ const OutpatientList: React.FC = () => {
     navigate(path);
   };
 
-  const handleOpenDashboard = () => navigateTo(`/outpatient/${selectedVisit!.patientId}`);
+  const handleOpenDashboard = () => navigateTo(`/karte-outpatient/${selectedVisit!.patientId}`);
   const handleOpenOrders = () => navigateTo(`/orders`); // 暫定: 既存オーダー管理へ
   const handleOpenDocuments = () => {
     showSnackbar(`文書登録画面は別エピックで実装予定（${selectedVisit!.patientName}）`, 'info');
@@ -329,7 +329,7 @@ const OutpatientList: React.FC = () => {
                         wardId: 'ward1' as any, roomNumber: '', bedLabel: '',
                         status: 'stable' as any, admitDate: '', doctorName: v.doctorName, diagnosis: '',
                       } as any);
-                      navigate(`/outpatient/${v.patientId}`);
+                      navigate(`/karte-outpatient/${v.patientId}`);
                     }}
                     sx={{ cursor: 'pointer' }}
                   >

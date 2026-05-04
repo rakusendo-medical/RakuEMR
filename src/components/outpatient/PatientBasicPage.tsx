@@ -241,12 +241,12 @@ const PatientBasicPage: React.FC = () => {
       setDiscardOpen(true);
       return;
     }
-    navigate(`/outpatient/${visit.patientId}`);
+    navigate(`/karte-outpatient/${visit.patientId}`);
   };
 
   const confirmDiscard = () => {
     setDiscardOpen(false);
-    navigate(`/outpatient/${visit.patientId}`);
+    navigate(`/karte-outpatient/${visit.patientId}`);
   };
 
   const handleSave = () => {

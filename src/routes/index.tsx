@@ -7,7 +7,6 @@ import PatientList from '../components/patientList/PatientList';
 import PatientMain from '../components/patientMain/PatientMain';
 import AdmissionDischarge from '../components/admission/AdmissionDischarge';
 import OutpatientList from '../components/outpatient/OutpatientList';
-import OutpatientDashboard from '../components/outpatient/OutpatientDashboard';
 import PatientBasicPage from '../components/outpatient/PatientBasicPage';
 import PatientSearch from '../components/patientSearch/PatientSearch';
 import NursingRecordView from '../components/nursing/NursingRecord';
@@ -35,7 +34,6 @@ const AppRoutes: React.FC = () => (
       <Route path="/karte-alpha/:patientId" element={<KarteAlphaPage />} />
       <Route path="/karte-outpatient/:patientId" element={<OutpatientKartePage />} />
       <Route path="/outpatient" element={<OutpatientList />} />
-      <Route path="/outpatient/:patientId" element={<OutpatientDashboard />} />
       <Route path="/outpatient/:patientId/basic" element={<PatientBasicPage />} />
       <Route path="/patient-search" element={<PatientSearch />} />
       <Route path="/admission" element={<AdmissionDischarge />} />
