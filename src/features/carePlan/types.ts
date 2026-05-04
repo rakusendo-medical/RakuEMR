@@ -109,6 +109,10 @@ export interface CarePlan {
   status: CarePlanStatus;
   createdAt: ISODate;
   createdBy: UUID;
+  /** 計画期間の開始日。立案時に必須。未補完の既存データは createdAt にフォールバック扱い。 */
+  periodStart?: ISODate;
+  /** 計画期間の終了日。継続中なら undefined。終了時（次期間立案 or 明示クローズ）に設定。 */
+  periodEnd?: ISODate;
   closedAt?: ISODate;
   supersededByCarePlanId?: UUID;
 }

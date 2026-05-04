@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Box, Button, Card, CardContent, Container, Paper, Stack, Typography,
+  Box, Button, Card, CardContent, Container, FormControl, InputLabel, MenuItem,
+  Paper, Select, Stack, Typography,
 } from '@mui/material';
 import {
   Add as AddIcon, Edit as EditIcon, Assessment as AssessmentIcon,
-  Print as PrintIcon, History as HistoryIcon, SyncAlt as SyncAltIcon,
+  Print as PrintIcon, History as HistoryIcon,
   FileCopy as FileCopyIcon, UnfoldMore as UnfoldMoreIcon, UnfoldLess as UnfoldLessIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -34,9 +35,32 @@ const PatientCarePlan: React.FC<Props> = ({ embedded = false, patientId: patient
   const navigate = useNavigate();
   const patientId = patientIdProp ?? params.patientId ?? '';
   const patient = useCarePlanStore((s) => s.patients.find((p) => p.id === patientId));
-  const carePlan = useCarePlanStore((s) =>
-    s.carePlans.find((p) => p.patientId === patientId && p.status !== 'closed')
+
+  // 当該患者の全計画を「期間開始日」降順で取得（最新期間が先頭）
+  const allCarePlans = useCarePlanStore((s) =>
+    s.carePlans
+      .filter((p) => p.patientId === patientId)
+      .slice()
+      .sort((a, b) => {
+        const aStart = a.periodStart ?? a.createdAt;
+        const bStart = b.periodStart ?? b.createdAt;
+        return bStart.localeCompare(aStart);
+      })
   );
+
+  // 表示対象期間: 初期は最新（active 優先 → 先頭）。ユーザー切替で変更可
+  const initialPlanId = allCarePlans.find((p) => p.status !== 'closed')?.id
+    ?? allCarePlans[0]?.id;
+  const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(initialPlanId);
+
+  // 患者切替時に選択をリセット
+  React.useEffect(() => {
+    setSelectedPlanId(initialPlanId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId]);
+
+  const carePlan = allCarePlans.find((p) => p.id === selectedPlanId);
+
   const allItems = useCarePlanStore((s) =>
     carePlan ? s.problemItems.filter((pi) => pi.carePlanId === carePlan.id) : []
   );
@@ -141,12 +165,43 @@ const PatientCarePlan: React.FC<Props> = ({ embedded = false, patientId: patient
           className="no-print"
         >
           <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+            {/* 期間プルダウン: 当該患者の全期間を時系列降順で表示。「+ 新規期間で計画立案」で /create に遷移 */}
+            <FormControl size="small" sx={{ minWidth: 240 }}>
+              <InputLabel>期間</InputLabel>
+              <Select
+                label="期間"
+                value={selectedPlanId ?? '__new__'}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '__new__') {
+                    navigate(`/care-plan/patients/${patient.id}/create`);
+                  } else {
+                    setSelectedPlanId(v);
+                  }
+                }}
+              >
+                {allCarePlans.map((p) => {
+                  const start = p.periodStart ?? p.createdAt;
+                  const endLabel = p.periodEnd ? formatJPDate(p.periodEnd) : '継続中';
+                  const statusLabel = p.status === 'closed' ? '（クローズ）'
+                    : p.status === 'draft' ? '（下書き）'
+                    : '';
+                  return (
+                    <MenuItem key={p.id} value={p.id}>
+                      {formatJPDate(start)} - {endLabel} {statusLabel}
+                    </MenuItem>
+                  );
+                })}
+                <MenuItem value="__new__" sx={{ fontStyle: 'italic', color: 'primary.main' }}>
+                  + 新規期間で計画立案
+                </MenuItem>
+              </Select>
+            </FormControl>
             <Button startIcon={<EditIcon />} variant="outlined" onClick={() => setPlanEditOpen(true)}>
               看護過程を編集
             </Button>
             <Button startIcon={<PrintIcon />} onClick={() => window.print()}>印刷</Button>
             <Button startIcon={<HistoryIcon />} onClick={() => setHistoryOpen(true)}>過去診断を参照</Button>
-            <Button startIcon={<SyncAltIcon />} onClick={() => alert('新計画作成(長期目標見直し)(未実装)')}>新計画に切替</Button>
             <Box sx={{ flex: 1 }} />
             <Button
               startIcon={<AssessmentIcon />}

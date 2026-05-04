@@ -67,16 +67,22 @@ export const PATIENTS: Patient[] = [
 ];
 
 // CarePlans - 全10名のうち p-003 (鈴木一郎) のみ計画未立案
+// 計画期間モデル（mock 改修フェーズ 2）:
+//   periodStart: 立案時に設定（既存データは createdAt と同値で補完）
+//   periodEnd: 継続中なら undefined。次期間立案時に「新期間 periodStart - 1日」が自動設定される
+//   closed プランには periodEnd を補完
 export const CARE_PLANS: CarePlan[] = [
-  { id: 'cp-001', patientId: 'P001', longTermGoal: '服薬自己管理ができ、自宅退院を目指す', status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a' },
-  { id: 'cp-002', patientId: 'P002', longTermGoal: '気分の安定を保ち、日常生活動作を自立して行える', status: 'active', createdAt: '2026-01-20', createdBy: 'ns-a' },
-  { id: 'cp-004', patientId: 'P004', longTermGoal: '気分の波をコントロールし、社会復帰の準備を進める', status: 'active', createdAt: '2026-02-10', createdBy: 'ns-a' },
-  { id: 'cp-005', patientId: 'P005', longTermGoal: '幻聴への対処方法を習得し、生活リズムを整える', status: 'active', createdAt: '2025-11-01', createdBy: 'ns-b' },
-  { id: 'cp-006', patientId: 'P006', longTermGoal: 'ストレス対処行動を身に付け、職場復帰を目指す', status: 'active', createdAt: '2026-02-15', createdBy: 'ns-b' },
-  { id: 'cp-007', patientId: 'P007', longTermGoal: '断酒継続のセルフモニタリングを確立する', status: 'active', createdAt: '2026-03-20', createdBy: 'ns-b' },
-  { id: 'cp-008', patientId: 'P008', longTermGoal: '希死念慮を訴えることができ、安全に療養生活を送れる', status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c' },
-  { id: 'cp-009', patientId: 'P009', longTermGoal: '予期不安のコントロール方法を獲得する', status: 'active', createdAt: '2026-02-25', createdBy: 'ns-c' },
-  { id: 'cp-010', patientId: 'P010', longTermGoal: '陰性症状への対応と生活リズムの確立', status: 'active', createdAt: '2025-12-01', createdBy: 'ns-c' },
+  // P001 山田太郎: 過去期間 + 現在期間の 2 期間サンプル（期間プルダウンの動作確認用）
+  { id: 'cp-001-prev', patientId: 'P001', longTermGoal: '初回入院時の症状改善と生活リズム確立', status: 'closed', createdAt: '2025-08-01', createdBy: 'ns-a', periodStart: '2025-08-01', periodEnd: '2026-01-14', closedAt: '2026-01-14' },
+  { id: 'cp-001', patientId: 'P001', longTermGoal: '服薬自己管理ができ、自宅退院を目指す', status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a', periodStart: '2026-01-15' },
+  { id: 'cp-002', patientId: 'P002', longTermGoal: '気分の安定を保ち、日常生活動作を自立して行える', status: 'active', createdAt: '2026-01-20', createdBy: 'ns-a', periodStart: '2026-01-20' },
+  { id: 'cp-004', patientId: 'P004', longTermGoal: '気分の波をコントロールし、社会復帰の準備を進める', status: 'active', createdAt: '2026-02-10', createdBy: 'ns-a', periodStart: '2026-02-10' },
+  { id: 'cp-005', patientId: 'P005', longTermGoal: '幻聴への対処方法を習得し、生活リズムを整える', status: 'active', createdAt: '2025-11-01', createdBy: 'ns-b', periodStart: '2025-11-01' },
+  { id: 'cp-006', patientId: 'P006', longTermGoal: 'ストレス対処行動を身に付け、職場復帰を目指す', status: 'active', createdAt: '2026-02-15', createdBy: 'ns-b', periodStart: '2026-02-15' },
+  { id: 'cp-007', patientId: 'P007', longTermGoal: '断酒継続のセルフモニタリングを確立する', status: 'active', createdAt: '2026-03-20', createdBy: 'ns-b', periodStart: '2026-03-20' },
+  { id: 'cp-008', patientId: 'P008', longTermGoal: '希死念慮を訴えることができ、安全に療養生活を送れる', status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c', periodStart: '2025-10-05' },
+  { id: 'cp-009', patientId: 'P009', longTermGoal: '予期不安のコントロール方法を獲得する', status: 'active', createdAt: '2026-02-25', createdBy: 'ns-c', periodStart: '2026-02-25' },
+  { id: 'cp-010', patientId: 'P010', longTermGoal: '陰性症状への対応と生活リズムの確立', status: 'active', createdAt: '2025-12-01', createdBy: 'ns-c', periodStart: '2025-12-01' },
 ];
 
 // ProblemItems
@@ -90,6 +96,31 @@ export const CARE_PLANS: CarePlan[] = [
 // p-009 (小林拓也, Ns-C): 通常
 // p-010 (加藤由美, Ns-C): 通常
 export const PROBLEM_ITEMS: ProblemItem[] = [
+  // --- cp-001-prev 山田太郎 過去期間（2025-08 〜 2026-01-14、解決でクローズ） ---
+  {
+    id: 'pi-001-prev-1', carePlanId: 'cp-001-prev', domain: '精神', priority: 'high', nandaCode: '00146',
+    problemStatement: '初回入院による不安・緊張感が強く、夜間不眠を訴える',
+    shortTermGoal: '入眠困難なく安定した睡眠が確保できる',
+    ote: {
+      observation: ['睡眠状況の観察', '日中の様子の観察'],
+      therapy: ['就寝前の傾聴', '入眠環境の調整'],
+      education: ['リラクゼーション法の指導'],
+    },
+    status: 'closed_resolved', createdAt: '2025-08-01', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-01-10', closedAt: '2026-01-14', closeReason: '症状改善',
+  },
+  {
+    id: 'pi-001-prev-2', carePlanId: 'cp-001-prev', domain: '日常生活', priority: 'medium', nandaCode: '00095',
+    problemStatement: '入院環境への適応が遅れ、生活リズム不安定',
+    shortTermGoal: '病棟スケジュールに沿って生活できる',
+    ote: {
+      observation: ['離床時間・食事摂取量の観察'],
+      therapy: ['生活リズムの調整支援'],
+      education: ['病棟スケジュールの説明'],
+    },
+    status: 'closed_resolved', createdAt: '2025-08-01', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-01-10', closedAt: '2026-01-14', closeReason: '症状改善',
+  },
   // --- cp-001 山田太郎 (期限超過) ---
   {
     id: 'pi-001-1', carePlanId: 'cp-001', domain: '服薬', priority: 'high', nandaCode: '00078',

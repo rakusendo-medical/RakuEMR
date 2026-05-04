@@ -3,6 +3,7 @@ import type {
   CarePlan,
   ChangeLog,
   Evaluation,
+  ISODate,
   NandaDiagnosis,
   Nurse,
   Patient,
@@ -32,6 +33,29 @@ const addMonthISO = (iso: string, months: number) => {
   return d.toISOString().slice(0, 10);
 };
 
+const addDayISO = (iso: string, days: number) => {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+/** 計画の有効期間を取得（periodStart 未設定なら createdAt で代用、periodEnd 未設定なら継続中） */
+const planPeriod = (p: CarePlan): { start: string; end?: string } => ({
+  start: p.periodStart ?? p.createdAt,
+  end: p.periodEnd,
+});
+
+/** 2 区間が重複するか（end が undefined は無限大とみなす） */
+const periodsOverlap = (
+  a: { start: string; end?: string },
+  b: { start: string; end?: string },
+): boolean => {
+  // a.end < b.start なら離れている、b.end < a.start なら離れている、それ以外は重複
+  if (a.end !== undefined && a.end < b.start) return false;
+  if (b.end !== undefined && b.end < a.start) return false;
+  return true;
+};
+
 interface CarePlanState {
   nurses: Nurse[];
   currentNurseId: UUID;
@@ -44,11 +68,15 @@ interface CarePlanState {
   changeLogs: ChangeLog[];
 
   switchNurse: (nurseId: UUID) => void;
-  createCarePlan: (patientId: UUID, longTermGoal: string) => CarePlan;
+  /** 計画を新規作成。periodStart 省略時は TODAY。
+   *  同患者に「継続中（periodEnd 未設定）の active 計画」があれば、その計画の
+   *  periodEnd を「新計画 periodStart - 1日」、status を 'closed' に自動更新する（案 A）。 */
+  createCarePlan: (patientId: UUID, longTermGoal: string, periodStart?: ISODate) => CarePlan;
   activateCarePlan: (carePlanId: UUID) => void;
   updateLongTermGoal: (carePlanId: UUID, longTermGoal: string) => void;
-  /** 立案日と長期目標の編集。評価期限などには影響させない */
-  updateCarePlanMeta: (carePlanId: UUID, patch: { longTermGoal?: string; createdAt?: string }) => void;
+  /** 立案日・長期目標・期間情報の編集。評価期限などには影響させない。
+   *  期間情報の編集は同患者の他計画と重複しないこと（重複時は何もせずエラーをログに出して return）。 */
+  updateCarePlanMeta: (carePlanId: UUID, patch: { longTermGoal?: string; createdAt?: string; periodStart?: ISODate; periodEnd?: ISODate | null }) => void;
   addProblemItem: (
     carePlanId: UUID,
     item: Omit<ProblemItem, 'id' | 'carePlanId' | 'createdAt' | 'createdBy' | 'status'> & {
@@ -80,8 +108,9 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
 
   switchNurse: (nurseId) => set({ currentNurseId: nurseId }),
 
-  createCarePlan: (patientId, longTermGoal) => {
+  createCarePlan: (patientId, longTermGoal, periodStart) => {
     const now = new Date().toISOString();
+    const start = periodStart ?? TODAY;
     const plan: CarePlan = {
       id: uid('cp'),
       patientId,
@@ -89,21 +118,47 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
       status: 'draft',
       createdAt: TODAY,
       createdBy: get().currentNurseId,
+      periodStart: start,
     };
     const a = actor(get());
+    // 案 A: 同患者の継続中（periodEnd 未設定の active）計画があれば、自動で periodEnd / status を設定
+    const existing = get().carePlans.find((p) =>
+      p.patientId === patientId
+      && p.status === 'active'
+      && (p.periodEnd === undefined)
+    );
     set((s) => ({
-      carePlans: [...s.carePlans, plan],
+      carePlans: [
+        ...s.carePlans.map((p) =>
+          existing && p.id === existing.id
+            ? { ...p, status: 'closed' as const, periodEnd: addDayISO(start, -1), closedAt: addDayISO(start, -1) }
+            : p,
+        ),
+        plan,
+      ],
       changeLogs: [
         ...s.changeLogs,
+        ...(existing
+          ? [{
+              id: uid('log'),
+              targetType: 'care_plan' as const,
+              targetId: existing.id,
+              action: 'close' as const,
+              actorId: get().currentNurseId,
+              actorName: a?.name || '',
+              at: now,
+              summary: `新期間立案により前計画を自動クローズ（periodEnd=${addDayISO(start, -1)}）`,
+            }]
+          : []),
         {
           id: uid('log'),
-          targetType: 'care_plan',
+          targetType: 'care_plan' as const,
           targetId: plan.id,
-          action: 'create',
+          action: 'create' as const,
           actorId: get().currentNurseId,
           actorName: a?.name || '',
           at: now,
-          summary: '看護過程を新規作成(下書き)',
+          summary: `看護過程を新規作成(下書き) 期間=${start}〜継続中`,
         },
       ],
     }));
@@ -177,7 +232,38 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
     if (patch.createdAt !== undefined && patch.createdAt !== before.createdAt) {
       fields.push('立案日');
     }
+    if (patch.periodStart !== undefined && patch.periodStart !== before.periodStart) {
+      fields.push('期間開始日');
+    }
+    // periodEnd の patch 値: undefined = 変更なし、null = 継続中に戻す（クリア）、文字列 = 設定
+    const periodEndChanging = patch.periodEnd !== undefined
+      && (patch.periodEnd === null ? before.periodEnd !== undefined : patch.periodEnd !== before.periodEnd);
+    if (periodEndChanging) fields.push('期間終了日');
     if (fields.length === 0) return;
+
+    // 期間バリデーション: 同患者の他計画と重複しないこと
+    const newStart = patch.periodStart ?? before.periodStart ?? before.createdAt;
+    const newEnd = patch.periodEnd === null
+      ? undefined
+      : (patch.periodEnd ?? before.periodEnd);
+    if (patch.periodStart !== undefined || periodEndChanging) {
+      if (newEnd !== undefined && newEnd < newStart) {
+        // eslint-disable-next-line no-console
+        console.error(`[updateCarePlanMeta] periodEnd (${newEnd}) は periodStart (${newStart}) より前に設定できません`);
+        return;
+      }
+      const conflict = get().carePlans.find((p) => {
+        if (p.id === carePlanId) return false;
+        if (p.patientId !== before.patientId) return false;
+        return periodsOverlap(planPeriod(p), { start: newStart, end: newEnd });
+      });
+      if (conflict) {
+        // eslint-disable-next-line no-console
+        console.error(`[updateCarePlanMeta] 期間が他計画 (${conflict.id}) と重複しています`);
+        return;
+      }
+    }
+
     set((s) => ({
       carePlans: s.carePlans.map((p) =>
         p.id === carePlanId
@@ -185,6 +271,10 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
               ...p,
               ...(patch.longTermGoal !== undefined ? { longTermGoal: patch.longTermGoal } : {}),
               ...(patch.createdAt !== undefined ? { createdAt: patch.createdAt } : {}),
+              ...(patch.periodStart !== undefined ? { periodStart: patch.periodStart } : {}),
+              ...(periodEndChanging
+                ? { periodEnd: patch.periodEnd === null ? undefined : patch.periodEnd }
+                : {}),
             }
           : p
       ),

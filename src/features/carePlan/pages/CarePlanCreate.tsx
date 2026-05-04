@@ -66,22 +66,9 @@ const CarePlanCreate: React.FC<Props> = ({ embedded = false, patientId: patientI
     return <Typography>患者が見つかりません</Typography>;
   }
 
-  if (existingPlan && existingPlan.status === 'active') {
-    return (
-      <Container maxWidth="xl" disableGutters>
-        {!embedded && <PatientHeader patient={patient} />}
-        <Alert severity="info" action={
-          !embedded ? (
-            <Button size="small" onClick={() => navigate(`/care-plan/patients/${patient.id}`)}>
-              看護過程を開く
-            </Button>
-          ) : undefined
-        }>
-          この患者には既に有効な看護過程があります。
-        </Alert>
-      </Container>
-    );
-  }
+  // 期間モデルでは新規期間立案で前計画を自動クローズするため、active 計画存在を理由にブロックしない
+  // （embedded mode = 計画なしでの立案 / standalone mode = 「+ 新規期間で計画立案」からの遷移）
+  // 既存 draft plan がある場合は planId 初期値で resume される（上記 useState 参照）
 
   const ensurePlan = (): string => {
     if (planId) return planId;
