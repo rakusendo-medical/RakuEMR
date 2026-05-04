@@ -114,7 +114,7 @@ const OutpatientList: React.FC = () => {
     navigate(path);
   };
 
-  const handleOpenKarte = () => navigateTo(`/karte-outpatient/${selectedVisit!.patientId}`);
+  const handleOpenDashboard = () => navigateTo(`/outpatient/${selectedVisit!.patientId}`);
   const handleOpenOrders = () => navigateTo(`/orders`); // 暫定: 既存オーダー管理へ
   const handleOpenDocuments = () => {
     showSnackbar(`文書登録画面は別エピックで実装予定（${selectedVisit!.patientName}）`, 'info');
@@ -205,13 +205,13 @@ const OutpatientList: React.FC = () => {
           </Box>
           <Box sx={{ flex: 1 }} />
           {/* 補助アクション群（outlined） */}
-          <Tooltip title="メインダッシュボード（カルテ）を開く">
+          <Tooltip title="メインダッシュボードを開く">
             <span>
               <Button
                 size="small" variant="outlined" startIcon={<DescriptionIcon />}
-                disabled={!selectedVisit} onClick={handleOpenKarte}
+                disabled={!selectedVisit} onClick={handleOpenDashboard}
               >
-                カルテ
+                メイン
               </Button>
             </span>
           </Tooltip>
@@ -329,7 +329,7 @@ const OutpatientList: React.FC = () => {
                         wardId: 'ward1' as any, roomNumber: '', bedLabel: '',
                         status: 'stable' as any, admitDate: '', doctorName: v.doctorName, diagnosis: '',
                       } as any);
-                      navigate(`/karte-outpatient/${v.patientId}`);
+                      navigate(`/outpatient/${v.patientId}`);
                     }}
                     sx={{ cursor: 'pointer' }}
                   >
