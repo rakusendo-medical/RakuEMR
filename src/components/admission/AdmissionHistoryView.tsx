@@ -14,6 +14,7 @@ import {
 import { useAppStore } from '../../stores/useAppStore';
 import DeleteReasonDialog from './DeleteReasonDialog';
 import AdmitFormChangeDialog from './AdmitFormChangeDialog';
+import IsolationHistoryDialog from '../isolation/IsolationHistoryDialog';
 
 interface Props {
   /** タブ「移動歴」へ切替するためのコールバック */
@@ -154,6 +155,8 @@ const AdmissionHistoryView: React.FC<Props> = ({ onNavigateToTransferHistory }) 
   // ダイアログ
   const [formChangeOpen, setFormChangeOpen] = React.useState(false);
   const [deleteReason, setDeleteReason] = React.useState<{ open: boolean; action: CancelAction | null }>({ open: false, action: null });
+  // ===== ep-08 隔離拘束歴 =====
+  const [isolationHistoryOpen, setIsolationHistoryOpen] = React.useState(false);
 
   const buildMedicalRecord = (content: string, tags: string[] = []): MedicalRecord => {
     const now = new Date();
@@ -320,16 +323,13 @@ const AdmissionHistoryView: React.FC<Props> = ({ onNavigateToTransferHistory }) 
           >
             移動歴
           </Button>
-          <Tooltip title="隔離歴（ep-08 で本実装予定）">
-            <span>
-              <Button
-                size="small" variant="outlined" startIcon={<LockIcon />}
-                onClick={() => showSnackbar('隔離歴は ep-08 で本実装予定です', 'info')}
-              >
-                隔離歴
-              </Button>
-            </span>
-          </Tooltip>
+          {/* ===== ep-08 隔離拘束歴 ===== */}
+          <Button
+            size="small" variant="outlined" startIcon={<LockIcon />}
+            onClick={() => setIsolationHistoryOpen(true)}
+          >
+            隔離歴
+          </Button>
         </Stack>
       </Stack>
 
@@ -560,6 +560,13 @@ const AdmissionHistoryView: React.FC<Props> = ({ onNavigateToTransferHistory }) 
         variant={deleteReason.action === 'cancel-discharge' ? 'discharge' : 'admit'}
         onClose={() => setDeleteReason({ open: false, action: null })}
         onConfirm={handleDeleteConfirmed}
+      />
+
+      {/* ===== ep-08 隔離拘束歴 ===== */}
+      <IsolationHistoryDialog
+        open={isolationHistoryOpen}
+        onClose={() => setIsolationHistoryOpen(false)}
+        patientId={selectedPatientId}
       />
     </Box>
   );

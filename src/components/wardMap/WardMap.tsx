@@ -10,6 +10,7 @@ import {
   OpenInFull as OpenInFullIcon, Close as CloseIcon, MoveDown as MoveDownIcon,
   ArticleOutlined as ArticleIcon,
   LogoutOutlined, AssignmentReturnedOutlined,
+  Lock as LockIcon,
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, UnassignedPatient, WardId } from '../../types';
 import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS } from '../../data/mockData';
@@ -23,6 +24,7 @@ import UnassignedPatientsPanel from './UnassignedPatientsPanel';
 import BedMoveDialog, { BedMoveMode, BedMoveTarget, BedMoveSubmitParams } from './BedMoveDialog';
 import DischargeConfirmDialog from '../admission/DischargeConfirmDialog';
 import DischargeOrderDialog from '../admission/DischargeOrderDialog';
+import IsolationHistoryDialog from '../isolation/IsolationHistoryDialog';
 
 const WardMap: React.FC = () => {
   const navigate = useNavigate();
@@ -47,6 +49,8 @@ const WardMap: React.FC = () => {
   // ※ 隔離指示・拘束指示など他の指示系（ep-05 隔離拘束指示）は将来このセクションに追加する想定。
   const [dischargeConfirmOrder, setDischargeConfirmOrder] = React.useState<AdmissionOrder | null>(null);
   const [dischargeOrderPatient, setDischargeOrderPatient] = React.useState<Patient | null>(null);
+  // ===== ep-08 隔離拘束歴 =====
+  const [isolationHistoryPatientId, setIsolationHistoryPatientId] = React.useState<string | null>(null);
 
   const rooms = ROOMS.filter((r) => r.wardId === ward);
 
@@ -380,6 +384,15 @@ const WardMap: React.FC = () => {
               {/* === 将来追加位置 ===
                   ep-05 隔離拘束指示: 隔離指示／拘束指示ボタンをここに追加する。
                   条件: 入院患者かつ既に隔離拘束指示が出ていない場合などをここで判定。 */}
+              {/* ===== ep-08 隔離拘束歴 ===== */}
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<LockIcon />}
+                onClick={() => setIsolationHistoryPatientId(selectedBedPatient.id)}
+              >
+                隔離歴
+              </Button>
               <IconButton size="small" onClick={() => setBedMenuPatientId(null)}><CloseIcon /></IconButton>
             </Stack>
           </Box>
@@ -423,6 +436,13 @@ const WardMap: React.FC = () => {
         open={!!dischargeOrderPatient}
         patient={dischargeOrderPatient}
         onClose={() => setDischargeOrderPatient(null)}
+      />
+
+      {/* ===== ep-08 隔離拘束歴 ===== */}
+      <IsolationHistoryDialog
+        open={!!isolationHistoryPatientId}
+        patientId={isolationHistoryPatientId}
+        onClose={() => setIsolationHistoryPatientId(null)}
       />
     </Box>
   );

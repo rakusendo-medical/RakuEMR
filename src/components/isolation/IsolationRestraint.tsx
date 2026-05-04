@@ -24,6 +24,7 @@ import IsolationFilterDialog from './IsolationFilterDialog';
 import RestraintNursingRecordStub from './RestraintNursingRecordStub';
 import ObservationBulkDialog from './ObservationBulkDialog';
 import ObservationRecordDialog from './ObservationRecordDialog';
+import IsolationHistoryView from './IsolationHistoryView';
 import BedMoveDialog, { type BedMoveTarget } from '../wardMap/BedMoveDialog';
 
 const OBS_COLORS: Record<ObservationState, string> = {
@@ -890,34 +891,8 @@ const IsolationRestraint: React.FC = () => {
       {/* ===== ep-07 観察記録: tab=1 改修済 ===== */}
       {tab === 1 && <ObservationListTab />}
 
-      {tab === 2 && (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>患者氏名</TableCell>
-                <TableCell>種別</TableCell>
-                <TableCell>開始日時</TableCell>
-                <TableCell>終了日時</TableCell>
-                <TableCell>期間</TableCell>
-                <TableCell>指示医</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {ISOLATION_ORDERS.map((o) => (
-                <TableRow key={o.id} hover>
-                  <TableCell sx={{ fontWeight: 600 }}>{o.patientName}</TableCell>
-                  <TableCell><Chip label={o.type} size="small" color={o.type === '隔離' ? 'error' : 'warning'} variant="outlined" /></TableCell>
-                  <TableCell>{o.startDatetime}</TableCell>
-                  <TableCell>{o.endDatetime || '継続中'}</TableCell>
-                  <TableCell>{o.endDatetime ? '2日間' : '継続中'}</TableCell>
-                  <TableCell>{o.doctorName}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+      {/* ===== ep-08 隔離拘束歴: tab=2 改修済 ===== */}
+      {tab === 2 && <IsolationHistoryView />}
 
       {tab === 3 && (
         <Box>

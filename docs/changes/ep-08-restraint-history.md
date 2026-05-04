@@ -10,7 +10,7 @@
 
 | ストーリー | 改修前 AC | 実装後 AC | 状態 |
 | --- | --- | --- | --- |
-| us-15 隔離拘束歴 | 0/6 | 0/6 | 🟡 着手前 |
+| us-15 隔離拘束歴 | 0/6 | 6/6 | ✅ 完了（モック実装） |
 
 ## 既存実装と本エピックの関係
 
@@ -147,3 +147,43 @@ deletable(target):
 | `src/components/admission/AdmissionHistoryView.tsx` | 既存「隔離歴」リンクに onClick 接続 | リンクハンドラ追加のみ |
 | `src/components/wardMap/WardMap.tsx` | フッターメニューに「隔離歴」追加 | 既存 RelatedFeatureDialogs の枠流用、新規メニュー項目 1 件 |
 | `docs/screen-mapping.tsv` | IsolationRestraint.tsx 行に ep-08 / us-15 を追記 | 既存行変更（要 MASTER 調整） |
+
+## 実装後メモ（2026-05-04）
+
+### 追加・変更ファイル
+
+- `src/types/index.ts` — `IsolationHistoryAudit` を追加（ep-07 と同タイミングで追加済）
+- `src/stores/useAppStore.ts` — `isolationHistoryAudits` state + `deleteIsolationOrderWithAudit` action を追加（ep-07 と同タイミングで追加済）
+- `src/components/isolation/IsolationHistoryView.tsx` — 新規（中身。tab=2 inline と Dialog の両方で再利用）
+- `src/components/isolation/IsolationHistoryDialog.tsx` — 新規（殻。AdmissionHistoryView / WardMap から起動）
+- `src/components/isolation/IsolationRestraint.tsx` — tab=2 を `<IsolationHistoryView />` に置き換え
+- `src/components/admission/AdmissionHistoryView.tsx` — 既存「隔離歴」リンクを `IsolationHistoryDialog` 起動に接続（show snackbar の暫定実装を撤去）
+- `src/components/wardMap/WardMap.tsx` — フッター操作メニューに「隔離歴」ボタンを追加（既存退院手続き／退院指示と並列）
+- `docs/screen-mapping.tsv` — IsolationHistoryView / IsolationHistoryDialog の 2 行を追加
+
+### 実装上の判断・割り切り
+
+- **削除順序ルール** は `IsolationHistoryView` 内の `computeDeletability` 関数で実装。`restraintChange` トグル ON/OFF で分岐
+  - OFF: 「開始」と「解除」のみ削除可。後続に同 subtype の開始があれば削除不可。ペア削除（開始 → 対応する解除も同時削除、逆も同様）
+  - ON: 同 patient × 同 subtype の series で **最終指示のみ削除可**
+  - 削除不可時はホバーツールチップ + Snackbar (error) で「以降の {operation} 指示 ({datetime}) を先に削除してください」を表示
+- **終了日時表示ロジック** は `computeDisplayEnd`:
+  - 後続なし → `endDatetime` または「継続中」
+  - 後続が「開始」 → 新開始 - 1 分
+  - 後続が「継続/変更/解除」 → 新指示の開始（同時刻）
+- **削除権限** はモック: `currentUserRole === 'doctor'` のみ削除アイコンを表示。それ以外は Alert で「削除権限なし」を案内（表示は可能）
+- **物理削除** を採用: `dynamicIsolationOrders` から filter で除去し、`isolationHistoryAudits` にスナップショット込みの監査ログを永続化
+- **マスタ ISOLATION_ORDERS の削除**: マスタ由来の指示は `dynamicIsolationOrders` に居ない。`deleteIsolationOrderWithAudit` は dynamic から filter のみ実行するため、マスタサンプルは削除されないまま再表示される（リロード後元に戻る）。本格運用では論理削除フラグの導入が必要だが、モックでは現状の挙動で十分（ユーザは新規追加した動的指示のみ削除すれば動作確認可能）
+- **AC-1 の起動経路** は AdmissionHistoryView / WardMap フッターを実装。患者情報画面（ep-09 経由）からの起動は ep-09 Phase 3 と整合確認の上で別ラウンド
+- **観察記録が紐づく指示の削除制約** は spec の補足通りスコープ外（ep-07 完了後の別ラウンドで検討）
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+- ブラウザ目視確認は未実施
+
+### MASTER への共有事項
+
+- screen-mapping.tsv の `IsolationRestraint.tsx` 行（ep-06 / ep-07）には ep-08 / us-15 を追記したい（既存行更新）。MASTER 側で調整いただけると助かります
+- screen-mapping.tsv の `IsolationHistoryDialog.tsx` 行は起動経路が複数あるため `screen_path` を `*` としています。命名運用は MASTER 判断で OK

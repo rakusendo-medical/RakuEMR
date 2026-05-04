@@ -25,3 +25,5 @@ screen_path	component	epic	stories	status	notes
 /isolation	src/components/isolation/ObservationLinkSettingDialog.tsx	ep-07-observation	us-13,us-14	implemented	連携設定ダイアログ。看護記録連携 ON/OFF、報告先（作成依頼／確認依頼／両方）。
 /isolation	src/components/isolation/ObservationContentBulkDialog.tsx	ep-07-observation	us-13,us-14	implemented	内容一括入力ダイアログ。最大 3000 文字、文例 5 件・タグ 10 件、起動元の表示中行に同一内容反映。
 /flowsheet/:patientId	src/components/isolation/RestraintObservationMatrix.tsx	ep-07-observation	us-13	implemented	S3 (ep-10) FlowsheetPage の isolation タブから呼ばれる観察マトリクス。Props: { patientId, dates }。7 日 × 24 時間グリッド、拘束優先表示、開放時間アイコン、未来日抑止。S3 が FlowsheetPage の isolation タブで Alert → このコンポーネントに差し替え予定。
+/isolation	src/components/isolation/IsolationHistoryView.tsx	ep-08-restraint-history	us-15	implemented	隔離・拘束歴表示／削除コア。開始日時降順、終了日時表示ロジック（継続方式で異なる）、削除順序ルール（restraintChange ON/OFF で分岐）、削除権限（doctor のみ）、DeleteReasonDialog 連携、監査ログ。tab=2 inline と Dialog 殻の両方で再利用。
+*	src/components/isolation/IsolationHistoryDialog.tsx	ep-08-restraint-history	us-15	implemented	隔離・拘束歴ダイアログ（殻）。AdmissionHistoryView の「隔離歴」リンクと WardMap フッター「隔離歴」メニューから起動。中身は IsolationHistoryView を再利用。
