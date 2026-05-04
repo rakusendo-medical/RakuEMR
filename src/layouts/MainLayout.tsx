@@ -7,6 +7,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   AppBar,
   Toolbar,
   Typography,
@@ -57,98 +58,59 @@ interface NavItem {
   path: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { key: "ward-map", label: "病棟マップ", icon: <LocalHospital />, path: "/" },
+interface NavSection {
+  key: string;
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
   {
-    key: "patient-list",
-    label: "入院患者一覧",
-    icon: <People />,
-    path: "/patients",
-  },
-  {
-    key: "outpatient",
-    label: "外来一覧",
-    icon: <Groups />,
-    path: "/outpatient",
-  },
-  {
-    key: "patient-search",
-    label: "患者検索",
-    icon: <Search />,
-    path: "/patient-search",
-  },
-  {
-    key: "admission",
-    label: "入退院管理",
-    icon: <MeetingRoom />,
-    path: "/admission",
+    key: "bed",
+    label: "病床管理",
+    items: [
+      { key: "ward-map", label: "病棟マップ", icon: <LocalHospital />, path: "/" },
+      { key: "patient-list", label: "入院患者一覧", icon: <People />, path: "/patients" },
+      { key: "outpatient", label: "外来一覧", icon: <Groups />, path: "/outpatient" },
+      { key: "patient-search", label: "患者検索", icon: <Search />, path: "/patient-search" },
+      { key: "admission", label: "入退院管理", icon: <MeetingRoom />, path: "/admission" },
+      { key: "ward-mgmt", label: "病棟管理", icon: <Business />, path: "/ward-management" },
+      { key: "documents", label: "書類管理", icon: <FolderOpen />, path: "/documents" },
+      { key: "orders", label: "オーダ管理", icon: <Receipt />, path: "/orders" },
+    ],
   },
   {
     key: "nursing",
-    label: "看護記録",
-    icon: <Description />,
-    path: "/nursing",
-  },
-  // ep-10 看護実施（フローシート）系の 4 画面（フラット追加。サイドメニュー全体の整理は全エピック完了後）
-  {
-    key: "nursing-records",
-    label: "部門記録簿",
-    icon: <ArticleOutlined />,
-    path: "/nursing/records",
-  },
-  {
-    key: "bulk-vitals",
-    label: "一括バイタル",
-    icon: <MonitorHeart />,
-    path: "/nursing/bulk-vitals",
+    label: "看護",
+    items: [
+      { key: "nursing", label: "看護記録", icon: <Description />, path: "/nursing" },
+      { key: "nursing-records", label: "部門記録簿", icon: <ArticleOutlined />, path: "/nursing/records" },
+      { key: "bulk-vitals", label: "一括バイタル", icon: <MonitorHeart />, path: "/nursing/bulk-vitals" },
+      { key: "sleep-table", label: "睡眠表", icon: <Bedtime />, path: "/nursing/sleep-table" },
+      { key: "bulk-records", label: "一括看護経過記録", icon: <EditNote />, path: "/nursing/bulk-records" },
+      { key: "care", label: "看護ケア予定", icon: <Favorite />, path: "/nursing-care" },
+      { key: "care-plan", label: "看護過程", icon: <EventNote />, path: "/care-plan" },
+    ],
   },
   {
-    key: "sleep-table",
-    label: "睡眠表",
-    icon: <Bedtime />,
-    path: "/nursing/sleep-table",
+    key: "common",
+    label: "共通・運用",
+    items: [
+      { key: "isolation", label: "隔離拘束", icon: <Lock />, path: "/isolation" },
+      { key: "behavior", label: "行動範囲", icon: <Lock />, path: "/behavior" },
+      { key: "outing", label: "外出外泊", icon: <Home />, path: "/outing" },
+    ],
   },
   {
-    key: "bulk-records",
-    label: "一括看護経過記録",
-    icon: <EditNote />,
-    path: "/nursing/bulk-records",
-  },
-  { key: "isolation", label: "隔離拘束", icon: <Lock />, path: "/isolation" },
-  { key: "behavior", label: "行動範囲", icon: <Lock />, path: "/behavior" },
-  { key: "outing", label: "外出外泊", icon: <Home />, path: "/outing" },
-  {
-    key: "ward-mgmt",
-    label: "病棟管理",
-    icon: <Business />,
-    path: "/ward-management",
-  },
-  {
-    key: "documents",
-    label: "書類管理",
-    icon: <FolderOpen />,
-    path: "/documents",
-  },
-  { key: "orders", label: "オーダ管理", icon: <Receipt />, path: "/orders" },
-  {
-    key: "care",
-    label: "看護ケア予定",
-    icon: <Favorite />,
-    path: "/nursing-care",
-  },
-  {
-    key: "care-plan",
-    label: "看護過程",
-    icon: <EventNote />,
-    path: "/care-plan",
-  },
-  {
-    key: "design-guide",
-    label: "デザインガイド",
-    icon: <Palette />,
-    path: "/design-guide",
+    key: "dev",
+    label: "開発",
+    items: [
+      { key: "design-guide", label: "デザインガイド", icon: <Palette />, path: "/design-guide" },
+    ],
   },
 ];
+
+const NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((s) => s.items);
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -349,51 +311,79 @@ const MainLayout: React.FC = () => {
         )}
 
         {/* Nav Items */}
-        <List sx={{ flex: 1, overflowY: "auto", py: 1 }}>
-          {NAV_ITEMS.map((item) => {
-            const isActive = currentNav?.key === item.key;
-            return (
-              <Tooltip
-                key={item.key}
-                title={sidebarOpen ? "" : item.label}
-                placement="right"
-              >
-                <ListItemButton
-                  onClick={() => navigate(item.path)}
+        <List sx={{ flex: 1, overflowY: "auto", py: 1 }} component="nav">
+          {NAV_SECTIONS.map((section, sectionIndex) => (
+            <React.Fragment key={section.key}>
+              {sidebarOpen ? (
+                <ListSubheader
+                  component="div"
+                  disableSticky
                   sx={{
-                    minHeight: 38,
-                    px: sidebarOpen ? 2 : 1.5,
-                    justifyContent: sidebarOpen ? "flex-start" : "center",
-                    bgcolor: isActive ? "#1e3a5f" : "transparent",
-                    borderLeft: isActive
-                      ? "3px solid #3b82f6"
-                      : "3px solid transparent",
-                    color: isActive ? "#fff" : "#94a3b8",
-                    "&:hover": { bgcolor: "#1e293b" },
+                    bgcolor: "transparent",
+                    color: "#64748b",
+                    fontSize: "0.6875rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    lineHeight: 1.6,
+                    px: 2,
+                    mt: sectionIndex === 0 ? 0 : 1.25,
                   }}
                 >
-                  <ListItemIcon
-                    sx={{
-                      color: "inherit",
-                      minWidth: sidebarOpen ? 36 : "auto",
-                      justifyContent: "center",
-                    }}
+                  {section.label}
+                </ListSubheader>
+              ) : (
+                sectionIndex > 0 && (
+                  <Divider
+                    sx={{ borderColor: "#1e293b", my: 0.75, mx: 1 }}
+                  />
+                )
+              )}
+              {section.items.map((item) => {
+                const isActive = currentNav?.key === item.key;
+                return (
+                  <Tooltip
+                    key={item.key}
+                    title={sidebarOpen ? "" : item.label}
+                    placement="right"
                   >
-                    {React.cloneElement(item.icon, { fontSize: "small" })}
-                  </ListItemIcon>
-                  {sidebarOpen && (
-                    <ListItemText
-                      primary={item.label}
-                      primaryTypographyProps={{
-                        fontSize: "0.8125rem",
-                        noWrap: true,
+                    <ListItemButton
+                      onClick={() => navigate(item.path)}
+                      sx={{
+                        minHeight: 38,
+                        px: sidebarOpen ? 2 : 1.5,
+                        justifyContent: sidebarOpen ? "flex-start" : "center",
+                        bgcolor: isActive ? "#1e3a5f" : "transparent",
+                        borderLeft: isActive
+                          ? "3px solid #3b82f6"
+                          : "3px solid transparent",
+                        color: isActive ? "#fff" : "#94a3b8",
+                        "&:hover": { bgcolor: "#1e293b" },
                       }}
-                    />
-                  )}
-                </ListItemButton>
-              </Tooltip>
-            );
-          })}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          color: "inherit",
+                          minWidth: sidebarOpen ? 36 : "auto",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {React.cloneElement(item.icon, { fontSize: "small" })}
+                      </ListItemIcon>
+                      {sidebarOpen && (
+                        <ListItemText
+                          primary={item.label}
+                          primaryTypographyProps={{
+                            fontSize: "0.8125rem",
+                            noWrap: true,
+                          }}
+                        />
+                      )}
+                    </ListItemButton>
+                  </Tooltip>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </List>
       </Drawer>
 
