@@ -205,13 +205,13 @@ const OutpatientList: React.FC = () => {
           </Box>
           <Box sx={{ flex: 1 }} />
           {/* 補助アクション群（outlined） */}
-          <Tooltip title="メインダッシュボードを開く">
+          <Tooltip title="カルテ画面を開く">
             <span>
               <Button
                 size="small" variant="outlined" startIcon={<DescriptionIcon />}
                 disabled={!selectedVisit} onClick={handleOpenDashboard}
               >
-                メイン
+                カルテ
               </Button>
             </span>
           </Tooltip>

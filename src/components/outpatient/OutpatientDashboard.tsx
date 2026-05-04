@@ -29,7 +29,10 @@ import { OUTPATIENT_VISITS, diagnosisInfo, allergyInfo, adlInfo, medicalRecords 
 import { useAppStore } from '../../stores/useAppStore';
 
 /**
- * 外来メインダッシュボード（v1.1 デザインルール準拠）
+ * 外来カルテ画面（v1.1 デザインルール準拠）
+ *
+ * 用語: 本実装では参考システムの「メインダッシュボード」を「カルテ画面」、
+ * 「カルテ記載」を「診療録」と呼ぶ（プロジェクト用語ポリシー）。
  *
  * ルール参照: docs/design-rules.md
  * - §1.1 maxWidth="xl"、§1.3 セクション構造、§2.1 戻るボタン
@@ -37,9 +40,9 @@ import { useAppStore } from '../../stores/useAppStore';
  * - §9.1.1 トースト右上、§15 スケルトン優先、§17 日本語固定
  *
  * 仕様参照: docs/gairai/features/patient.html § メインダッシュボード
- * - 表示情報: 患者基本情報・病名情報一覧・カルテ記載履歴・GAFスコア・開示情報・オーダー処理状況
- * - ナビゲーション: 患者基本情報/属性/保険/連絡先/エピソード/その他/メモ/カルテ/各オーダー/病名/各種文書
- * - 一部画面（カルテ・各オーダー）は新規ウィンドウで開く想定
+ * - 表示情報: 患者基本情報・病名情報一覧・診療録履歴・GAFスコア・開示情報・オーダー処理状況
+ * - ナビゲーション: 患者基本情報/属性/保険/連絡先/エピソード/その他/メモ/診療録/各オーダー/病名/各種文書
+ * - 一部画面（診療録・各オーダー）は新規ウィンドウで開く想定
  */
 
 // ===== ナビゲーションタイル定義 =====
@@ -53,7 +56,7 @@ type NavTile = {
 };
 
 const PRIMARY_TILES: NavTile[] = [
-  { key: 'karte',     label: 'カルテ記載',  icon: <ArticleIcon />,         to: '/karte-outpatient', newWindow: true,  description: '診療記録の入力' },
+  { key: 'karte',     label: '診療録',      icon: <ArticleIcon />,         to: '/karte-outpatient', newWindow: true,  description: '診療録の閲覧・記載' },
   { key: 'orders',    label: 'オーダー',    icon: <AssignmentIcon />,      to: '/orders',           newWindow: true,  description: '処方・注射・検査・処置' },
   { key: 'documents', label: '文書登録',    icon: <FolderOpenIcon />,      to: '/documents',                          description: '診療文書の登録・閲覧' },
   { key: 'diagnosis', label: '病名管理',    icon: <LocalHospitalIcon />,   to: '/karte-outpatient',                   description: '病名の追加・編集' },
@@ -128,7 +131,7 @@ const OutpatientDashboard: React.FC = () => {
         </Button>
         <Box sx={{ flex: 1 }} />
         <Typography variant="caption" color="text.secondary">
-          メインダッシュボード
+          カルテ画面
         </Typography>
       </Stack>
 
@@ -199,7 +202,7 @@ const OutpatientDashboard: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* 主要アクション（カルテ・オーダー・文書・病名）*/}
+      {/* 主要アクション（診療録・オーダー・文書・病名）*/}
       <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
         <SectionHeader title="主要アクション" />
         <Grid container spacing={1.5}>
@@ -238,7 +241,7 @@ const OutpatientDashboard: React.FC = () => {
         </Grid>
       </Paper>
 
-      {/* サマリ Grid: 病名・基本情報・カルテ履歴・GAF・オーダー状況 */}
+      {/* サマリ Grid: 病名・基本情報・診療録履歴・GAF・オーダー状況 */}
       <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
         {/* 病名情報 */}
         <Grid item xs={12} md={6}>
@@ -314,11 +317,11 @@ const OutpatientDashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* 最新カルテ記載 */}
+        {/* 最新診療録 */}
         <Grid item xs={12} md={8}>
           <Paper variant="outlined" sx={{ p: 1.5, height: '100%' }}>
             <SectionHeader
-              title="最新カルテ記載"
+              title="最新診療録"
               right={
                 <Button
                   size="small"
@@ -326,14 +329,14 @@ const OutpatientDashboard: React.FC = () => {
                   variant="contained"
                   onClick={() => navigate(`/karte-outpatient/${visit.patientId}`)}
                 >
-                  カルテ記載
+                  診療録
                 </Button>
               }
             />
             <Stack divider={<Divider flexItem />} spacing={0}>
               {recentRecords.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                  カルテ記載はありません
+                  診療録はありません
                 </Typography>
               )}
               {recentRecords.map((r) => (
