@@ -42,3 +42,7 @@ user-story/us-28-diagnosis.md	[看護] 看護診断編集	story,area/nursing	epi
 user-story/us-29-care-plan.md	[看護] 看護計画編集	story,area/nursing	epics/ep-13-care-plan.md	story
 user-story/us-30-eval-criteria.md	[看護] 評価項目立案	story,area/nursing	epics/ep-14-evaluation.md	story
 user-story/us-31-periodic-eval.md	[看護] 定期評価	story,area/nursing	epics/ep-14-evaluation.md	story
+epics/ep-15-outpatient-emr.md	[外来] 外来 EMR 刷新（カルテ画面統一）	epic,area/outpatient		epic
+user-story/us-32-outpatient-list.md	[外来] 外来一覧	story,area/outpatient	epics/ep-15-outpatient-emr.md	story
+user-story/us-33-karte-screen.md	[外来] カルテ画面（タブ式 TOP・mode 切替）	story,area/outpatient	epics/ep-15-outpatient-emr.md	story
+user-story/us-34-patient-info-subtabs.md	[外来] 患者情報サブタブ	story,area/outpatient	epics/ep-15-outpatient-emr.md	story
