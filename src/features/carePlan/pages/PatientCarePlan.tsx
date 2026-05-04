@@ -14,6 +14,7 @@ import ProblemItemEditDialog from '../components/ProblemItemEditDialog';
 import CarePlanEditDialog from '../components/CarePlanEditDialog';
 import CopyFromDialog from '../components/CopyFromDialog';
 import PrintLayout from '../components/PrintLayout';
+import DiagnosisHistoryDialog from '../components/DiagnosisHistoryDialog';
 import CarePlanCreate from './CarePlanCreate';
 import SectionHeader from '../../../components/common/SectionHeader';
 import { useCarePlanStore, formatJPDate } from '../store';
@@ -49,6 +50,7 @@ const PatientCarePlan: React.FC<Props> = ({ embedded = false, patientId: patient
     { mode: 'create' } | { mode: 'edit'; itemId: string } | null
   >(null);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [planEditOpen, setPlanEditOpen] = useState(false);
   // セクションごとの折りたたみ状態 (デフォルト全開)
   const [sectionOpen, setSectionOpen] = useState({
@@ -143,7 +145,7 @@ const PatientCarePlan: React.FC<Props> = ({ embedded = false, patientId: patient
               看護過程を編集
             </Button>
             <Button startIcon={<PrintIcon />} onClick={() => window.print()}>印刷</Button>
-            <Button startIcon={<HistoryIcon />} onClick={() => alert('履歴ビュー(未実装)')}>履歴を見る</Button>
+            <Button startIcon={<HistoryIcon />} onClick={() => setHistoryOpen(true)}>過去診断を参照</Button>
             <Button startIcon={<SyncAltIcon />} onClick={() => alert('新計画作成(長期目標見直し)(未実装)')}>新計画に切替</Button>
             <Box sx={{ flex: 1 }} />
             <Button
@@ -240,8 +242,10 @@ const PatientCarePlan: React.FC<Props> = ({ embedded = false, patientId: patient
                 domain: draft.domain,
                 priority: draft.priority,
                 nandaCode: draft.nandaCode,
+                problemStatement: draft.problemStatement,
                 shortTermGoal: draft.shortTermGoal,
                 ote: draft.ote,
+                diagnosedAt: draft.diagnosedAt || undefined,
                 status: saveAs === 'active' ? 'active' : 'draft',
               });
             } else {
@@ -249,8 +253,10 @@ const PatientCarePlan: React.FC<Props> = ({ embedded = false, patientId: patient
                 domain: draft.domain,
                 priority: draft.priority,
                 nandaCode: draft.nandaCode,
+                problemStatement: draft.problemStatement,
                 shortTermGoal: draft.shortTermGoal,
                 ote: draft.ote,
+                diagnosedAt: draft.diagnosedAt || undefined,
                 status: saveAs === 'active' ? 'active' : 'draft',
               });
             }
@@ -270,6 +276,12 @@ const PatientCarePlan: React.FC<Props> = ({ embedded = false, patientId: patient
           onClose={() => setCopyOpen(false)}
           targetCarePlanId={carePlan.id}
           allowLongTermGoalCopy={false}
+        />
+
+        <DiagnosisHistoryDialog
+          open={historyOpen}
+          patientId={patientId}
+          onClose={() => setHistoryOpen(false)}
         />
 
         <CarePlanEditDialog

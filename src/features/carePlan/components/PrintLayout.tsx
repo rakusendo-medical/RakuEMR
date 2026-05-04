@@ -87,8 +87,11 @@ const PrintLayout: React.FC<Props> = ({ patient, carePlan, planAuthor, items }) 
                 <PrintOte label="T: 援助" lines={item.ote.therapy} />
                 <PrintOte label="E: 指導" lines={item.ote.education} />
               </Box>
-              <Box sx={{ display: 'flex', gap: 2, fontSize: '0.75rem', color: '#444' }}>
+              <Box sx={{ display: 'flex', gap: 2, fontSize: '0.75rem', color: '#444', flexWrap: 'wrap' }}>
                 <Typography variant="caption">立案日 {formatJPDate(item.createdAt)}</Typography>
+                {item.diagnosedAt && item.diagnosedAt !== item.createdAt && (
+                  <Typography variant="caption">診断日 {formatJPDate(item.diagnosedAt)}</Typography>
+                )}
                 <Typography variant="caption">最終評価 {formatJPDate(item.lastEvaluatedAt)}</Typography>
                 {!isClosed && (
                   <Typography variant="caption">次回期限 {formatJPDate(item.nextEvaluationDueAt)}</Typography>

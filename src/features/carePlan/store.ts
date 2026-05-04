@@ -219,8 +219,10 @@ export const useCarePlanStore = create<CarePlanState>((set, get) => ({
       domain: item.domain,
       priority: item.priority,
       nandaCode: item.nandaCode,
+      problemStatement: item.problemStatement,
       shortTermGoal: item.shortTermGoal,
       ote: item.ote,
+      diagnosedAt: item.diagnosedAt,
       copiedFrom: item.copiedFrom,
     };
     set((s) => ({

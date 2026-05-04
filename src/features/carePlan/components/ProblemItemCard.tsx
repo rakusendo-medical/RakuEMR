@@ -147,8 +147,11 @@ const ProblemItemCard: React.FC<Props> = ({
         )}
 
         <Divider sx={{ my: 1 }} />
-        <Stack direction="row" spacing={2} sx={{ color: 'text.secondary' }}>
+        <Stack direction="row" spacing={2} sx={{ color: 'text.secondary', flexWrap: 'wrap', rowGap: 0.5 }}>
           <Typography variant="caption">立案日 {formatJPDate(item.createdAt)}</Typography>
+          {item.diagnosedAt && item.diagnosedAt !== item.createdAt && (
+            <Typography variant="caption">診断日 {formatJPDate(item.diagnosedAt)}</Typography>
+          )}
           <Typography variant="caption">最終評価 {formatJPDate(item.lastEvaluatedAt)}</Typography>
           {!isClosed && (
             <Typography

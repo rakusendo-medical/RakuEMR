@@ -19,7 +19,11 @@ type DraftItem = {
   problemStatement: string;
   shortTermGoal: string;
   ote: OteContent;
+  /** 看護診断として確定した日。空欄時は createdAt と同値で扱う（任意入力） */
+  diagnosedAt: string;
 };
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const EMPTY: DraftItem = {
   domain: '精神',
@@ -28,6 +32,7 @@ const EMPTY: DraftItem = {
   problemStatement: '',
   shortTermGoal: '',
   ote: { observation: [''], therapy: [''], education: [''] },
+  diagnosedAt: '',
 };
 
 interface Props {
@@ -59,9 +64,10 @@ const ProblemItemEditDialog: React.FC<Props> = ({
           problemStatement: initial.problemStatement ?? fallback,
           shortTermGoal: initial.shortTermGoal,
           ote: initial.ote,
+          diagnosedAt: initial.diagnosedAt ?? '',
         });
       } else {
-        setDraft(EMPTY);
+        setDraft({ ...EMPTY, diagnosedAt: todayISO() });
       }
     }
   }, [open, initial, nandaMaster]);
@@ -162,6 +168,23 @@ const ProblemItemEditDialog: React.FC<Props> = ({
                 inputProps={{ maxLength: 500 }}
                 helperText={`${draft.problemStatement.length} / 500 文字`}
                 error={!draft.problemStatement.trim() && !!draft.nandaCode}
+              />
+            </Box>
+
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">診断日（任意）</Typography>
+                <Tooltip title="看護診断として確定した日。空欄時は立案日（作成日）と同値として扱います。" placement="right">
+                  <InfoIcon sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
+                </Tooltip>
+              </Stack>
+              <TextField
+                size="small"
+                type="date"
+                value={draft.diagnosedAt}
+                onChange={(e) => setDraft((d) => ({ ...d, diagnosedAt: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+                sx={{ maxWidth: 200 }}
               />
             </Box>
 

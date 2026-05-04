@@ -235,8 +235,10 @@ const CarePlanCreate: React.FC<Props> = ({ embedded = false, patientId: patientI
               domain: draft.domain,
               priority: draft.priority,
               nandaCode: draft.nandaCode,
+              problemStatement: draft.problemStatement,
               shortTermGoal: draft.shortTermGoal,
               ote: draft.ote,
+              diagnosedAt: draft.diagnosedAt || undefined,
               status: saveAs === 'active' ? 'active' : 'draft',
             });
           } else {
@@ -244,8 +246,10 @@ const CarePlanCreate: React.FC<Props> = ({ embedded = false, patientId: patientI
               domain: draft.domain,
               priority: draft.priority,
               nandaCode: draft.nandaCode,
+              problemStatement: draft.problemStatement,
               shortTermGoal: draft.shortTermGoal,
               ote: draft.ote,
+              diagnosedAt: draft.diagnosedAt || undefined,
               status: 'draft',
             });
           }

@@ -76,8 +76,12 @@ export interface ProblemItem {
   shortTermGoal: string;
   ote: OteContent;
   status: ProblemItemStatus;
+  /** 立案日 = 計画明細レコード作成日。適用日も同義として運用。 */
   createdAt: ISODate;
   createdBy: UUID;
+  /** 看護診断として確定した日。未設定時は createdAt にフォールバック。
+   *  運用上、立案より後に確定するケースで別管理可能（mock 改修フェーズ 1 で追加）。 */
+  diagnosedAt?: ISODate;
   lastEvaluatedAt?: ISODate;
   nextEvaluationDueAt?: ISODate;
   closedAt?: ISODate;
