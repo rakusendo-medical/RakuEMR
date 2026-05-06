@@ -32,7 +32,7 @@ type FilterStatus = OutpatientStatus | 'all';
  * ルール参照: docs/design-rules.md
  * - §1.3 セクション構造、§2.3 タブ、§3.2 ボタン配置（MUI 標準）
  * - §6 テーブル（ヘッダー固定・空状態・選択ハイライト）、§7.1 ステータス Chip
- * - §9.1.1 トースト右上、§10 破壊的操作（confirm dialog）、§12.5 色覚配慮（アイコン併用）
+ * - §9.1.1 トースト右上、§10 破壊的操作（confirm dialog）、§13.5 色覚配慮（アイコン併用）
  *
  * 仕様参照: docs/gairai/features/patient.html § 外来一覧
  * - 患者選択時にアクションバーを活性化
@@ -114,7 +114,7 @@ const OutpatientList: React.FC = () => {
     navigate(path);
   };
 
-  const handleOpenDashboard = () => navigateTo(`/karte-outpatient/${selectedVisit!.patientId}`);
+  const handleOpenDashboard = () => navigateTo(`/karte/${selectedVisit!.patientId}`);
   const handleOpenOrders = () => navigateTo(`/orders`); // 暫定: 既存オーダー管理へ
   const handleOpenDocuments = () => {
     showSnackbar(`文書登録画面は別エピックで実装予定（${selectedVisit!.patientName}）`, 'info');
@@ -329,7 +329,7 @@ const OutpatientList: React.FC = () => {
                         wardId: 'ward1' as any, roomNumber: '', bedLabel: '',
                         status: 'stable' as any, admitDate: '', doctorName: v.doctorName, diagnosis: '',
                       } as any);
-                      navigate(`/karte-outpatient/${v.patientId}`);
+                      navigate(`/karte/${v.patientId}`);
                     }}
                     sx={{ cursor: 'pointer' }}
                   >
