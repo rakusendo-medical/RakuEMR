@@ -397,8 +397,7 @@ const MainLayout: React.FC = () => {
         }}
       >
         {/* Top Bar */}
-        {!location.pathname.startsWith("/karte-alpha") &&
-          !location.pathname.startsWith("/karte-outpatient") && (
+        {!location.pathname.startsWith("/karte-alpha") && (
             <AppBar
               position="static"
               elevation={0}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -43,27 +43,43 @@ interface KartePageProps {
 interface TabDef {
   id: string;
   label: string;
+  /** URL ハッシュ（`#` 抜き）。AC-10 の対応表に準拠。看護過程のみ tabId（`care-plan`）と異なる */
+  hash: string;
   /** この mode のとき disabled */
   disabledIn?: KarteMode[];
   disabledTooltip?: string;
 }
 
 const TABS: TabDef[] = [
-  { id: 'medical-record', label: '診療録' },
-  { id: 'flowsheet', label: 'フローシート' },
-  { id: 'orders', label: '指示簿' },
-  { id: 'order-status', label: '指示状況' },
+  { id: 'medical-record', label: '診療録', hash: 'medical-record' },
+  { id: 'flowsheet', label: 'フローシート', hash: 'flowsheet' },
+  { id: 'orders', label: '指示簿', hash: 'orders' },
+  { id: 'order-status', label: '指示状況', hash: 'order-status' },
   {
     id: 'care-plan',
     label: '看護過程',
+    hash: 'nursing-process',
     disabledIn: ['outpatient'],
     disabledTooltip: '外来では利用しません',
   },
-  { id: 'patient-info', label: '患者情報' },
-  { id: 'schedule', label: 'スケジュール' },
+  { id: 'patient-info', label: '患者情報', hash: 'patient-info' },
+  { id: 'schedule', label: 'スケジュール', hash: 'schedule' },
 ];
 
 const DEFAULT_TAB = 'medical-record';
+
+/**
+ * URL ハッシュから tabId を解決。
+ * - 未対応／空ハッシュ、現 mode で disabled なタブ指定は既定タブにフォールバック
+ */
+function resolveTabFromHash(hashRaw: string, mode: KarteMode): string {
+  const hash = hashRaw.startsWith('#') ? hashRaw.slice(1) : hashRaw;
+  if (!hash) return DEFAULT_TAB;
+  const def = TABS.find((t) => t.hash === hash);
+  if (!def) return DEFAULT_TAB;
+  if (def.disabledIn?.includes(mode)) return DEFAULT_TAB;
+  return def.id;
+}
 
 function determineMode(args: {
   override?: KarteMode;
@@ -124,11 +140,41 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     [modeOverride, navState, storeNavSource, patient],
   );
 
-  const [currentTab, setCurrentTab] = useState<string>(DEFAULT_TAB);
+  // 初期 currentTab は URL ハッシュ → mode で解決（無効・空・disabled なら既定タブ）
+  const [currentTab, setCurrentTab] = useState<string>(() =>
+    resolveTabFromHash(location.hash, mode),
+  );
   const [toast, setToast] = useState<{ open: boolean; message: string }>({
     open: false,
     message: '',
   });
+
+  // URL ハッシュ変化（戻る／進む／外部からの URL 直打ち変更）に追従
+  useEffect(() => {
+    const resolved = resolveTabFromHash(location.hash, mode);
+    if (resolved !== currentTab) {
+      setCurrentTab(resolved);
+    }
+    // currentTab を依存に入れるとループするため除外
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.hash, mode]);
+
+  /** タブ確定時に currentTab を更新し、URL ハッシュを `#<hash>` で揃える（履歴は汚さない） */
+  const commitTab = useCallback(
+    (nextTab: string) => {
+      setCurrentTab(nextTab);
+      const def = TABS.find((t) => t.id === nextTab);
+      if (!def) return;
+      const targetHash = `#${def.hash}`;
+      if (location.hash !== targetHash) {
+        navigate(
+          { pathname: location.pathname, search: location.search, hash: targetHash },
+          { replace: true, state: location.state },
+        );
+      }
+    },
+    [navigate, location.pathname, location.search, location.hash, location.state],
+  );
 
   // ===== us-34 患者情報タブ用：未保存検知 =====
   const [patientInfoDirty, setPatientInfoDirty] = useState(false);
@@ -164,7 +210,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       setPendingNav({ type: 'tab', tabId: nextTab });
       return;
     }
-    setCurrentTab(nextTab);
+    commitTab(nextTab);
   };
 
   const handleConfirmDiscard = () => {
@@ -173,7 +219,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     setPatientInfoDirty(false);
     setPendingNav(null);
     if (target?.type === 'tab') {
-      setCurrentTab(target.tabId);
+      commitTab(target.tabId);
     } else if (target?.type === 'back') {
       performBack();
     }
