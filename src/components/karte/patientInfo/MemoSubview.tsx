@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Paper, Stack, TextField, Typography } from '@mui/material';
+import { Chip, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAppStore } from '../../../stores/useAppStore';
 import type { KarteMode } from '../KartePage';
 import { useDirtyForm } from './useDirtyForm';
@@ -32,20 +32,31 @@ export default function MemoSubview({ mode, onDirtyChange, discardSignal }: Memo
   return (
     <Stack spacing={1.5}>
       <Paper variant="outlined" sx={{ p: 1.5 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
-          患者メモ
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            患者メモ
+          </Typography>
+          <Chip
+            size="small"
+            variant="outlined"
+            label="このタブのみ表示"
+            sx={{ height: 20, fontSize: 11 }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            運用上の長文自由メモ（基本情報サブタブの「基本情報メモ（補足）」とは用途を分ける）
+          </Typography>
+        </Stack>
         <TextField
           fullWidth
           multiline
           minRows={8}
           maxRows={20}
-          placeholder="自由記述。基本情報サブタブの「基本情報メモ（補足）」とは別に、運用上の自由メモを残す枠。"
+          placeholder="運用上の自由メモを記載する枠。基本情報の補足は基本情報サブタブのメモへ。"
           value={form.memo}
           onChange={(e) => setForm({ memo: e.target.value })}
         />
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-          基本情報の「基本情報メモ（補足）」と用途を分け、より長文の運用メモをここに記載する想定。
+          表示位置: 患者情報タブ &gt; メモサブタブ。カルテ画面トップに常時表示する運用は将来拡張（現在は本タブ内のみ）。
         </Typography>
       </Paper>
 

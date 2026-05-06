@@ -190,7 +190,7 @@ export default function AttributesSubview({
             入院専用情報
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 size="small"
                 fullWidth
@@ -199,7 +199,7 @@ export default function AttributesSubview({
                 InputProps={{ readOnly: true }}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 size="small"
                 fullWidth
@@ -208,7 +208,7 @@ export default function AttributesSubview({
                 InputProps={{ readOnly: true }}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 size="small"
                 fullWidth
@@ -217,9 +217,18 @@ export default function AttributesSubview({
                 InputProps={{ readOnly: true }}
               />
             </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                size="small"
+                fullWidth
+                label="受け持ち看護師"
+                value={patient.nurse ?? '（未設定）'}
+                InputProps={{ readOnly: true }}
+              />
+            </Grid>
           </Grid>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            段階 1 では枠のみ表示（既存 Patient フィールドを参照）。受け持ち看護師の正式割当 UI は段階 2 で実装予定。
+            既存 Patient フィールド（admitDate / wardId → wardLabel / roomNumber / nurse）から read-only 表示。担当看護師の編集 UI（複数割当・受け持ち変更履歴 等）は将来拡張予定。
           </Typography>
         </Paper>
       )}

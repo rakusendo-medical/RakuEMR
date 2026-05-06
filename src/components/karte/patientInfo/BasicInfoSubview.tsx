@@ -442,16 +442,23 @@ export default function BasicInfoSubview({ mode, onDirtyChange, discardSignal }:
             />
           </Grid>
           <Grid item xs={12} md={6}>
-            {/* 「メモ」サブタブと用途を分けるため、ここは基本情報補足のメモとして位置付ける */}
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              基本情報メモ（補足）
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                基本情報メモ（補足）
+              </Typography>
+              <Chip
+                size="small"
+                variant="outlined"
+                label="このタブのみ表示"
+                sx={{ height: 20, fontSize: 11 }}
+              />
+            </Stack>
             <TextField
               fullWidth
               multiline
               minRows={2}
               maxRows={4}
-              placeholder="自由記述"
+              placeholder="基本情報サブタブの中だけで参照する補足メモ。長文の運用メモはメモサブタブに記載。"
               value={form.memo}
               onChange={(e) => update('memo', e.target.value)}
             />
@@ -459,38 +466,12 @@ export default function BasicInfoSubview({ mode, onDirtyChange, discardSignal }:
         </Grid>
       </Paper>
 
-      <Paper variant="outlined" sx={{ p: 1.5 }}>
-        <SectionHeader title="預かり金" icon={<PaymentsIcon />} />
-        <Stack spacing={1.5}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Typography variant="body2" sx={{ width: 110, fontWeight: 600 }}>
-              預かり金管理
-            </Typography>
-            <ToggleButtonGroup
-              value={form.depositManaged}
-              exclusive
-              size="small"
-              onChange={(_, v) => v && update('depositManaged', v)}
-            >
-              {TRI_STATES.map((s) => (
-                <ToggleButton key={s.value} value={s.value} sx={{ px: 1.5, py: 0.25 }}>
-                  {s.label}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Stack>
-          {form.depositManaged === 'yes' && (
-            <TextField
-              fullWidth
-              multiline
-              minRows={2}
-              placeholder="預かり金に関するメモ"
-              value={form.depositMemo}
-              onChange={(e) => update('depositMemo', e.target.value)}
-            />
-          )}
-        </Stack>
-      </Paper>
+      {/*
+        預かり金セクション: PM 判断 #1（2026-05-06）により ep-16 us-35 で **非表示化**。
+        将来別システム連携で「預かり金管理」が実装される際に復活予定（連携先・項目スキーマは未確定）。
+        BasicForm.depositManaged / depositMemo の state は連携時の復活を見越して温存。
+        AC-5（預かり金セクションが非表示）の根拠コメント。
+      */}
 
       <SubviewActionBar
         mode={mode}
