@@ -518,6 +518,44 @@ navigate(`/karte/${patient.id}`, {
 
 ---
 
+## 段階 1 クローズ作業: PM 確認事項 #3 / #5 完了メモ（S4 / 2026-05-06）
+
+PM 確認事項 #3「OutpatientKartePage 即撤去」と #5「`/outpatient/:patientId/basic` 互換リダイレクト」を処理。段階 1 統合確認の前段として外来カルテ系を最終形に整理。
+
+### #3 OutpatientKartePage 即撤去
+
+- 削除: `src/components/karteOutpatient/OutpatientKartePage.tsx`（947 行）
+- 削除: `src/components/karteOutpatient/` ディレクトリ（中身は本ファイルのみ）
+- `src/routes/index.tsx` から `/karte-outpatient/:patientId` ルートと `OutpatientKartePage` import を削除
+- `src/layouts/MainLayout.tsx` の AppBar 非表示ガード `!startsWith("/karte-outpatient")` を削除（撤去後は不要）
+
+撤去理由: 新カルテ画面 `KartePage`（`/karte/:patientId`）で `mode='outpatient'` の機能を完全代替済（us-33 で骨組み、us-34 で患者情報サブタブ、us-32 仕上げで遷移先切替）。OutpatientKartePage は段階 1 終了時の撤去候補として `_epic.md` でも予告済。
+
+### #5 `/outpatient/:patientId/basic` 互換リダイレクト
+
+- 削除: `src/components/outpatient/PatientBasicPage.tsx`（582 行・S3 us-34 で `BasicInfoSubview` に内訳移植済）
+- `src/routes/index.tsx` の `/outpatient/:patientId/basic` ルートを `RedirectToPatientInfo` コンポーネントに置換し、`/karte/:patientId#patient-info` へ `replace` リダイレクト
+- `<Navigate>` + `useParams()` で `:patientId` を保持して新カルテ画面の患者情報タブに転送
+- ハッシュ `#patient-info` は S2 us-33 AC-10（タブ状態の URL ハッシュ反映）で定義された tabId に準拠
+
+旧 URL を踏んだリンク・ブックマーク・履歴は自動で新カルテ画面に転送される。
+
+### 参照残存チェック
+
+`grep -rn "OutpatientKartePage\|PatientBasicPage\|karte-outpatient\|karteOutpatient" src/` で参照残存ゼロを確認済。
+
+### 検証
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+- 共有ファイル: `routes/index.tsx`（ルート 1 削除 + 1 置換 + `RedirectToPatientInfo` 追加 + `useParams` import）と `MainLayout.tsx`（AppBar ガード 1 行削除）を変更。`types` / `store` / `mockData` / `common` は変更なし
+
+### コミット記録
+
+実装本体は **S2 のコミット `30151eb`（`feat(ep-15/us-33): AC-10 タブ状態の URL ハッシュ反映`）に巻き込まれて push 済**。S2 が並行で全ファイルをまとめてコミットしたタイミングで、S4 のローカル変更（4 ファイル）も同コミットに含まれた。S2 のコミットメッセージは AC-10 内容のみで「routes に手を入れず完了」と書かれているが、実態としては `routes/index.tsx` / `MainLayout.tsx` / `karteOutpatient/` / `outpatient/PatientBasicPage.tsx` も同コミットで変更されている。並行運用の FS 共有による既知の干渉パターン（前段で S3 → S4 の巻き込みも発生済）。
+
+---
+
 ## 残課題（段階 1 で扱わない）
 
 - 段階 2（mode='inpatient' 実装）／段階 3（KarteAlphaPage 置換）は別エピックで管理
