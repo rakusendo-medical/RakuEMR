@@ -106,8 +106,18 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   const { patientId = '' } = useParams<{ patientId: string }>();
   const navState = (location.state as KartePageLocationState | null)?.from;
   const storeNavSource = useAppStore((s) => s.navigationSource);
+  const selectedPatient = useAppStore((s) => s.selectedPatient);
 
-  const patient = useMemo(() => PATIENTS.find((p) => p.id === patientId), [patientId]);
+  // 患者解決の優先順:
+  //  1) PATIENTS（入院マスタ）に同 ID があればそれ
+  //  2) useAppStore.selectedPatient（OutpatientList 等が `setSelectedPatient` で渡した合成 Patient）
+  //     -> 外来 visit（`OUTPATIENT_VISITS`）の patientId は PATIENTS に居ないため、ここで受ける
+  const patient = useMemo(() => {
+    const fromMaster = PATIENTS.find((p) => p.id === patientId);
+    if (fromMaster) return fromMaster;
+    if (selectedPatient && selectedPatient.id === patientId) return selectedPatient;
+    return undefined;
+  }, [patientId, selectedPatient]);
 
   const mode = useMemo(
     () => determineMode({ override: modeOverride, navState, storeNavSource, patient }),
