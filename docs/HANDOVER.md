@@ -9,7 +9,7 @@
 
 | セッション名 | 役割 | 対応中エピック | ステータス | 最終更新 |
 | --- | --- | --- | --- | --- |
-| MASTER | マスターセッション | **ep-15 段階 1 クローズ判定待ち**（PM の AC-10 ハッシュ URL ブラウザ目視待ち）。S2 / S4 / S3 すべて完了 push 済。**並行運用の干渉事例**: S2 commit `30151eb`（AC-10 ハッシュ URL）に S4 の段階 1 クローズ作業（#3 OutpatientKartePage 撤去 + #5 互換リダイレクト + 関連削除）が `git add → commit` 間の競合で巻き込まれて push された（コードは正しい状態。S4 の補追記録は `bc12a57`）。S3 案 A（現状維持・履歴注記で吸収）を採用。次の MASTER アクション: ① PM ブラウザ目視（ハッシュ URL / 撤去後 404 / リダイレクト）→ ② 段階 1 クローズ宣言 → ③ ep-16 / ep-17 manifest 追加 + commit → ④ S3 を ep-16 にローテーション。**並行作業**: ep-16/ep-17 issue ドラフト push 待ち（未 commit） | クローズ判定待ち | 2026-05-06 |
+| MASTER | マスターセッション | **ep-15 段階 1 クローズ済**（2026-05-06 PM OK 受領）。本コミットで `docs/issues/manifest.tsv` に ep-16 / ep-17 エピック行を追加。エピック進捗表の ep-15 を ✅ 完了へ移動、ep-16 / ep-17 の状態を「ドラフト・manifest 登録済」に更新。**次のアクション**: ① S3 を ep-16 にローテーション指示（HANDOVER S3 行追加 + 段階 2 着手指示）／② ep-16 着手前に MASTER 主導で「KarteAlphaPage 機能インベントリ」を切る（PM 提案・段階 2 見積もりブレ防止）／③ 段階 1 で温存した PM 判断項目（預かり金 mode 別表示 / メモ重複住み分け / localStorage 永続化）を ep-16 冒頭で棚卸し。**並行運用の干渉事例 2 件**は履歴注記セクション参照（`30151eb` の S2/S4 巻き込み・既知）。教訓「`git add <file>` 直後に `git diff --cached --stat` で範囲確認」を ep-16 着手時に並行ワーカーへ再周知 | 段階 1 クローズ済・ep-16 着手準備 | 2026-05-06 |
 | S2 | ワーカー | ep-05〜ep-08 隔離拘束系すべて実装完了・push 済（モック実装。ブラウザ目視は未実施）。追加: サイドバー整理完了（19 エントリを「病床管理／看護／共通・運用／開発」の 4 セクションに分割。MainLayout のみ変更、ルート・画面コンポーネントは未変更。tsc / build クリーン、ブラウザ目視は MASTER 側で実施依頼） | 完了 | 2026-05-04 |
 | S2 | ワーカー | ep-15 着手順序 \[1\]\[2\] **+ AC-10 完了 + 履歴挙動修正完了**。\[1\] design-rules §12「mode 切替（外来／入院）」本文（§12.1〜§12.6）+ 改訂履歴追記。\[2\] us-33 骨組み: `/karte/:patientId` 新規ルート / `KartePage.tsx` / `KartePatientHeader.tsx` / `KarteActionBar.tsx` / 7 タブ枠 / mode prop API 確立 / mode 判定 / 戻り先判定 / 看護過程タブ disabled + Tooltip / フローシート埋込 / mode 識別 Chip。**\[3\] AC-10 タブ状態の URL ハッシュ反映**（commit `30151eb`）: `useLocation().hash` から初期 currentTab 解決 / 戻る・進む追従 / 看護過程の語彙差（tabId=`care-plan` / hash=`nursing-process`）/ 患者情報未保存検知の確認ダイアログ経由でも URL 揃え。spec us-33 に AC-10 + URL ハッシュ ↔ タブ ID 対応表を追加（commit `25b884f`）。**\[4\] AC-10 履歴挙動修正**（PM フィードバック・本コミット）: ユーザー操作によるタブ切替を `replace: false`（履歴に積む）に変更。`commitTab(nextTab, opts?: { replace })` シグネチャ拡張、初期化時の URL 自動補正は `replace: true` を維持するルールを spec / コードコメントに明文化。spec AC-10 末尾 Note 改訂 + 「ブラウザバックで前タブに戻る」Given/When/Then 追加。changes に「AC-10 フォローアップ修正」節を追記。tsc + build クリーン、共有ファイル変更なし。**`30151eb` には S4 の段階 1 クローズ作業（#3 / #5）が並行編集で巻き込まれている**（後述・経緯記録あり）。**MASTER のレビュー + ブラウザ目視（履歴挙動含む AC-10 動作確認）待ち** | \[1\] / \[2\] / AC-10 + 履歴挙動修正 完了 | 2026-05-06 |
 | S3 | ワーカー | ep-10 看護実施（フローシート, us-17〜26）モック実装完了（10 ストーリー全 push 済）。残: KarteAlphaPage タブ統合は MASTER 待ち事項として継続管理。FlowsheetPage には `embedded` / `patientId` prop 追加済（統合準備済み） | 完了 | 2026-05-02 |
@@ -119,6 +119,7 @@
 | ep-08 隔離拘束歴 | us-15 | `/restraint/history` |
 | ep-09 患者情報 | us-16 | `/patients` |
 | ep-10 看護実施（フローシート） | us-17〜us-26 | `/nursing/*`、カルテタブ埋込済（S3 が us-17 バイタルグラフ補修を 2026-05-06 完了 push 済） |
+| ep-15 外来 EMR 刷新（段階 1） | us-32, us-33, us-34 | `/outpatient`, `/karte/:patientId`（外来 mode）。段階 1 完了（2026-05-06 PM OK）。`OutpatientKartePage` 撤去済、`/outpatient/:patientId/basic` は `/karte/:patientId#patient-info` に互換リダイレクト |
 
 ### 🟠 進行中
 
@@ -127,14 +128,13 @@
 | ep-12 看護診断 | 看護 | us-28 | spec 確定（方針 Y）／mock 改修フェーズ 2 進行中 |
 | ep-13 看護計画 | 看護 | us-29 | 同上（期間複数計画モデル実装中） |
 | ep-14 看護評価 | 看護 | us-30, us-31 | 同上 |
-| ep-15 外来 EMR 刷新 | 外来・共通 | us-32, us-33, us-34 | us-32 / us-33（+ AC-10）/ us-34 完了。#3 OutpatientKartePage 撤去 / #5 互換リダイレクト 完了。**段階 1 クローズ判定待ち**（PM ブラウザ目視: AC-10 ハッシュ URL / `/karte-outpatient/*` 404 / `/outpatient/*/basic` リダイレクト動作） |
 
 ### 🟡 残（未着手）
 
-ep-15 段階 1 クローズ後、段階 2 / 段階 3 を後続エピックとして起票予定:
+ep-15 段階 1 完了に伴い、段階 2 / 段階 3 を後続エピックとして manifest 登録済:
 
-- **ep-16**（仮）外来 EMR 刷新・段階 2: `mode='inpatient'` 本実装と `KarteAlphaPage` 機能の段階移植
-- **ep-17**（仮）外来 EMR 刷新・段階 3: `/karte-alpha` を新カルテに置換、`KarteAlphaPage` 撤去
+- **ep-16** 外来 EMR 刷新・段階 2（`docs/issues/epics/ep-16-outpatient-emr-stage2.md`）: `mode='inpatient'` 本実装と `KarteAlphaPage` 機能の段階移植。想定子ストーリー us-35〜38（仮、着手時に確定）。**S3 ローテ予定**
+- **ep-17** 外来 EMR 刷新・段階 3（`docs/issues/epics/ep-17-outpatient-emr-stage3.md`）: `/karte-alpha` を新カルテに置換、`KarteAlphaPage` 撤去。想定子ストーリー us-39〜41（仮、ep-16 完了後に確定）
 
 ### 全エピック完了後
 

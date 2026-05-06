@@ -10,12 +10,15 @@
   - `src/components/karte/`（既存素材: `KartePage.tsx` / `ActionBar.tsx` / `LifeTimeline.tsx` / `MedicalInfo.tsx` / `MedicalRecords.tsx` / `PatientHeader.tsx` — **素材として活用方針**。design-rules v1.1 適合可否で個別判断）
 - 参照 spec: [docs/specs/ep-15-outpatient-emr/](../specs/ep-15-outpatient-emr/)
 
-## 決定事項（PM 合意済 2026-05-06）
+## 決定事項（PM 合意済）
 
-| # | 決定 | 影響範囲 |
-| --- | --- | --- |
-| 1 | **URL は段階 1 から最終形 `/karte/:patientId` を先行採用**。`/karte-outpatient/:patientId` は新規実装せず | us-33 ルート、us-32 遷移先 |
-| 2 | **既存 `src/components/karte/` 素材は活用方針**。design-rules v1.1 適合可否は MASTER がデザイン面で個別判断 | us-33 実装方針 |
+| # | 決定 | 合意日 | 影響範囲 |
+| --- | --- | --- | --- |
+| 1 | **URL は段階 1 から最終形 `/karte/:patientId` を先行採用**。`/karte-outpatient/:patientId` は新規実装せず | 2026-05-06 | us-33 ルート、us-32 遷移先 |
+| 2 | **既存 `src/components/karte/` 素材は活用方針**。design-rules v1.1 適合可否は MASTER がデザイン面で個別判断 | 2026-05-06 | us-33 実装方針 |
+| 3 | **段階 1 終了時に `OutpatientKartePage` 即撤去**（commit `30151eb` で実施済） | 2026-05-06 | 段階 1 の終わり方 |
+| 4 | **看護過程タブは段階 1 では「タブ枠だけ」**。中身は ep-12〜14 / 段階 2 で別途 | 2026-05-06 | us-33 スコープ |
+| 5 | **`/outpatient/:patientId/basic` は互換リダイレクト** → `/karte/:patientId#patient-info`（commit `30151eb` で実施済）。`PatientBasicPage.tsx` 本体は削除済（機能は `BasicInfoSubview` に継承） | 2026-05-06 | us-34 ルート整理 |
 
 ## サマリ
 
@@ -334,11 +337,7 @@ src/components/karte/
 
 ## 残 PM 確認事項（実装中に判断可・任意）
 
-| # | 内容 | 影響範囲 | 優先度 |
-| --- | --- | --- | --- |
-| 3 | 既存 `OutpatientKartePage` の撤去タイミング: 段階 1 終了時に即撤去 vs 移行期間 | 段階 1 の終わり方 | 中（着手順序 [2] 完了後） |
-| 4 | 看護過程タブの実体: 段階 1 では「タブ枠だけ・中身は ep-12〜14 で別途」で良いか | us-33 タブ内コンポーネントのスコープ | 中（着手順序 [2] 中） |
-| 5 | `/outpatient/:patientId/basic` の扱い: 撤去 vs 互換リダイレクト | us-34 ルート整理 | 中（着手順序 [4] 中） |
+段階 1 中の確認事項はすべて 2026-05-06 にクローズ。冒頭「決定事項（PM 合意済）」表参照。
 
 ---
 

@@ -155,20 +155,15 @@
 - 骨組み合意後、`us-33` の枠と `mode` prop API が固まる
 - 以降は `us-32`（仕上げ）と `us-34`（サブタブ）を並列化可能
 
-## 決定事項（PM 合意済 2026-05-06）
+## 決定事項（PM 合意済）
 
-| # | 決定 | 影響範囲 |
-| --- | --- | --- |
-| 1 | **URL は段階 1 から最終形 `/karte/:patientId` を先行採用**。`/karte-outpatient/:patientId` は新規実装せず（既存 `OutpatientKartePage` ルートは撤去）。`/karte-alpha/:patientId` は段階 3 まで温存（入院系現状維持） | us-33 ルート、us-32 遷移先 |
-| 2 | **既存 `src/components/karte/` 素材は活用方針**。design-rules v1.1 への適合可否は MASTER がデザイン面で個別判断（適合可 → 取込／不適合 → 廃棄・差し替え） | us-33 実装方針 |
-
-## 残 PM 確認事項（実装中に判断可・任意）
-
-| # | 内容 | 影響範囲 |
-| --- | --- | --- |
-| 3 | 既存 `OutpatientKartePage`（6 タブ実装）の撤去タイミング: 段階 1 終了時に即撤去 vs 移行期間を設ける | 段階 1 の終わり方 |
-| 4 | 看護過程タブの実体（外来 disabled・入院 ○）: 段階 1 では「タブ枠だけ」「中身は ep-12〜14 で別途」で良いか | us-33 タブ内コンポーネントのスコープ |
-| 5 | `/outpatient/:patientId/basic` の扱い: 撤去 vs 互換リダイレクト | us-34 ルート整理 |
+| # | 決定 | 合意日 | 影響範囲 |
+| --- | --- | --- | --- |
+| 1 | **URL は段階 1 から最終形 `/karte/:patientId` を先行採用**。`/karte-outpatient/:patientId` は新規実装せず（既存 `OutpatientKartePage` ルートは撤去）。`/karte-alpha/:patientId` は段階 3 まで温存（入院系現状維持） | 2026-05-06 | us-33 ルート、us-32 遷移先 |
+| 2 | **既存 `src/components/karte/` 素材は活用方針**。design-rules v1.1 への適合可否は MASTER がデザイン面で個別判断（適合可 → 取込／不適合 → 廃棄・差し替え） | 2026-05-06 | us-33 実装方針 |
+| 3 | **段階 1 終了時に `OutpatientKartePage` 即撤去**。`src/components/karteOutpatient/OutpatientKartePage.tsx` 削除 + ルート削除（commit `30151eb` で実施済） | 2026-05-06 | 段階 1 の終わり方 |
+| 4 | **看護過程タブは段階 1 では「タブ枠だけ・中身は ep-12〜14 で別途」**。mode='outpatient' で disabled + Tooltip、mode='inpatient' で活性化のみ。中身は段階 2 / ep-12〜14 のラウンドで詰める | 2026-05-06 | us-33 タブ内コンポーネントのスコープ |
+| 5 | **`/outpatient/:patientId/basic` は互換リダイレクト**。`<Navigate to={'/karte/:patientId#patient-info'} replace />` で新カルテ画面の患者情報タブへ転送（commit `30151eb` で実施済）。`PatientBasicPage.tsx` ファイル本体は S4 が独自判断で削除し、機能は `BasicInfoSubview` に継承（MASTER 追認済） | 2026-05-06 | us-34 ルート整理 |
 
 ## 関連
 
