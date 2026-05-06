@@ -5,6 +5,7 @@ import type {
   CareItemMaster, CareRecord, ISODate, LabResultEntry, NursingRecord, ScheduledOrder,
   SignEntry, ShiftType, VitalEntry,
 } from '../types';
+import VitalChart from './VitalChart';
 
 interface Props {
   patientId: string;
@@ -110,34 +111,41 @@ const FlowsheetGrid: React.FC<Props> = ({
     </Box>
   );
 
-  // バイタル簡易表示行（T のみ。次ステップで VitalChart に置換）
-  const renderVitalRow = () => {
-    const byDate = new Map<string, VitalEntry[]>();
-    dates.forEach((d) => byDate.set(d, []));
-    vitals.filter((v) => v.patientId === patientId && byDate.has(v.date))
-      .forEach((v) => byDate.get(v.date)!.push(v));
-    return (
-      <Row label="バイタル(T)" bgcolor="#fffbeb">
-        {dates.map((d) => {
-          const list = (byDate.get(d) ?? []).sort((a, b) => a.time.localeCompare(b.time));
-          return (
-            <Cell key={d}>
-              <Stack spacing={0}>
-                {list.map((v) => (
-                  <Tooltip key={v.id} title={`${v.time} BP ${v.bpSys ?? '-'}/${v.bpDia ?? '-'} P ${v.pulse ?? '-'} R ${v.resp ?? '-'} S ${v.spo2 ?? '-'}`} arrow>
-                    <Typography sx={{ fontSize: 11, color: '#7c2d12' }}>
-                      {v.time} {v.temp != null ? `${v.temp.toFixed(1)}℃` : ''}
-                    </Typography>
-                  </Tooltip>
-                ))}
-                {list.length === 0 && <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>—</Typography>}
-              </Stack>
-            </Cell>
-          );
-        })}
-      </Row>
-    );
-  };
+  // 体温表（7 日 × 時間軸の格子状グラフ）— spec us-17 L45-48
+  // BP・R・P・T・S の 5 系統を 1 つのグラフに重ねる。日境目は ReferenceLine で明示。
+  const renderVitalRow = () => (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: `${labelCol} 1fr`,
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        bgcolor: '#fffbeb',
+        alignItems: 'stretch',
+      }}
+    >
+      <Box
+        sx={{
+          pl: 1,
+          py: 0.5,
+          fontSize: 12,
+          color: '#7c2d12',
+          fontWeight: 700,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
+        <span>体温表</span>
+        <Typography sx={{ fontSize: 9, color: '#9a3412', fontWeight: 400 }}>
+          BP / R / P / T / S
+        </Typography>
+      </Box>
+      <Box sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
+        <VitalChart patientId={patientId} dates={dates} vitals={vitals} height={200} />
+      </Box>
+    </Box>
+  );
 
   // 予定オーダ行
   const renderOrderRow = () => {
