@@ -117,6 +117,17 @@
   - design-rules.md §12（新設・mode 切替）に従う
   - §11（未保存検知）はタブ切替時にも適用
 
+- [ ] **AC-10: タブ状態が URL ハッシュに反映される**
+  - **Given** カルテ画面でタブを切り替える
+  - **When** 任意のタブ（診療録／フローシート／指示簿／指示状況／看護過程／患者情報／スケジュール）を選択
+  - **Then** URL ハッシュが `#<tabId>` に更新される（例: `/karte/:patientId#flowsheet`）
+  - **Given** URL に有効なハッシュ付きで遷移（例: `/karte/P001#orders`）
+  - **When** カルテ画面を表示
+  - **Then** ハッシュに対応するタブが初期選択される
+  - **Given** ハッシュが無効・空（または現在 mode で disabled なタブを指す）
+  - **Then** 既定タブ「診療録」が選択される
+  - **Note**: タブ切替時の URL 更新は履歴を汚さないため `navigate('#<hash>', { replace: true })` 相当を用いる。ブラウザの戻る／進むでハッシュが変わった場合はそれに追従して再描画する
+
 ## 状態遷移 / バリデーション
 
 mode 判定の決定木:
@@ -135,6 +146,24 @@ mode 判定の決定木:
 ```
 
 ## 補足
+
+### URL ハッシュ ↔ タブ ID 対応表（AC-10）
+
+| タブ | tabId（内部） | URL ハッシュ |
+| --- | --- | --- |
+| 診療録 | `medical-record` | `#medical-record` |
+| フローシート | `flowsheet` | `#flowsheet` |
+| 指示簿 | `orders` | `#orders` |
+| 指示状況 | `order-status` | `#order-status` |
+| 看護過程 | `care-plan` | `#nursing-process` |
+| 患者情報 | `patient-info` | `#patient-info` |
+| スケジュール | `schedule` | `#schedule` |
+
+- 看護過程タブのみ tabId（`care-plan`）と URL ハッシュ（`#nursing-process`）が異なる点に注意。**URL に出すのはユーザー向け語彙**（`care-plan` は内部実装名）
+- 患者情報タブの **サブタブ永続化**（例: `#patient-info/basic` のような階層ハッシュ）は段階 1 では **スコープ外**。後続タスクで検討する
+- ハッシュ未対応タブ／未来の追加タブを含む拡張パターン（例: `#flowsheet?date=...` のようなクエリ込み）も段階 1 ではスコープ外
+
+### その他
 
 - 段階 1 のスコープは **mode='outpatient' の実装と mode prop API の確立**。`mode='inpatient'` は段階 2 で追加（タブ枠の disabled 切替・テーマ切替の実装は段階 1 で済ませる）
 - 戻る先判定: zustand `navigationSource`（既存 KarteAlphaPage パターン）を踏襲
