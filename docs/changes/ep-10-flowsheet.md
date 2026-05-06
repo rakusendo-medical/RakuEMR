@@ -16,7 +16,7 @@
 
 | ストーリー | 改修前 AC | 実装後 AC | 状態 |
 | --- | --- | --- | --- |
-| us-17 フローシート表示 | 0/9 | 9/9 | ✅ 完了（モック実装） |
+| us-17 フローシート表示 | 0/9 | 8/9 | 🟠 補修待ち（バイタル「7 日 × 時間軸の格子状グラフ」未実装。詳細: 末尾「補修予定（2026-05-06 起票）」） |
 | us-18 フローシート編集 | 0/10 | 10/10 | ✅ 完了（モック実装） |
 | us-19 サイン記載 | 0/8 | 8/8 | ✅ 完了（モック実装） |
 | us-20 個別バイタル入力 | 0/10 | 10/10 | ✅ 完了（モック実装） |
@@ -228,3 +228,34 @@ src/features/flowsheet/
 - `src/layouts/MainLayout.tsx` のサイドメニューに `/nursing/*` 配下 4 画面と `/flowsheet/:patientId`
   への導線を追加。フラット化が縦に伸びるため、PM 提案の「セクション分け」（折り畳み or 見出し）の
   導入を MASTER と要相談
+
+---
+
+## 補修予定（2026-05-06 起票）
+
+### バイタル「7 日 × 時間軸の格子状グラフ」未実装（us-17 AC リグレッション）
+
+#### 経緯
+
+- PM から「フローシートのバイタル表示欄が数字の列挙だけ」と指摘あり（2026-05-06）
+- 調査結果: 旧 `src/components/flowsheet/VitalChart.tsx`（recharts LineChart で BP・脈拍・体温を折れ線表示）が **2026-05-02 commit `1a3ec15`「フェーズ 1 — flowsheet feature の土台を新設」** で削除された
+- 新実装の `src/features/flowsheet/components/FlowsheetGrid.tsx`（行 113）には `// バイタル簡易表示行（T のみ。次ステップで VitalChart に置換）` のコメントのみ残存
+- spec [us-17-flowsheet-view.spec.md L45-48](../specs/ep-10-flowsheet/us-17-flowsheet-view.spec.md) は「**7 日 × 時間軸の格子状グラフ（BP・R・P・T・S）**」を要求しており、現状実装は AC 未充足
+- 上記 AC 表記「9/9 完了」を **「8/9」** に訂正（本ファイル冒頭サマリ表）
+
+#### 補修方針
+
+- **新規**: `src/features/flowsheet/components/VitalChart.tsx`（recharts LineChart、BP/P/R/T/S の複数系統、7 日 × 時間軸）
+- **更新**: `src/features/flowsheet/components/FlowsheetGrid.tsx` の `renderVitalRow` を VitalChart 埋込に置換
+- **参考実装**: `src/features/flowsheet/components/LabResultGraphDialog.tsx`（既存の recharts 利用パターン）
+- **追補**: 実装後に本ファイル冒頭サマリ表の us-17 を 9/9 に戻し、状態を ✅ に変更
+
+#### 担当・タイミング
+
+- **担当**: S3（ep-10 既任ワーカー）
+- **着手タイミング**: ep-15 us-34 患者情報サブタブ完了後の次タスク
+- **MASTER 採用案**: 案 (1) — 急がずゆっくり、ep-15 段階 1 を阻害せず順次対応
+
+#### 共有ファイル変更
+
+`src/features/flowsheet/` 内に閉じる見込み。`Vital` 型は既存活用、`useFlowsheetStore` も既存。共有ファイル変更が必要になったら HANDOVER「MASTER 待ち事項」起票。
