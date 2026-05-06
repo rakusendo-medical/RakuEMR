@@ -284,3 +284,141 @@ src/features/flowsheet/
 #### 共有ファイル変更
 
 `src/features/flowsheet/` 内に閉じる見込み。`Vital` 型は既存活用、`useFlowsheetStore` も既存。共有ファイル変更が必要になったら HANDOVER「MASTER 待ち事項」起票。
+
+---
+
+## 文字サイズ・情報密度の改善候補（S3 調査メモ・2026-05-06）
+
+PM 指摘「全体的に文字の小ささ懸念」の事前調査結果。**実装は本メモの範囲外**（PM 判断・後続タスク扱い）。コード読解中心で観察（ブラウザ目視は本セッション環境上限定的）。
+
+### 調査スコープ
+
+- 観点: **A 文字サイズ**（design-rules §6.3 / §1.3）／ **B 情報密度**（§6.2 / §6.3）／ **C 色覚配慮**（§13.5）／ **D 階層と視認性**（§1.3 / §3.3 / §2.1）
+- 画面: `/flowsheet/:patientId`、`/nursing/records`、`/nursing/bulk-vitals`、`/nursing/sleep-table`、`/nursing/bulk-records`
+- ダイアログ: VitalEditDialog / FlowsheetEditDialog / SignInputDialog / NursingRecordDialog（PatternChangeDialog / OrderListDialog 等は MUI 標準範囲のため抜粋のみ）
+- 手法: `fontSize` 直書き 26 箇所の grep、`Table size="small"` + 追加 padding 圧縮の検出、variant 使用統計、`<br />` 構造、`aria-label` / Tooltip 併用、色のみ依存箇所の抽出
+
+### 観察結果サマリ
+
+| # | 画面／コンポーネント | 観点 | 観察 | 改善候補 | 優先度 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | FlowsheetGrid (`/flowsheet/:patientId`) | A 文字 | Cell の `fontSize: 11/12` ハードコード（L61, L94, L127-129, L168 ほか） | variant `body2` (14px) 統一、補助のみ caption | 高 |
+| 2 | 同上 | B 密度 | Row `minHeight: 28`、Cell `px/py: 0.5` (4x4px)。§6.3 規定 8x12px の約 1/3 | minHeight 36、padding 8x12（テーマ既定） | 高 |
+| 3 | 同上 | B 密度 | header bgcolor `#f1f5f9` ハードコード | テーマ既定 `#f8fafc` に揃える | 高 |
+| 4 | 同上 | C 色覚 | サイン Cell が `SHIFT_COLOR` の文字色のみ（夜赤/日青/準緑） | アイコン or `(夜)/(日)/(準)` 1 文字 prefix を併記 | 中 |
+| 5 | 同上 | D 階層 | 編集アイコン `fontSize: 14`（IconButton size="small" 内） | 18 に拡大（§3.3） | 低 |
+| 6 | 同上 | D 階層 | スタンドアローン遷移時に戻るボタン無し（embedded 想定） | embedded=false 時に左上「戻る」（§2.1） | 中 |
+| 7 | VitalChart (`/flowsheet/:patientId`) | A 文字 | 軸目盛・Tooltip・Legend の `fontSize: 10` | 軸 11 / Legend 11 / Tooltip 12 へ底上げ | 中 |
+| 8 | 同上 | C 色覚 | 5 系統に **線種（実線/破線/長破線）併用** | 維持（§13.5 良例） | — |
+| 9 | MovementBar | A 文字 | セグメント内ラベル `fontSize: 10` | 11 へ | 中 |
+| 10 | 同上 | B 密度 | バー `height: 18` で薄い、ラベル詰まり | 24 へ拡大 | 中 |
+| 11 | 同上 | C 色覚 | KIND_COLOR で 6 種類の色帯、`seg.label` が optional のため未指定時は色のみ | bar 内に種類 1 文字（隔/拘/制/出/泊/室）を強制表示 | 中 |
+| 12 | FlowsheetHeader | D 階層 | Tabs に明示的 `borderBottom` 設定なし（MUI 既定下線のみ） | コンテナに `borderBottom: 1, borderColor: 'divider'`（§2.3） | 低 |
+| 13 | 同上 | A 文字 | タブ `fontSize: 13` | デフォルト（≈14px）に戻し統一 | 低 |
+| 14 | NursingRecordsPage (`/nursing/records`) | A 文字 | Card 内 caption 多用（時刻・登録者・登録日時・連携情報） | 主情報は `body2` (14px) へ、補助のみ caption | 中 |
+| 15 | 同上 | B 密度 | `CardContent sx={{ py: 1 }}` (8px) | py 1.5 (12px) へ | 低 |
+| 16 | 同上 | C 色覚 | 時刻が SHIFT_COLOR、修正情報が `#b91c1c` の文字色のみ | 時刻に shift ラベル併記（例 `08:30（夜）`） | 中 |
+| 17 | 同上 | D 階層 | 戻るボタン無し | §2.1 戻るボタン追加 | 中 |
+| 18 | BulkVitalsPage (`/nursing/bulk-vitals`) | B 密度 | `<Table size="small">` + `'& th, & td': { p: 0.75 }` の **§6-D 重複圧縮** | 追加 padding 撤廃。size="small" 単独で十分 | 高 |
+| 19 | 同上 | C 色覚 | 選択行 bgcolor `#dbeafe` のみで識別、Checkbox 併用済 | 維持（Checkbox で実質充足） | — |
+| 20 | 同上 | D 階層 | 戻るボタン無し | §2.1 戻るボタン追加 | 中 |
+| 21 | SleepTablePage (`/nursing/sleep-table`) | A 文字 | 列タイトル `fontSize: 11`、患者リンク `fontSize: 12` | variant 統一（caption→body2） | 高 |
+| 22 | 同上 | B 密度 | `<Table size="small">` + `'& th, & td': { p: 0.5 }` 重複圧縮、セル `height: 28` | 追加 padding 撤廃、height 36 | 高 |
+| 23 | 同上 | C 色覚 | セル状態を `STATE_COLOR` の色面 + 8x8 ドットで表示。色のみ依存（Tooltip にしか状態名なし） | ドット中央に状態 1 文字（入/覚/離/中/不）併記 | 中 |
+| 24 | 同上 | D 階層 | 患者セルが `<MuiLink fontSize:12>` + `<br />` + `<Typography variant="caption">` 混在 | `Stack spacing={0.25}` + variant 統一 | 低 |
+| 25 | 同上 | D 階層 | 戻るボタン無し | §2.1 戻るボタン追加 | 中 |
+| 26 | BulkNursingRecordsPage (`/nursing/bulk-records`) | B 密度 | `<Table size="small">` + `'& th, & td': { p: 0.75 }` の重複圧縮（L207） | 追加 padding 撤廃 | 高 |
+| 27 | 同上 | D 階層 | 戻るボタン無し | §2.1 戻るボタン追加 | 中 |
+| 28 | VitalEditDialog | B 密度 | `Table size="small" sx={{ '& th, & td': { p: 0.5 } }}` 重複圧縮（L215） | 追加 padding 撤廃 | 高 |
+| 29 | 同上 | A 文字 | 記録者カラムが `<Typography variant="caption">`（L272） | body2 へ（情報として本文相当） | 中 |
+| 30 | FlowsheetEditDialog | A 文字 | `FormLabel sx={{ fontSize: 13 }}`（L308） | 14（default）へ | 中 |
+| 31 | NursingRecordDialog | B 密度 | タブ `minHeight: 32`（標準 48 / dense 36 より低い・L313） | 36 へ | 低 |
+| 32 | SignInputDialog | — | body2 中心、シンプルな縦積み | 維持（密度問題薄い） | — |
+
+### 観察データの内訳（参考）
+
+#### fontSize 直書き 26 箇所の分布
+
+| 値 | 件数 | 主な使用箇所 |
+| --- | --- | --- |
+| `12` | 6 | FlowsheetGrid の Cell（既定）、SleepTablePage 患者リンク |
+| `11` | 9 | FlowsheetGrid の Tooltip / バイタル文 / 看護記録リンク、SleepTablePage 列タイトル |
+| `10` | 5 | VitalChart 軸目盛・凡例、MovementBar セグメント内ラベル |
+| `13` | 2 | FlowsheetHeader タブラベル、FlowsheetEditDialog |
+| `14` | 2 | FlowsheetGrid 編集アイコン、FlowsheetEditDialog 強調 |
+
+→ **大半が 10〜12px** で、§6 規定の `0.875rem (= 14px)` を下回る。
+
+#### §6-D 重複圧縮（`<Table size="small">` + 追加 padding）の検出位置
+
+| ファイル | 該当行 | 追加 padding |
+| --- | --- | --- |
+| `BulkVitalsPage.tsx` | L217 | `p: 0.75` (6px) |
+| `SleepTablePage.tsx` | L172 | `p: 0.5` (4px) |
+| `BulkNursingRecordsPage.tsx` | L207 | `p: 0.75` (6px) |
+| `VitalEditDialog.tsx` | L215 | `p: 0.5` (4px) |
+
+### 詳細
+
+#### A. 文字サイズ（§6.3 / §1.3）
+
+- **`FlowsheetGrid.tsx`**: L61, L94, L127-129, L168, L235, L249, L266, L272, L304 で `fontSize: 11/12` 直書き多発。§6.3 のテーブルセル基準 `0.875rem (14px)` を下回る。**改善候補**: variant `body2` (14px) 統一、補助情報のみ `caption` (≈12px) 許容
+- **`VitalChart.tsx`**: L153/L162/L170 軸目盛・Tooltip・Legend が `fontSize: 10`。**改善候補**: 軸 11 / Legend 11 / Tooltip 12 に底上げ
+- **`MovementBar.tsx` L73**: セグメント内ラベル `fontSize: 10`。**改善候補**: 11 へ
+- **`SleepTablePage.tsx`**: L179 列タイトルリンク `fontSize: 11`、L191 患者リンク `fontSize: 12`。**改善候補**: variant 統一
+- **`FlowsheetEditDialog.tsx` L308**: `FormLabel sx={{ fontSize: 13 }}`。**改善候補**: 14（default）へ
+- **`FlowsheetHeader.tsx` L48**: タブ `fontSize: 13`（minHeight 36 と組）。**改善候補**: タブ既定（≈14px / minHeight 48）に戻すか、現密度を維持するなら統一基準として明文化
+- **`NursingRecordsPage.tsx` Card 内**: 「登録者 / 登録日時」「連携情報」が `variant="caption"` (≈12px)。本文相当の情報まで caption 化。**改善候補**: `body2` に上げる、密度上昇するなら別行に折り返し
+
+#### B. 情報密度（§6.2 / §6.3）
+
+- **§6-D「`<Table size="small">` + 追加 padding 圧縮」の重複圧縮（4 箇所）**: MUI size="small" 単独で既に dense（行高 33px / padding 6x16px）なのに、追加 padding を上書きして §6.3 規定 8x12px の半分以下に圧縮している。**改善候補**: 全て追加 padding 撤廃。詳細位置は前述「観察データの内訳」表
+- **`FlowsheetGrid.tsx` L48-72**: `Row minHeight: 28`、`Cell px: 0.5 py: 0.5` (4x4px)。§6.3 規定 8x12px の約 1/3。**改善候補**: minHeight 36、padding 8x12（テーマ既定）にしてセルクリック対象も拡大
+- **`MovementBar.tsx` L70**: バー `height: 18`。**改善候補**: 24 へ
+- **`NursingRecordsPage.tsx` L93**: `CardContent sx={{ py: 1 }}` (8px)。**改善候補**: py 1.5 (12px)（Card は本文用なので余白を持たせる）
+- **`SleepTablePage.tsx` L205**: セル `height: 28`。**改善候補**: 36 へ
+- **`NursingRecordDialog.tsx` L313**: タブ `minHeight: 32`（MUI dense 36 / 標準 48 より低い）。**改善候補**: 36 へ
+
+#### C. 色覚配慮（§13.5）
+
+色だけで情報を伝えている箇所は §13.5 違反。色 + アイコン / テキスト併記が必要。
+
+- **`FlowsheetGrid.tsx` L304** サイン Cell: 文字色 `SHIFT_COLOR` のみ（深夜=赤 / 日勤=青 / 準夜=緑）。**改善候補**: 1 文字 prefix（`(夜)`/`(日)`/`(準)`）or 小さなアイコン併記
+- **`NursingRecordsPage.tsx` L96, L117**: 時刻が SHIFT_COLOR、修正情報が `#b91c1c` の文字色のみ。修正の方は「修正:」テキスト併記済 ✅ だが時刻は色のみ。**改善候補**: 時刻に shift ラベル併記（例 `08:30（夜）`）
+- **`SleepTablePage.tsx` L213**: cell ドット表示が色のみ（入眠青 / 覚醒緑 / 離床橙 / 中途覚醒赤 / 不穏紫）。Tooltip でしか状態名が出ない。**改善候補**: ドット中央に状態 1 文字（入/覚/離/中/不）を入れる
+- **`MovementBar.tsx` L20-26**: KIND_COLOR で 6 種類の色帯。`seg.label` が optional のため未指定時は色のみ依存。**改善候補**: bar 内に種類の 1 文字（隔/拘/制/出/泊/室）を強制表示
+- **`VitalChart.tsx` L186-220**: 5 系統を **線種併用（実線 / 破線（4-2）/ 短破線（2-2）/ 長破線（6-3））** + 色 + Legend テキスト ✅ → §13.5「グラフは色 + 線種」の良例として **維持**
+
+#### D. 階層と視認性（§1.3 / §3.3 / §2.1 / §2.3）
+
+- **§2.1 戻るボタンが 5 ページ全部で未実装**: サイドバー導線前提だが、URL 直接アクセス・履歴バック以外の戻り口が無い
+  - `/flowsheet/:patientId`（embedded=false 時）
+  - `/nursing/records`、`/nursing/bulk-vitals`、`/nursing/sleep-table`、`/nursing/bulk-records`
+  - **改善候補**: 各ページ左上に `<Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>戻る</Button>` 配置
+- **§2.3 タブ borderBottom 未明示**: `FlowsheetHeader.tsx` L44 の Tabs。MUI Tabs の内部下線はあるが、コンテナ境界として明示が薄い。**改善候補**: 親 Box に `borderBottom: 1, borderColor: 'divider'` を付与
+- **§3.3 IconButton + Tooltip**: `FlowsheetGrid.tsx` の編集アイコンは Tooltip 付き ✅、ただし icon 本体が `fontSize: 14`。**改善候補**: 18 へ拡大
+- **§2.2 パンくず**: ep-10 は階層 2 段以下なので導入不要 ✅
+- **`FlowsheetPage.tsx` L107-117 患者ヘッダー**: h6 + body2 + caption の階層あり ✅ → 維持
+- **`aria-label` 直書き 0 件**: §12.2 は MUI IconButton + Tooltip 構成で実質充足。明示 aria-label が欲しい場合は別タスク化（本メモのスコープ外）
+
+### 実装スコープの目安
+
+| スコープ | 内容 | 該当観察# | 影響範囲 | 想定工数 |
+| --- | --- | --- | --- | --- |
+| **小** | §6 セル padding 統一 + §6-D 重複圧縮の撤廃 + fontSize 直書きを variant 化 | 1, 2, 3, 18, 21, 22, 26, 28 | `FlowsheetGrid.tsx` / `BulkVitalsPage.tsx` / `SleepTablePage.tsx` / `BulkNursingRecordsPage.tsx` / `VitalEditDialog.tsx`。共有ファイル変更なし | 1〜2 時間 + 目視 1 時間 |
+| **中** | VitalChart 軸ラベル拡大・Legend / MovementBar 高さ拡大 / Card density 緩和 / 各ページ戻るボタン追加 / Tabs borderBottom 明示 / 色覚配慮の併記 | 4, 7, 9, 10, 11, 12, 14, 16, 17, 20, 23, 25, 27, 29, 30 | `VitalChart.tsx` / `MovementBar.tsx` / `NursingRecordsPage.tsx` / `FlowsheetGrid.tsx` / `SleepTablePage.tsx` / `FlowsheetHeader.tsx` / 5 ページに戻るボタン | +1〜2 時間 |
+| **大** | テーブル全体のレイアウト見直し（FlowsheetGrid の grid 構造再設計、列幅自動 → 固定併用、1366 解像度での横スクロール最適化） | (大規模再設計) | `FlowsheetGrid.tsx` 全面改修。VitalEditDialog / FlowsheetEditDialog からの再描画影響確認も必要 | 3〜4 時間 |
+
+### 採用候補のたたき台（PM 判断用）
+
+- **採用 A: 小のみ** — 最小コストで密度問題の根（§6-D 重複圧縮）を抜く
+- **採用 B: 小 + 中** — 読みやすさ + 戻るボタン整備 + 色覚配慮の主要箇所まで一括対応（段階 1 統合確認時に併合可能）
+- **採用 C: 小 + 中 + 大** — 全面リフレッシュ。段階 2（`mode='inpatient'` 実装）と並走
+- **据え置き** — 段階 2 後の整合確認時にまとめて判断
+
+### 補足
+
+- **1366×768 解像度**（§13.2 業務想定）で密度を下げると横溢れが起きやすい。FlowsheetGrid は患者 1 人 × 7 日 × 多列構造のため `fontSize` を 1 段上げるだけで横スクロールが顕著化する点が判断材料
+- **色覚配慮の優先実装**: VitalChart は線種併用で良例（§13.5 推奨形）。FlowsheetGrid サイン Cell（観察 #4）と SleepTable ドット（観察 #23）が色のみ依存の主な箇所
+- **ダイアログ群の総評**: VitalEditDialog の §6-D 重複圧縮（観察 #28）以外は概ね MUI 標準範囲。SignInputDialog は密度問題ほぼなし、FlowsheetEditDialog は FormLabel fontSize 13（観察 #30）のみ局所対応で済む
+- **観察ボリューム**: 観察項目 32 件（5 ページ + 主要 4 ダイアログ + 共通コンポーネント 2）×（A 文字 / B 密度 / C 色覚 / D 階層）の 4 観点。改善候補は **高 8 件 / 中 14 件 / 低 6 件 / 維持・現状 OK 4 件**
