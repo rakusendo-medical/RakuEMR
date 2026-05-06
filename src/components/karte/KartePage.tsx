@@ -1,8 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Paper,
   Snackbar,
   Tab,
@@ -16,6 +22,7 @@ import type { Patient } from '../../types';
 import KartePatientHeader from './KartePatientHeader';
 import KarteActionBar from './KarteActionBar';
 import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
+import PatientInfoTab from './PatientInfoTab';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -88,6 +95,11 @@ function determineBackPath(args: {
   }
 }
 
+type PendingNav =
+  | { type: 'tab'; tabId: string }
+  | { type: 'back' }
+  | null;
+
 export default function KartePage({ modeOverride }: KartePageProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -108,6 +120,13 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     message: '',
   });
 
+  // ===== us-34 患者情報タブ用：未保存検知 =====
+  const [patientInfoDirty, setPatientInfoDirty] = useState(false);
+  const [discardSignal, setDiscardSignal] = useState(0);
+  const [pendingNav, setPendingNav] = useState<PendingNav>(null);
+
+  const onPatientInfoDirty = useCallback((d: boolean) => setPatientInfoDirty(d), []);
+
   if (!patient) {
     return (
       <Box sx={{ p: 3 }}>
@@ -116,9 +135,42 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     );
   }
 
-  const handleBack = () => {
+  const performBack = () => {
     const path = determineBackPath({ navState, mode });
     navigate(path);
+  };
+
+  const handleBack = () => {
+    if (patientInfoDirty) {
+      setPendingNav({ type: 'back' });
+      return;
+    }
+    performBack();
+  };
+
+  const attemptTabChange = (nextTab: string) => {
+    if (nextTab === currentTab) return;
+    if (patientInfoDirty && currentTab === 'patient-info') {
+      setPendingNav({ type: 'tab', tabId: nextTab });
+      return;
+    }
+    setCurrentTab(nextTab);
+  };
+
+  const handleConfirmDiscard = () => {
+    const target = pendingNav;
+    setDiscardSignal((n) => n + 1);
+    setPatientInfoDirty(false);
+    setPendingNav(null);
+    if (target?.type === 'tab') {
+      setCurrentTab(target.tabId);
+    } else if (target?.type === 'back') {
+      performBack();
+    }
+  };
+
+  const handleCancelDiscard = () => {
+    setPendingNav(null);
   };
 
   const handleAction = (actionId: string) => {
@@ -145,7 +197,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       >
         <Tabs
           value={currentTab}
-          onChange={(_, v) => setCurrentTab(v)}
+          onChange={(_, v) => attemptTabChange(v)}
           variant="scrollable"
           scrollButtons="auto"
           textColor={mode === 'outpatient' ? 'inherit' : 'primary'}
@@ -173,7 +225,13 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', bgcolor: 'background.default', p: 2 }}>
-        <KarteTabContent tabId={currentTab} mode={mode} patientId={patient.id} />
+        <KarteTabContent
+          tabId={currentTab}
+          mode={mode}
+          patient={patient}
+          onPatientInfoDirty={onPatientInfoDirty}
+          discardSignal={discardSignal}
+        />
       </Box>
 
       <KarteActionBar mode={mode} onAction={handleAction} />
@@ -193,6 +251,30 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           {toast.message}
         </Alert>
       </Snackbar>
+
+      {/* §10 破壊的：患者情報タブの未保存変更を破棄して離脱する確認 */}
+      <Dialog
+        open={!!pendingNav}
+        onClose={handleCancelDiscard}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>保存していない変更があります</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            患者情報タブに未保存の変更があります。
+            {pendingNav?.type === 'back'
+              ? 'このまま戻ると変更内容は失われます。'
+              : 'このまま別タブに切り替えると変更内容は失われます。'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDiscard}>編集に戻る</Button>
+          <Button onClick={handleConfirmDiscard} variant="contained" color="warning">
+            破棄して{pendingNav?.type === 'back' ? '戻る' : '進む'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
@@ -200,14 +282,29 @@ export default function KartePage({ modeOverride }: KartePageProps) {
 function KarteTabContent({
   tabId,
   mode,
-  patientId,
+  patient,
+  onPatientInfoDirty,
+  discardSignal,
 }: {
   tabId: string;
   mode: KarteMode;
-  patientId: string;
+  patient: Patient;
+  onPatientInfoDirty: (d: boolean) => void;
+  discardSignal: number;
 }) {
   if (tabId === 'flowsheet') {
-    return <FlowsheetPage embedded patientId={patientId} />;
+    return <FlowsheetPage embedded patientId={patient.id} />;
+  }
+
+  if (tabId === 'patient-info') {
+    return (
+      <PatientInfoTab
+        patient={patient}
+        mode={mode}
+        onDirtyChange={onPatientInfoDirty}
+        discardSignal={discardSignal}
+      />
+    );
   }
 
   const meta: Record<string, { title: string; note: string }> = {
@@ -227,10 +324,6 @@ function KarteTabContent({
       title: '看護過程',
       note: 'mode=inpatient 時の中身は ep-12〜14 で別途実装予定。',
     },
-    'patient-info': {
-      title: '患者情報',
-      note: 'us-34 で 7 サブタブ（基本情報／属性／保険／連絡先／病名／エピソード／メモ）として S3 が実装予定。',
-    },
     schedule: {
       title: 'スケジュール',
       note: '段階 1 ではタブ枠のみ。予約・受診計画は別ストーリーで実装予定。',
@@ -247,7 +340,7 @@ function KarteTabContent({
         {m?.note ?? '未実装タブです。'}
       </Typography>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-        現在 mode: <code>{mode}</code> / patientId: <code>{patientId}</code>
+        現在 mode: <code>{mode}</code> / patientId: <code>{patient.id}</code>
       </Typography>
     </Paper>
   );

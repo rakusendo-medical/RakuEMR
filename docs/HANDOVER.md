@@ -9,12 +9,12 @@
 
 | セッション名 | 役割 | 対応中エピック | ステータス | 最終更新 |
 | --- | --- | --- | --- | --- |
-| MASTER | マスターセッション | ep-15 段階 1 進行中。**S2 着手順序 \[1\]\[2\] 完了 → MASTER レビュー 🟢 OK**（spec / mode prop API / 共有ファイル変更ゼロ / design-rules / リグレッション 全観点 OK）。**S3/S4 へ本格着手 GO サインを PM 経由で発出済**（S3=us-34 患者情報サブタブ本実装、S4=us-32 外来一覧の URL 切替）。次の MASTER アクション: ① S3/S4 完了報告受領、② 段階 1 統合確認（外来一覧 → カルテ → 患者情報 → 戻る の動線目視）、③ 段階 1 クローズ判定 | 進行中 | 2026-05-06 |
+| MASTER | マスターセッション | ep-15 段階 1 進行中。S2 \[1\]\[2\] / S4 us-32 完了。S3 us-34 本格実装中。**新規起票**: ep-10 us-17 バイタルグラフ補修（リグレッション、commit `1a3ec15` で旧 VitalChart 削除を確認）→ 担当 S3、PM 採用案 (1)「急がずゆっくり、us-34 完了後の次タスク」。詳細は `docs/changes/ep-10-flowsheet.md` 末尾「補修予定（2026-05-06 起票）」。次の MASTER アクション: ① S3 us-34 完了報告受領 → ② ep-15 段階 1 統合確認 → ③ 段階 1 クローズ判定 → ④ S3 を ep-10 補修にローテーション（GO サインを PM 経由） | 進行中 | 2026-05-06 |
 | S2 | ワーカー | ep-05〜ep-08 隔離拘束系すべて実装完了・push 済（モック実装。ブラウザ目視は未実施）。追加: サイドバー整理完了（19 エントリを「病床管理／看護／共通・運用／開発」の 4 セクションに分割。MainLayout のみ変更、ルート・画面コンポーネントは未変更。tsc / build クリーン、ブラウザ目視は MASTER 側で実施依頼） | 完了 | 2026-05-04 |
 | S2 | ワーカー | ep-15 着手順序 \[1\]\[2\] **両方完了**。\[1\] design-rules §12「mode 切替（外来／入院）」本文（§12.1〜§12.6）+ 改訂履歴追記。\[2\] us-33 骨組み: `/karte/:patientId` 新規ルート / `KartePage.tsx`（既存上書き刷新）/ `KartePatientHeader.tsx` 新規 / `KarteActionBar.tsx` 新規 / 7 タブ枠 / mode prop API 確立（後述）/ mode 判定（`location.state.from` → `navigationSource` → `admissionState` の優先順）/ 戻り先判定 / 看護過程タブの outpatient disabled + Tooltip / フローシート埋込（ep-10 `<FlowsheetPage embedded patientId>`） / mode 識別 Chip。`docs/screen-mapping.tsv` 行追加 / `docs/changes/ep-15-outpatient-emr.md` に \[2\] 完了メモ + mode prop API 仕様 + S3/S4 申し送り を追記。**`useAppStore` 型変更なし**（state.from 経由で回避）/ `MASTER_*` 追加なし / `types/index.ts` 変更なし。tsc + build クリーン。**S3/S4 は本格着手可能**。MASTER のレビュー + ブラウザ目視待ち | \[1\] / \[2\] 完了 | 2026-05-06 |
 | S3 | ワーカー | ep-10 看護実施（フローシート, us-17〜26）モック実装完了（10 ストーリー全 push 済）。残: KarteAlphaPage タブ統合は MASTER 待ち事項として継続管理。FlowsheetPage には `embedded` / `patientId` prop 追加済（統合準備済み） | 完了 | 2026-05-02 |
-| S3 | ワーカー | ep-15 段階 1 **us-34 患者情報サブタブ** 担当（着手順序 \[4\]）。準備フェーズ: PatientBasicPage 構造分解／7 サブタブ（基本情報・属性・保険・連絡先・病名・エピソード・メモ）コンテンツ詳細化（参照 `docs/gairai/features/patient.html`）／mock 仮設計／TriStateField・ChipInput 共通化検討／`docs/changes/ep-15-outpatient-emr.md` に「準備メモ」追記。**S2 の us-33 骨組み + mode prop API 確定報告（PM 経由）まで本格実装は保留**。`/outpatient/:patientId/basic` の扱い（PM 確認事項 #5）は PM 判断待ちで触らない | 起動・準備フェーズ着手 | 2026-05-06 |
-| S4 | ワーカー | ep-15 段階 1 **us-32 外来一覧仕上げ** 完了・push 済（commit `a7c1398`）。OutpatientList.tsx の 3 箇所を更新: ① ダブルクリック遷移先・②「カルテ」ボタン遷移先 を `/karte/:patientId` へ切替（決定事項 #1 充足）、③ 冒頭コメント参照を §12.5 → §13.5 に追従（§12 リナンバー案 B 反映）。tsc / build クリーン、共有ファイル変更なし。AC 全 8 件達成。ブラウザ目視は未実施（MASTER 側で実施依頼） | 完了 | 2026-05-06 |
+| S3 | ワーカー | ep-15 段階 1 **us-34 患者情報サブタブ** 実装完了（着手順序 \[4\]）。新規: `karte/PatientInfoTab.tsx` + `karte/patientInfo/{BasicInfo,Attributes,Insurance,Contacts,Diagnoses,Episodes,Memo}Subview.tsx` + 共通 `useDirtyForm.ts` / `SubviewActionBar.tsx`。既存改修: `karte/KartePage.tsx`（S2 提供）の `KarteTabContent` `patient-info` 分岐に PatientInfoTab を埋込、メインタブ切替・「一覧に戻る」時の未保存検知ダイアログを追加（discardSignal で全サブビュー reset）。`screen-mapping.tsv` に PatientInfoTab.tsx 行追加。AC-1〜AC-8 全達成。tsc / build クリーン。**共有ファイル変更なし**（types / store / mockData / common 触らず）。`PatientBasicPage` 撤去判断は PM 確認事項 #5 待ちで温存。詳細は `docs/changes/ep-15-outpatient-emr.md`「## 段階 1 着手順序 \[4\] 完了メモ」。ブラウザ目視は MASTER 段階 1 統合確認時に依頼 | 完了 | 2026-05-06 |
+| S4 | ワーカー | ep-15 段階 1 **us-32 外来一覧仕上げ** 完了・push 済。① URL 切替 `a7c1398`（ダブルクリック / 「カルテ」ボタン → `/karte/:patientId`、冒頭コメント §12.5 → §13.5）、② state.from 必須対応 `2db9346`（`KartePageLocationState` import + `navigateTo` 拡張 + 両遷移箇所に `state: { from: 'outpatient-list' }` 添付。`KartePage` の mode 判定一次ソースを満たす）、③ 記録系仕上げ（spec AC を `[x]` に / `docs/changes/ep-15-outpatient-emr.md` に実装後メモ追記 / `docs/screen-mapping.tsv` に `/outpatient` 行新規追加）。tsc / build クリーン、共有ファイル（types / store / mockData / routes）変更なし、AC 全 8 件達成。ブラウザ目視は未実施 → MASTER 段階 1 統合確認時に併せて依頼 | 完了 | 2026-05-06 |
 
 **運用ルール:**
 - 新しくセッションを開始する場合は、上記表に **自分の名前と対応中エピックを追記** すること（例: `S2`, `claude-2`, `worker-A` など任意の識別子）
@@ -106,7 +106,6 @@
 | ep-07 観察記録 | us-13, us-14 | `/restraint/observation` |
 | ep-08 隔離拘束歴 | us-15 | `/restraint/history` |
 | ep-09 患者情報 | us-16 | `/patients` |
-| ep-10 看護実施（フローシート） | us-17〜us-26 | `/nursing/*`、カルテタブ埋込予定 |
 
 ### 🟠 進行中
 
@@ -115,7 +114,8 @@
 | ep-12 看護診断 | 看護 | us-28 | spec 確定（方針 Y）／mock 改修フェーズ 2 進行中 |
 | ep-13 看護計画 | 看護 | us-29 | 同上（期間複数計画モデル実装中） |
 | ep-14 看護評価 | 看護 | us-30, us-31 | 同上 |
-| ep-15 外来 EMR 刷新 | 外来・共通 | us-32, us-33, us-34 | spec / gap 抽出完了、PM 確認待ち（着手前） |
+| ep-10 看護実施（フローシート） | 看護 | us-17 | バイタル「7 日 × 時間軸の格子状グラフ」未実装の補修待ち（リグレッション・2026-05-06 起票）。担当 S3、着手は us-34 完了後 |
+| ep-15 外来 EMR 刷新 | 外来・共通 | us-32, us-33, us-34 | us-32 / us-33 完了。us-34 は S3 が本格実装中 |
 
 ### 🟡 残（未着手）
 

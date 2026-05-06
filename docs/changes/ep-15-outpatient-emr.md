@@ -97,6 +97,31 @@
 
 - なし
 
+#### 実装後メモ（S4 / 2026-05-06）
+
+**コミット**: `a7c1398` (URL 切替 + コメント追従) → `2db9346` (state.from 必須対応)
+
+**実施内容**:
+
+1. **URL 切替**（`a7c1398`）
+   - L117 「カルテ」ボタン (`handleOpenDashboard`) と L332 ダブルクリック の `navigate` 先を `/karte-outpatient/:patientId` → `/karte/:patientId` に統一
+   - 冒頭コメントの design-rules 参照を `§12.5 色覚配慮` → `§13.5 色覚配慮` に追従更新（§12 リナンバー案 B 反映）
+
+2. **state.from 添付**（`2db9346`）
+   - 初回コミットで漏れていた `state: { from: 'outpatient-list' }` を両遷移箇所に追加
+   - `KartePageLocationState` 型を `../karte/KartePage` から import
+   - `navigateTo` シグネチャを `(path, state?)` に拡張し、state があれば `navigate(path, { state })` で渡す形に
+   - これで `KartePage` の mode 判定が一次ソース（`location.state.from === 'outpatient-list'` → `outpatient`）で確定。フォールバックの `admissionState` 判定に頼らずに済む
+   - 戻り先判定も同 state を参照するため、「一覧に戻る」が正しく `/outpatient` に戻れる
+
+**検証**: `npx tsc --noEmit` + `npx vite build` 両方クリーン（環境メモ: 既定シェルの Node が v12 だったため `nvm use --lts` で v24 に切替えて実行）
+
+**共有ファイル**: 変更なし（types / store / mockData / routes に手を入れず完了）
+
+**ブラウザ目視**: S4 セッションでは未実施。MASTER 段階 1 統合確認時に併せて確認依頼
+
+**AC 達成**: 全 8 件 ✅（spec チェックボックスを `[x]` に更新済）
+
 ---
 
 ### us-33 カルテ画面（🟠 構造再設計）
@@ -429,6 +454,67 @@ navigate(`/karte/${patient.id}`, {
 
 - **S3（us-34）**: 患者情報タブの実装は `KartePage.tsx` 内 `KarteTabContent` の `tabId === 'patient-info'` 分岐に差し込む形で OK。または別コンポーネント `PatientInfoTab.tsx`（S3 が起こす想定）を `KartePage.tsx` から呼ぶ形が望ましい。`mode` と `patientId` は `KarteTabContent` の props で受けられる
 - **S4（us-32）**: `OutpatientList` の `navigate` 呼び出しを `/karte-outpatient/:patientId` から `/karte/:patientId` に切替え、`state: { from: 'outpatient-list' }` を必ず添える。型は `import type { KartePageLocationState } from '../karte/KartePage'` で共有可能
+
+---
+
+## 段階 1 着手順序 [4] 完了メモ（S3 / 2026-05-06）
+
+### 実装サマリ
+
+着手順序 [4]「us-34 患者情報サブタブ」を実装完了。`npx tsc --noEmit` / `npx vite build` クリーン（ブラウザ目視は MASTER 側で実施依頼）。
+
+- 新規ファイル
+  - `src/components/karte/PatientInfoTab.tsx` — サブタブ Chip 群と dirty 集約
+  - `src/components/karte/patientInfo/BasicInfoSubview.tsx` — `PatientBasicPage` の内訳を移植
+  - `src/components/karte/patientInfo/AttributesSubview.tsx`
+  - `src/components/karte/patientInfo/InsuranceSubview.tsx`
+  - `src/components/karte/patientInfo/ContactsSubview.tsx`
+  - `src/components/karte/patientInfo/DiagnosesSubview.tsx`
+  - `src/components/karte/patientInfo/EpisodesSubview.tsx`
+  - `src/components/karte/patientInfo/MemoSubview.tsx`
+  - `src/components/karte/patientInfo/useDirtyForm.ts` — 共通フック（dirty 検出 + 破棄シグナルでの reset）
+  - `src/components/karte/patientInfo/SubviewActionBar.tsx` — 共通フッター（保存・キャンセル・未保存 Chip）
+- 既存ファイル更新
+  - `src/components/karte/KartePage.tsx`（S2 提供）— `KarteTabContent` の `patient-info` 分岐に `<PatientInfoTab>` を埋込。メインタブ切替（`attemptTabChange`）と「一覧に戻る」(`handleBack`) で **未保存検知ダイアログ** を発火。確定時は `discardSignal` を inc して全サブビューを reset
+  - `docs/screen-mapping.tsv` — `/karte/:patientId` の `PatientInfoTab.tsx` 行を追加
+- 既存温存
+  - `src/components/outpatient/PatientBasicPage.tsx` — 段階 1 では `/outpatient/:patientId/basic` 経路含めそのまま動作維持（撤去判断は PM 確認事項 #5）
+- 共有ファイル変更なし
+  - `src/types/index.ts` / `src/stores/useAppStore.ts` / `src/data/mockData.ts` の `MASTER_*` / `src/components/common/` いずれも変更なし
+  - 既存マスタの追加なし、`localStorage` 永続化なし
+
+### 段階 1 のスコープ充足状況（AC 別）
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| AC-1 サブタブ表示（7 サブタブ） | ✅ | Chip 風小型タブで横並び、既定「基本情報」 |
+| AC-2 基本情報サブタブの内容 | ✅ | PatientBasicPage の 8 セクション（主訴／アレルギー／感染症・既往／服薬・基礎疾患／問診表／現在の状態／その他／預かり金）を移植 |
+| AC-3 Chip 風小型タブ | ✅ | メインタブ = `Tabs`（標準サイズ）／サブタブ = `Chip size="small"` で階層差を視覚化 |
+| AC-4 サブタブ切替時の未保存保持 | ✅ | 全サブビューを `display: none` で常時マウントし内部 state を保持 |
+| AC-5 編集単位ごとの保存 | ✅ | サブビュー内 `SubviewActionBar` で「保存／キャンセル」を実装。サブビュー間で独立 |
+| AC-6 離脱時の未保存検知 | ✅ | `KartePage` で「メインタブ切替」「一覧に戻る」時に dirty なら確認ダイアログ（design-rules §10/§11 準拠） |
+| AC-7 mode 別表示差分 | ✅ 枠のみ | mode='inpatient' で属性サブタブに「入院専用情報」セクション（入院日／病棟／病室を read-only 表示）を追加表示。受け持ち看護師の正式割当 UI は段階 2 |
+| AC-8 設計ルール準拠 | ✅ | §3.2 アクションバー右寄せ／§10 破壊的（warning ボタン）／§11 未保存検知／§12 mode 切替（外来=success／入院=primary）に準拠 |
+
+### 設計判断（暫定）
+
+実装中に S3 が暫定判断した事項。妥当性検証は MASTER レビュー時 or PM 確認時に。
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | **預かり金セクションを mode に関わらず両方で表示**（spec AC-2 通り） | 外来 mode で預かり金管理を表示する業務的妥当性は不明。mode='inpatient' のみ表示が筋という案は段階 2 で再判断 |
+| 2 | **`localStorage` 永続化なし**（保存は snackbar のみ） | サブタブ切替で値保持は実装済（AC-4）。リロード後の保持は段階 2 以降で判断 |
+| 3 | **基本情報の「メモ」は「基本情報メモ（補足）」とラベル変更**、メモサブタブは「患者メモ」で長文の運用メモ | 二重存在の運用整理。完全統合は段階 2 以降 |
+| 4 | **AC-7 入院専用情報セクションは枠のみ**（既存 `Patient` フィールドを read-only 表示） | spec 補足通り。`Patient` 型追加なし |
+| 5 | **`TriStateField` / `ChipInput` は `BasicInfoSubview` 内 private** に温存 | 他サブビューでの利用予定なし。`src/components/common/` への抽出は YAGNI で見送り |
+| 6 | **`PatientBasicPage` は段階 1 終了時点でも撤去せず温存** | PM 確認事項 #5 の判断待ち。撤去 vs 互換リダイレクトは MASTER / PM 領域 |
+
+### MASTER への申し送り
+
+- **PM 確認事項 #5（`/outpatient/:patientId/basic` の扱い）** は段階 1 終了時の判断待ち。S3 として現実装は新カルテ画面の患者情報タブで完全代替可能だが、撤去判断は MASTER / PM 領域として触らず温存
+- 「**未保存検知ダイアログ**」は段階 1 では「メインタブ切替」「一覧に戻る」のみ対応。`useBlocker` を使った **ブラウザ back / 直接 URL 変更** はスコープ外（段階 2 以降で要検討）
+- S3 のサブビュー実装は「最小モック」方針で、参考システム HTML の網羅は段階 2 以降に譲る項目が多い（属性のスタッフ細粒度、連絡先の複数行追加、病名 ICD10 マスタ検索、エピソードの MonthPicker・4000 文字バリデーション）
+- 段階 1 統合確認時には外来一覧 → カルテ → 患者情報タブ → サブタブ切替（未保存変更を残して別サブタブへ → 値保持の確認）→ 別メインタブクリック（未保存検知ダイアログ発火確認）→ 「破棄して進む」で reset の動線が想定パス
 
 ---
 
