@@ -49,3 +49,6 @@ docs/manuals/
 
 # Office temp/lock files
 ~$*
+
+# PM ブリーフィング（PM 主導の都度更新ファイル・git に残さない）
+.claude/briefings/

@@ -25,8 +25,10 @@ React + TypeScript + MUI + Vite で構築されています。
    - MASTER（= S1）の場合: `.claude/roles/MASTER.md`（または `S1.md` 経由）
    - ワーカーの場合: `.claude/roles/S<N>.md`（S2〜S4。共通責務は同ディレクトリの `WORKER.md` を参照）
 2. `docs/HANDOVER.md` を読み、現状把握
-3. `docs/HANDOVER.md`「アクティブセッション」表に自身を登録（既存行があればステータス・最終更新日を更新）
-4. 自ロールの責務範囲を超える作業要請を受けた場合は、`docs/HANDOVER.md`「MASTER 待ち事項」へ起票するか、PM へ確認する
+3. **`.claude/briefings/common.md` を読む**（並行作法・git 衛生・教訓の共通ブリーフィング）。存在すれば **`.claude/briefings/s<N>.md`** も読む（PM からの個別指示・タスクブリーフィング）
+   - `.claude/briefings/` 配下は git ignore 対象。PM が手元で都度更新する運用
+4. `docs/HANDOVER.md`「アクティブセッション」表に自身を登録（既存行があればステータス・最終更新日を更新）
+5. 自ロールの責務範囲を超える作業要請を受けた場合は、`docs/HANDOVER.md`「MASTER 待ち事項」へ起票するか、PM へ確認する
 
 ロール宣言が無いまま実装着手しないこと（誤って共有ファイルを単独編集すると衝突の元になる）。
 
