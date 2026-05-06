@@ -556,6 +556,43 @@ PM 確認事項 #3「OutpatientKartePage 即撤去」と #5「`/outpatient/:pati
 
 ---
 
+## AC-10 フォローアップ修正（S2 / 2026-05-06）
+
+### 経緯
+
+PM ブラウザ目視で「診療録 → フローシート と遷移した際、ブラウザバックは診療録に戻るのが自然」との指摘。初版 `30151eb` は履歴を汚さない方針で `navigate({hash}, {replace: true})` 一択だったが、ユーザーのタブ切替操作だけは履歴に積む挙動に変更。
+
+### 修正内容
+
+- `commitTab` のシグネチャを `commitTab(nextTab, opts?: { replace?: boolean })` に拡張。**既定は `replace: false`**（ユーザー操作経路）
+- 既存呼び出し（`attemptTabChange` / `handleConfirmDiscard`）は `commitTab(nextTab)` のまま → 自動的に `replace: false` 適用
+- 「初期化時の URL 自動補正」（無効ハッシュ → 既定タブ等の内部書換）は `commitTab(nextTab, { replace: true })` で履歴に積まないルールを spec / コードコメントに明文化（現状コードでは該当経路の navigate 呼び出しは未実装。将来の拡張用ルール）
+- `useEffect` での `location.hash` 追従（戻る／進むイベント由来の再描画）は `setCurrentTab` のみで `navigate` を呼ばないため、本修正の対象外
+
+### spec / changes の整合
+
+- `docs/specs/ep-15-outpatient-emr/us-33-karte-screen.spec.md` の AC-10 末尾 Note を「ユーザー操作は `replace: false`、内部補正は `replace: true`」に書き換え + 「ブラウザバックで前タブに戻る」 Given/When/Then を追加
+
+### 動作
+
+| 操作 | 結果 |
+| --- | --- |
+| 診療録 → フローシート と切替 → ブラウザバック | 診療録に戻る |
+| フローシート → 指示簿 → 患者情報 と切替 → ブラウザバック × 2 | 診療録に戻る（フローシート → 診療録） |
+| 直打ち `/karte/P001#orders` から開いてブラウザバック | カルテ画面の手前のページ（外来一覧等）に戻る |
+| 患者情報タブで編集 → 別タブクリック → 確認ダイアログ「破棄して進む」 → ブラウザバック | 患者情報タブに戻る（確認ダイアログは再表示しない・dirty は破棄済のため） |
+
+### 検証結果
+
+`npx tsc --noEmit` + `npx vite build` クリーン。共有ファイル（types / store / mockData / common / routes）に変更なし。`KartePage.tsx` 単一ファイル変更。
+
+### 並行運用注意（前回干渉の再発防止）
+
+- 編集前 `git pull --ff-only`、編集ファイルを **明示** で `git add`、`git diff --cached --stat` で範囲確認、それから `git commit && git push` を一気に
+- 今回は `KartePage.tsx` + spec + changes の 3 ファイルを 1 コミットでまとめて push
+
+---
+
 ## 残課題（段階 1 で扱わない）
 
 - 段階 2（mode='inpatient' 実装）／段階 3（KarteAlphaPage 置換）は別エピックで管理

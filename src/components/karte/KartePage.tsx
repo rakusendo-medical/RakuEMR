@@ -159,9 +159,13 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.hash, mode]);
 
-  /** タブ確定時に currentTab を更新し、URL ハッシュを `#<hash>` で揃える（履歴は汚さない） */
+  /**
+   * タブ確定時に currentTab を更新し、URL ハッシュを `#<hash>` で揃える。
+   * - `replace=false`（既定）: ユーザー操作（タブクリック等）の場合。履歴に積み、ブラウザバックで前タブに戻れる
+   * - `replace=true`: 初期化時の URL 自動補正（無効ハッシュ → 既定タブ等の内部書換）。履歴に積まない
+   */
   const commitTab = useCallback(
-    (nextTab: string) => {
+    (nextTab: string, opts: { replace?: boolean } = {}) => {
       setCurrentTab(nextTab);
       const def = TABS.find((t) => t.id === nextTab);
       if (!def) return;
@@ -169,7 +173,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       if (location.hash !== targetHash) {
         navigate(
           { pathname: location.pathname, search: location.search, hash: targetHash },
-          { replace: true, state: location.state },
+          { replace: opts.replace ?? false, state: location.state },
         );
       }
     },
