@@ -20,6 +20,7 @@ import DocumentManagement from '../components/documents/DocumentManagement';
 import WardManagement from '../components/wardManagement/WardManagement';
 import KarteAlphaPage from '../components/karteAlpha/KarteAlphaPage';
 import OutpatientKartePage from '../components/karteOutpatient/OutpatientKartePage';
+import KartePage from '../components/karte/KartePage';
 import DesignGuide from '../components/designGuide/DesignGuide';
 import { CARE_PLAN_ROUTES } from '../features/carePlan/routes';
 import { FLOWSHEET_ROUTES } from '../features/flowsheet/routes';
@@ -33,6 +34,7 @@ const AppRoutes: React.FC = () => (
       <Route path="/patients/:patientId" element={<PatientMain />} />
       <Route path="/karte-alpha/:patientId" element={<KarteAlphaPage />} />
       <Route path="/karte-outpatient/:patientId" element={<OutpatientKartePage />} />
+      <Route path="/karte/:patientId" element={<KartePage />} />
       <Route path="/outpatient" element={<OutpatientList />} />
       <Route path="/outpatient/:patientId/basic" element={<PatientBasicPage />} />
       <Route path="/patient-search" element={<PatientSearch />} />

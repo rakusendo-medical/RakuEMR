@@ -331,6 +331,107 @@ src/components/karte/
 
 ---
 
+## 段階 1 着手順序 [2] 完了メモ（S2 / 2026-05-06）
+
+### 実装サマリ
+
+着手順序 [2]「us-33 カルテ画面骨組み」を実装完了。`npx tsc --noEmit` / `npx vite build` クリーン（ブラウザ目視は MASTER 側で実施依頼）。
+
+- 新規ファイル
+  - `src/components/karte/KartePage.tsx`（既存 KartePage.tsx を上書き刷新）
+  - `src/components/karte/KartePatientHeader.tsx`
+  - `src/components/karte/KarteActionBar.tsx`
+- 既存温存（旧 `src/components/flowsheet/FlowsheetPage.tsx` が依存しているため触らない）
+  - `src/components/karte/PatientHeader.tsx` / `ActionBar.tsx` / `LifeTimeline.tsx` / `MedicalInfo.tsx` / `MedicalRecords.tsx`
+- ルート追加
+  - `/karte/:patientId` → `KartePage`（`src/routes/index.tsx`）
+  - `/karte-outpatient/:patientId`（`OutpatientKartePage`）は段階 1 では温存（撤去タイミングは PM 確認事項 #3）
+- `docs/screen-mapping.tsv` に `/karte/:patientId` 行追加
+
+### KartePage の mode prop API（S3 / S4 連携用契約）
+
+**型定義**（`src/components/karte/KartePage.tsx` で export）:
+
+```ts
+export type KarteMode = 'outpatient' | 'inpatient';
+
+export type KarteNavigationFrom = 'outpatient-list' | 'ward-map' | 'patient-list';
+
+export interface KartePageLocationState {
+  from?: KarteNavigationFrom;
+}
+
+interface KartePageProps {
+  /** mode を強制指定する（テスト・将来の埋込用エスケープハッチ）。通常は内部判定。 */
+  modeOverride?: KarteMode;
+}
+```
+
+**遷移時の契約（呼び出し側）**:
+
+呼び出し側は `useNavigate()` で `/karte/<patientId>` に遷移する際、`state.from` に **必ず遷移元種別** を渡すこと。`location.state` を使うのは `useAppStore` の型変更（共有ファイル変更）を避けるための統一インタフェース。
+
+```tsx
+// 外来一覧から（us-32 / S4 担当）
+navigate(`/karte/${patient.id}`, {
+  state: { from: 'outpatient-list' } satisfies KartePageLocationState,
+});
+
+// 病棟マップから（既存 KarteAlphaPage の置換時、段階 3）
+navigate(`/karte/${patient.id}`, {
+  state: { from: 'ward-map' } satisfies KartePageLocationState,
+});
+
+// 入院患者一覧から（PatientList の置換時、段階 3）
+navigate(`/karte/${patient.id}`, {
+  state: { from: 'patient-list' } satisfies KartePageLocationState,
+});
+```
+
+**mode 判定の優先順序**（`KartePage` 内部で実装済）:
+
+1. `props.modeOverride`（明示指定があれば最優先）
+2. `location.state.from === 'outpatient-list'` → `outpatient`
+3. `location.state.from === 'ward-map' | 'patient-list'` → `inpatient`
+4. `useAppStore.navigationSource === 'ward-map'` → `inpatient`（既存 `KarteAlphaPage` パターンの後方互換）
+5. `Patient.admissionState === 'outpatient'` → `outpatient`
+6. それ以外（`inpatient` / `discharged` / 未設定） → `inpatient`
+
+**戻り先判定**（`一覧に戻る` リンク）:
+
+- `state.from === 'outpatient-list'` → `/outpatient`
+- `state.from === 'ward-map'` → `/`
+- `state.from === 'patient-list'` → `/patients`
+- 未指定（直接 URL アクセス等） → mode に応じてフォールバック（`outpatient` → `/outpatient` / `inpatient` → `/`）
+
+### 段階 1 のスコープ充足状況（AC 別）
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| AC-1 タブ式 TOP（7 タブ） | ✅ 骨組み | 既定タブ「診療録」。各タブ中身は段階 1 ではプレースホルダ（フローシートのみ ep-10 埋込で実体あり） |
+| AC-2 mode 自動判定 | ✅ | 上記優先順で実装 |
+| AC-3 グレーアウト + Tooltip | ✅ | 看護過程タブが mode=outpatient で disabled。Tooltip「外来では利用しません」を `<span>` でラップ適用 |
+| AC-4 外来モード ActionBar | ✅ | 「オーダー入力／患者予約／印刷／終了（カルテを閉じる）」 |
+| AC-5 入院モード ActionBar | ✅ 枠のみ | 「入退院指示／隔離拘束指示／看護ケア記録／オーダー入力／印刷／終了」。前 3 ボタンは段階 2 で本実装するため `disabled + Tooltip「段階 2 で実装予定」` |
+| AC-6 戻るリンク | ✅ | `state.from` ベース |
+| AC-7 mode Chip | ✅ | 外来=success「外来」、入院=primary「入院」+ 病棟・病室併記。退院済補足 Chip も対応 |
+| AC-8 フローシート埋込 | ✅ | `<FlowsheetPage embedded patientId={patient.id} />`（`src/features/flowsheet/pages/FlowsheetPage.tsx`） |
+| AC-9 design-rules §12 準拠 | ✅ | §12.1〜§12.6 に従う |
+
+**未対応（後続ストーリー）**:
+
+- 患者情報タブの中身（us-34 / S3 担当）
+- 外来一覧からの遷移先 URL 切替（us-32 / S4 担当）
+- 看護過程タブ実体（ep-12〜14 配下）
+- 入退院指示／隔離拘束指示／看護ケア記録ボタンの本実装（段階 2）
+
+### S3 / S4 への申し送り
+
+- **S3（us-34）**: 患者情報タブの実装は `KartePage.tsx` 内 `KarteTabContent` の `tabId === 'patient-info'` 分岐に差し込む形で OK。または別コンポーネント `PatientInfoTab.tsx`（S3 が起こす想定）を `KartePage.tsx` から呼ぶ形が望ましい。`mode` と `patientId` は `KarteTabContent` の props で受けられる
+- **S4（us-32）**: `OutpatientList` の `navigate` 呼び出しを `/karte-outpatient/:patientId` から `/karte/:patientId` に切替え、`state: { from: 'outpatient-list' }` を必ず添える。型は `import type { KartePageLocationState } from '../karte/KartePage'` で共有可能
+
+---
+
 ## 残課題（段階 1 で扱わない）
 
 - 段階 2（mode='inpatient' 実装）／段階 3（KarteAlphaPage 置換）は別エピックで管理
