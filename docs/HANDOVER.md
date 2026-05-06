@@ -62,6 +62,14 @@
   - **記録 commit**: S4 が `bc12a57` で `docs/changes/ep-15-outpatient-emr.md` に #3 / #5 完了メモ + 巻き込み経緯を別途追記し push。
   - **教訓**: ワーカーは `git add <file>` の直後に `git diff --cached --stat` で **必ず** ステージ範囲を確認してから commit する（feedback_parallel_session_fs_interference.md 追記予定）。
 
+- **2026-05-06 ep-16 立ち上げ時のダブル巻き込み（commit `cfc0e83` と `9ba5894`）**: メッセージと実体が双方向に交差する事故。
+  - **commit `cfc0e83`**: メッセージは「docs(ep-16): Phase 0 完了 — KarteAlphaPage インベントリ + us-36/37 spec + S2 アサイン」（MASTER 担当）。**実体は S4 の us-38 work**（`src/components/wardMap/WardMap.tsx` +5/-1 / `src/components/patientList/PatientList.tsx` +5/-1）のみ。MASTER が staged した 4 ファイル（HANDOVER / changes/ep-16 / us-36 spec / us-37 spec）は **1 つも入らなかった**。
+  - **commit `9ba5894`**: メッセージは「feat(ep-16/us-38): 病棟マップ・入院患者一覧から /karte/:patientId に切替」（S4 担当）。**実体は HANDOVER + changes/ep-16-outpatient-emr-stage2.md（213 行新規）+ S3 の us-35 work**（`src/components/karte/patientInfo/{Attributes,BasicInfo,Memo}Subview.tsx`）。S4 自身の WardMap/PatientList は **`cfc0e83` に飲まれていた**。
+  - **原因**: MASTER が大量の `git add` → `git commit` 間に、S3 / S4 が並行で `git add` を実行。git index がプロセス間で共有されているため、commit 実行時に **直近 staged の塊** が消費される。MASTER の commit は S4 の index を、S4 の commit は MASTER + S3 の index を、それぞれ拾ってしまった。
+  - **判断**: コードと doc の整合は取れているため revert しない。本注記で履歴を補足。**段階 1 と同パターン・3 回目**。
+  - **未 push のまま残ったファイル**: `docs/specs/ep-16-outpatient-emr-stage2/us-36-inpatient-actions.spec.md`、`us-37-nursing-process-tab.spec.md`（後続 commit で push）。
+  - **教訓・再強調**: 並行ワーカーが多い時間帯は **`git add` から `git commit` までを文字通り即時** に閉じる（`git add file && git commit` を 1 行で）。`git add → 確認コマンド → git commit` の間に他セッションが挟むと巻き込まれる。共通 briefing `.claude/briefings/common.md` §3 の git 衛生プロトコルにこの事例を追加すべき（PM 検討）。
+
 ---
 
 ## プロジェクト概要
