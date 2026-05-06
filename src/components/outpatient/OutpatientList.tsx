@@ -21,6 +21,7 @@ import {
   CheckCircleOutline as CheckCircleIcon,
 } from '@mui/icons-material';
 import type { OutpatientStatus, OutpatientVisit } from '../../types';
+import type { KartePageLocationState } from '../karte/KartePage';
 import { OUTPATIENT_VISITS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -95,8 +96,11 @@ const OutpatientList: React.FC = () => {
     [selectedVisitId],
   );
 
-  /** ナビゲート関数（カルテ／オーダー／文書） */
-  const navigateTo = (path: string) => {
+  /** ナビゲート関数（カルテ／オーダー／文書）。
+   *  カルテ画面 (`/karte/:patientId`) へ遷移する場合は遷移元種別を `state.from` で渡す
+   *  （design-rules §12.6 / KartePage の mode 判定一次ソース）。
+   */
+  const navigateTo = (path: string, state?: KartePageLocationState) => {
     if (!selectedVisit) return;
     setSelectedPatient({
       id: selectedVisit.patientId,
@@ -111,10 +115,15 @@ const OutpatientList: React.FC = () => {
       doctorName: selectedVisit.doctorName,
       diagnosis: '',
     } as any);
-    navigate(path);
+    if (state) {
+      navigate(path, { state });
+    } else {
+      navigate(path);
+    }
   };
 
-  const handleOpenDashboard = () => navigateTo(`/karte/${selectedVisit!.patientId}`);
+  const handleOpenDashboard = () =>
+    navigateTo(`/karte/${selectedVisit!.patientId}`, { from: 'outpatient-list' });
   const handleOpenOrders = () => navigateTo(`/orders`); // 暫定: 既存オーダー管理へ
   const handleOpenDocuments = () => {
     showSnackbar(`文書登録画面は別エピックで実装予定（${selectedVisit!.patientName}）`, 'info');
@@ -329,7 +338,9 @@ const OutpatientList: React.FC = () => {
                         wardId: 'ward1' as any, roomNumber: '', bedLabel: '',
                         status: 'stable' as any, admitDate: '', doctorName: v.doctorName, diagnosis: '',
                       } as any);
-                      navigate(`/karte/${v.patientId}`);
+                      navigate(`/karte/${v.patientId}`, {
+                        state: { from: 'outpatient-list' } satisfies KartePageLocationState,
+                      });
                     }}
                     sx={{ cursor: 'pointer' }}
                   >
