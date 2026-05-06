@@ -11,6 +11,7 @@ import {
   CheckCircle, RadioButtonUnchecked, People as PeopleIcon,
 } from '@mui/icons-material';
 import type { WardId } from '../../types';
+import type { KartePageLocationState } from '../karte/KartePage';
 import { WARD_LABELS } from '../../types';
 import {
   PATIENTS, ADMISSION_HISTORY, MASTER_STAFF, MASTER_STAFF_BY_ID,
@@ -155,7 +156,9 @@ const PatientList: React.FC = () => {
     const patient = PATIENTS.find((p) => p.id === patientId);
     if (patient) {
       setSelectedPatient(patient);
-      navigate(`/karte-alpha/${patientId}`);
+      navigate(`/karte/${patientId}`, {
+        state: { from: 'patient-list' } satisfies KartePageLocationState,
+      });
     }
   };
 

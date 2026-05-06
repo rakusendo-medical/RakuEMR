@@ -13,6 +13,7 @@ import {
   Lock as LockIcon,
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, UnassignedPatient, WardId } from '../../types';
+import type { KartePageLocationState } from '../karte/KartePage';
 import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
@@ -74,7 +75,9 @@ const WardMap: React.FC = () => {
       // 部門記録簿（看護記録）画面へ
       navigate('/nursing');
     } else {
-      navigate(`/karte-alpha/${patientId}`);
+      navigate(`/karte/${patientId}`, {
+        state: { from: 'ward-map' } satisfies KartePageLocationState,
+      });
     }
   }, [navigate, setSelectedPatient, setWardMapNavigation, wardOrderedPatientIds]);
 
