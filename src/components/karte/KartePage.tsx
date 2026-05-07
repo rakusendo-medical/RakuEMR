@@ -24,6 +24,7 @@ import KarteActionBar from './KarteActionBar';
 import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
 import PatientInfoTab from './PatientInfoTab';
 import MedicalRecordTab from './MedicalRecordTab';
+import OrderStatusTab from './OrderStatusTab';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -381,14 +382,20 @@ function KarteTabContent({
     );
   }
 
+  if (tabId === 'order-status') {
+    return (
+      <OrderStatusTab
+        patient={patient}
+        mode={mode}
+        onOpenOrdersTab={onOpenOrdersTab}
+      />
+    );
+  }
+
   const meta: Record<string, { title: string; note: string }> = {
     orders: {
       title: '指示簿',
       note: '段階 1 ではタブ枠のみ。オーダー一覧の埋込は別エピックで対応。',
-    },
-    'order-status': {
-      title: '指示状況',
-      note: '段階 1 ではタブ枠のみ。実施状況・受け持ち情報は別エピックで対応。',
     },
     'care-plan': {
       title: '看護過程',
