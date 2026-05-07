@@ -52,6 +52,21 @@ for worker in s2 s3 s4; do
     # main から ahead でなければ fast-forward マージ
     git merge origin/main --ff-only --quiet 2>/dev/null || true
   )
+
+  # ブリーフィングディレクトリへのシンボリックリンクを設置
+  # （.claude/briefings/ は gitignore のため worktree には個別配備されない・
+  #  全 worktree で MASTER のブリーフィングを共有する）
+  briefing_link="$dir/.claude/briefings"
+  briefing_target="$repo_root/.claude/briefings"
+  if [ ! -e "$briefing_link" ]; then
+    mkdir -p "$dir/.claude"
+    ln -s "$briefing_target" "$briefing_link"
+    echo "[$worker] Symlinked .claude/briefings -> $briefing_target"
+  elif [ -L "$briefing_link" ]; then
+    echo "[$worker] .claude/briefings symlink already in place"
+  else
+    echo "[$worker] WARNING: .claude/briefings exists and is not a symlink. Skipping."
+  fi
 done
 
 echo

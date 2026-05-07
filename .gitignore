@@ -51,4 +51,5 @@ docs/manuals/
 ~$*
 
 # PM ブリーフィング（PM 主導の都度更新ファイル・git に残さない）
-.claude/briefings/
+# 末尾スラッシュなしで symlink もカバーする（ワーカー worktree 用）
+.claude/briefings
