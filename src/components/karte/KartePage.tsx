@@ -23,6 +23,7 @@ import KartePatientHeader from './KartePatientHeader';
 import KarteActionBar from './KarteActionBar';
 import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
 import PatientInfoTab from './PatientInfoTab';
+import MedicalRecordTab from './MedicalRecordTab';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -291,6 +292,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           patient={patient}
           onPatientInfoDirty={onPatientInfoDirty}
           discardSignal={discardSignal}
+          onOpenOrdersTab={() => attemptTabChange('orders')}
         />
       </Box>
 
@@ -345,12 +347,14 @@ function KarteTabContent({
   patient,
   onPatientInfoDirty,
   discardSignal,
+  onOpenOrdersTab,
 }: {
   tabId: string;
   mode: KarteMode;
   patient: Patient;
   onPatientInfoDirty: (d: boolean) => void;
   discardSignal: number;
+  onOpenOrdersTab: () => void;
 }) {
   if (tabId === 'flowsheet') {
     return <FlowsheetPage embedded patientId={patient.id} />;
@@ -367,11 +371,17 @@ function KarteTabContent({
     );
   }
 
+  if (tabId === 'medical-record') {
+    return (
+      <MedicalRecordTab
+        patient={patient}
+        mode={mode}
+        onOpenOrdersTab={onOpenOrdersTab}
+      />
+    );
+  }
+
   const meta: Record<string, { title: string; note: string }> = {
-    'medical-record': {
-      title: '診療録',
-      note: '段階 1 ではタブ枠のみ。診療録ビューは別ストーリーで実装予定。',
-    },
     orders: {
       title: '指示簿',
       note: '段階 1 ではタブ枠のみ。オーダー一覧の埋込は別エピックで対応。',

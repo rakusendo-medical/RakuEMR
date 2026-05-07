@@ -266,3 +266,84 @@ ep-15 us-32（`OutpatientList.tsx`）で確立した呼び出し側パターン�
 - `npx tsc --noEmit` クリーン
 - `npx vite build` クリーン
 - ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
+
+---
+
+## us-43 診療録タブ実装 完了メモ（MASTER / 2026-05-07）
+
+### 経緯
+
+PM フィードバック「Alpha では各部門の診療録やオーダーが全てタイムライン形式で集約されていた、その部分は大きく変更が必要」を踏まえ、KartePage の `medical-record` タブのプレースホルダを置換。
+
+### 実装サマリ
+
+新規ファイル: `src/components/karte/MedicalRecordTab.tsx`（約 380 行）
+
+**集約タイムライン**（PM 強調点）:
+
+- KarteAlphaPage の `MOCK_RECORDS` から代表 10 エントリを内部に保持（4 カテゴリ: 医師記録 / 看護記録 / 看護サマリ / 入退院記録）
+- `mockData.ts` の `ORDERS` を `patient.id` でフィルタしてオーダー型タイムラインレコードに変換（カテゴリ「オーダー」・色 `#0891b2`）
+- 統合後 `timestamp` 降順ソート → カテゴリ Chip + 著者 + ロール + タイムスタンプ + orderNumber + tags + 本文（100 字超は「展開」可）
+- カテゴリフィルタ Chip 6 種 + 件数表示
+- スクロール可能（max-height 360px）
+
+**新規 SOAP 記載（折りたたみ可）**:
+
+- 4 セクション TextField（S/O/A/P・各 multiline・helper 付き）
+- テンプレート選択 4 種（初診 / 再診 / 経過観察 / カンファ）+ 「テンプレート挿入」
+- dirty 検出は 4 値の OR → `onDirtyChange` で KartePage に上げる
+- 添付ファイルエリア + 描画ツールエリア（家系図 / シェーマ・プレースホルダダイアログ）
+
+**診療録専用アクションバー**（sticky bottom・8 ボタン）:
+
+- 保存（mock snackbar・SOAP リセット）／診察終了／閉じる／予約登録（プレースホルダ）／印刷（`window.print()`）／添付（mock）／家系図／シェーマ
+- 保存ボタンは mode に応じて `success`（外来）/`primary`（入院）色
+
+**KartePage 統合**:
+
+- `medicalRecordDirty` state + `onMedicalRecordDirty` callback 追加
+- `attemptTabChange` / `handleBack` / `handleConfirmDiscard` を双方 dirty の OR 評価に拡張
+- `KarteTabContent` の `medical-record` 分岐を `<MedicalRecordTab />` に差替（meta プレースホルダから移動）
+- `onOpenOrdersTab = () => attemptTabChange('orders')` を渡し、「指示簿タブを開く」が us-33 AC-10 ハッシュ仕様準拠で動作
+
+**プレースホルダ範囲**（別ストーリー予定）:
+
+- Fabric.js キャンバス描画（家系図 / シェーマ）
+- ファイルアップロード実機能
+- リビジョン管理（履歴アイコン → snackbar）
+- ORCA 連携 / 実 API 永続化
+- 予約登録ダイアログ
+
+### AC 充足
+
+- [x] AC-1 過去カルテエリア（フィルタ Chip + 集約タイムライン + 件数表示）
+- [x] AC-2 SOAP 4 セクション
+- [x] AC-3 テンプレート選択 + 挿入
+- [x] AC-4 添付ファイル mock（snackbar）
+- [x] AC-5 家系図 / シェーマ プレースホルダダイアログ
+- [x] AC-6 アクションバー 8 ボタン
+- [x] AC-7 未保存検知が KartePage 共通フローに統合（patient-info と同型・OR 評価）
+- [x] AC-8 「指示簿タブを開く」→ `attemptTabChange('orders')` で URL ハッシュも更新
+- [x] AC-9 design-rules §3 / §6 / §10 / §11 / §12 準拠
+
+### 共有ファイル変更
+
+- `src/components/karte/KartePage.tsx`: 1 ファイル更新（medical-record 分岐差替 + dirty 双方評価 + onOpenOrdersTab 配線）
+- `src/components/karte/MedicalRecordTab.tsx`: 新規
+- `src/types/index.ts` / `src/stores/useAppStore.ts` / `src/data/mockData.ts` の `MASTER_*` / `src/components/common/`: 触らず
+
+### 検証（us-43）
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+- dev server 上で HMR 反映確認 → ブラウザ目視は PM に依頼
+
+### 設計判断（暫定・MASTER 単独実装は PM 判断による例外）
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | MOCK_RECORDS は MedicalRecordTab.tsx 内にインライン | 患者横断の固定サンプル、データソース統合は段階 3 で再整理。共有ファイル変更を回避 |
+| 2 | オーダーをタイムラインに統合（カテゴリ「オーダー」追加） | PM 強調点に直接対応 |
+| 3 | 隔離拘束指示リンク群（`RestraintOrderLinks`）は本 us では埋込まず | us-36 サブ B との編集域重複回避。サブ B 着手時に MASTER で結合 |
+| 4 | テンプレート 4 種はハードコード | gairai `useFetchTemplateEntrySetsQuery()` 相当は段階 3 で API 化想定 |
+| 5 | 過去カルテのページングは scroll で代用 | 「最初へ ▲」「続き ▼」相当は段階 3（API 連携時に詰める） |

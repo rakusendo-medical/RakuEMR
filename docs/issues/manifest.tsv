@@ -48,3 +48,11 @@ user-story/us-33-karte-screen.md	[外来] カルテ画面（タブ式 TOP・mode
 user-story/us-34-patient-info-subtabs.md	[外来] 患者情報サブタブ	story,area/outpatient	epics/ep-15-outpatient-emr.md	story
 epics/ep-16-outpatient-emr-stage2.md	[外来] 外来 EMR 刷新・段階 2（入院 mode 本実装と入院機能の段階移植）	epic,area/outpatient		epic
 epics/ep-17-outpatient-emr-stage3.md	[外来] 外来 EMR 刷新・段階 3（KarteAlphaPage 撤去とルート統合）	epic,area/outpatient		epic
+user-story/us-43-medical-record-tab.md	[外来] 診療録タブ実装（カルテ記載 + 過去カルテ参照）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-44-patient-header-enhanced.md	[外来] 患者ヘッダー強化（mode 配色 + 8 ピクトグラム + 業務情報）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-45-life-history-timeline.md	[外来] 生活歴タイムラインパネル（縦軸時系列マトリクス・5 行）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-46-clinical-info-panel.md	[外来] 診療情報パネル + サブセクションタブ	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-47-medical-record-tab-refinements.md	[外来] 診療録タブ追補（期間切替 / タグ filter / ナビ動作）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-50-orders-tab.md	[外来] 指示簿タブ実装（最小実装）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-51-order-status-tab.md	[外来] 指示状況タブ実装（最小実装）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-52-schedule-tab.md	[外来] スケジュールタブ実装（最小実装）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
