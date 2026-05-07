@@ -343,3 +343,138 @@ ep-12 / ep-13 / ep-14 の spec が「mock の現状を spec として記述し�
 - 既存実装の `MonthlyEvaluation.tsx` の見た目・操作の改善（必要なら）
 - 看護経過記録ダイアログとの本格統合（評価転記時に NursingRecordDialog を呼ぶ）
 - 印刷レイアウトの見直し
+
+---
+
+## 進捗ヒアリング材料整備（S4・2026-05-07）
+
+ep-16 us-37「看護過程タブ統合」着手判定のため、ep-12 / ep-13 / ep-14 の現状を 4 観点で整理する。HANDOVER「MASTER 待ち事項」の起票（2026-05-06）に対応。
+
+### 観点 1. 各 ep の現状サマリ
+
+| epic | story | spec ステータス | spec AC 件数 | mock 改修状況 | 追加対応の要否（us-37 視点） |
+| --- | --- | --- | --- | --- | --- |
+| ep-12 看護診断 | us-28 | draft（方針 Y 適用済） | 9 件（AC-1〜AC-9） | **mock 改修フェーズ 1 完了**（commit `96ba0d4`）。`ProblemItem.diagnosedAt` 追加 + `DiagnosisHistoryDialog` 新規（履歴参照モード） | **不要**（NandaSelectDialog は `ProblemItemEditDialog` 内のサブ呼出のみ。タブ直下ではない） |
+| ep-13 看護計画 | us-29 | draft（方針 Y + 1 例外適用済） | 17 件（AC-1〜AC-17） | **mock 改修フェーズ 2 完了**（commit `8125792`）。`CarePlan` に `periodStart` / `periodEnd?` 追加、期間プルダウン、自動クローズロジック実装 | **本丸**（`PatientCarePlan.tsx` がタブ直下の埋込本体） |
+| ep-14 看護評価 | us-31 | draft（方針 Y 適用済） | 11 件（AC-1〜AC-11） | 既存 `MonthlyEvaluation.tsx` + `EvaluationForm.tsx` で要件充足、追加 mock 改修なし | **当面不要**（MonthlyEvaluation はサブ画面遷移として標準。ただし将来 embedded 対応の余地あり） |
+| ep-14 旧 us-30 評価項目立案 | us-30 | **削除確定**（2026-05-04 ユーザー判定 #14） | — | spec ファイルは未削除のまま残置 | spec ファイル削除作業が積み残し（us-37 とは独立） |
+
+**まとめ**:
+
+- **mock 改修フェーズ 1 / 2 は両方とも 2026-05-04 commit 済**。HANDOVER L139-141 の「mock 改修フェーズ 2 進行中」記載は **古い**（2026-05-04 時点で完了している）。
+- ep-12-13-14-integration.md 冒頭の Q1〜Q5（方針 Y 確定 / spec 全面書き直し / xlsx 注記 / 看護経過記録ダイアログ統合タイミング / us-30 削除）は **PM 判定済**（19 項目判定が 2026-05-04 に降りている）。残るのは spec 全面書き直し（Q2）の作業実施タイミング。
+- us-37 の観点では、**ep-13 の `PatientCarePlan` 埋込が技術的にすぐ着手可能な状態**にある。
+
+### 観点 2. 直近のコード変更（src/features/carePlan/ 履歴）
+
+```
+8125792  2026-05-04  feat(care-plan): mock 改修フェーズ 2 — 期間で区切る複数計画モデル
+96ba0d4  2026-05-04  feat(care-plan): mock 改修フェーズ 1 — 診断日 + 履歴参照ダイアログ
+54df12d  2026-05-04  feat(care-plan): 問題点（手入力）フィールドを ProblemItem に追加
+e0b7311  ...         docs: ドキュメント整備とサイドバー導線の整理（横断）
+2af95ed  ...         看護計画を看護過程として変更（用語統一）
+7635ab3  ...         看護計画についてモックアップを開発（初期実装）
+```
+
+ep-12 / ep-13 / ep-14 専用の commit は上記 6 件のみ。**`8125792` 以降は新規変更なし**（直近 3 日間動きなし）。
+
+#### 8125792（フェーズ 2）スコープ要約
+
+- `types.ts` — `CarePlan` に `periodStart` / `periodEnd?` を追加（オプショナル、`createdAt` フォールバック）
+- `mockData.ts` — 既存 CARE_PLANS 全件に `periodStart` 補完。P001 山田太郎に「過去期間（cp-001-prev / closed）+ 現在期間（cp-001 / active）」のサンプル
+- `store.ts` — `createCarePlan` 拡張（前計画自動クローズ）、`updateCarePlanMeta` で期間重複バリデーション、`planPeriod` / `periodsOverlap` / `addDayISO` 補助
+- `CarePlanEditDialog.tsx` — 期間開始日 / 継続中チェック / 期間終了日
+- `PatientCarePlan.tsx` — 期間プルダウン（240px）+「+ 新規期間で計画立案」、患者切替時に最新期間自動選択
+- `CarePlanCreate.tsx` — 既存有効計画ありでもブロック解除（自動クローズで吸収）
+
+#### 96ba0d4（フェーズ 1）スコープ要約
+
+- `types.ts` — `ProblemItem.diagnosedAt?: ISODate` を追加（任意・後方互換、未設定時 `createdAt` フォールバック）
+- `ProblemItemEditDialog.tsx` — `DraftItem.diagnosedAt` 入力フィールド + Tooltip
+- `store.ts` — `addProblemItem` で `problemStatement` / `diagnosedAt` を保持
+- `ProblemItemCard.tsx` / `PrintLayout.tsx` — `diagnosedAt` 表示（`createdAt` と異なる場合のみ）
+- `DiagnosisHistoryDialog.tsx`（新規）— 履歴参照モード（読み取り専用、ページめくり）
+
+### 観点 3. 看護過程タブ統合 API の現状（embedded / patientId 対応）
+
+| 対象 | ファイル | `embedded?` prop | `patientId?` prop | 統合可能性 |
+| --- | --- | --- | --- | --- |
+| **看護過程画面（タブ本体候補）** | `pages/PatientCarePlan.tsx` | ✅ あり（line 28） | ✅ あり（line 30、`useParams` フォールバック） | **即着手可能**。`<PatientCarePlan embedded patientId={...} />` で埋込可。`!embedded` 時に `PatientHeader` を非表示にする実装あり（L134, L159） |
+| 計画立案画面 | `pages/CarePlanCreate.tsx` | ✅ あり（line 21） | ✅ あり（line 22） + `onActivated?` callback | **PatientCarePlan 内部で連携済**（L135 `<CarePlanCreate embedded patientId={...} />`）。タブ統合時に追加対応不要 |
+| 月次評価画面 | `pages/MonthlyEvaluation.tsx` | ❌ なし | ❌ なし | **standalone のみ**（[評価する] ボタンで `/care-plan/patients/:patientId/evaluate` に遷移する設計）。タブ統合では現状の遷移を維持で OK。将来 embedded 化する場合は要対応 |
+| ダッシュボード | `pages/Dashboard.tsx` | ❌ なし（不要） | ❌ なし | 担当看護師の患者一覧画面。タブ統合の対象外 |
+| 看護診断ダイアログ | `components/NandaSelectDialog.tsx` | — | — | `ProblemItemEditDialog` 内のサブ呼出のみ。タブ直下ではない |
+| 履歴参照ダイアログ | `components/DiagnosisHistoryDialog.tsx` | — | — | `PatientCarePlan` 内ボタンから起動。タブ統合時は自動的に追従 |
+
+#### カルテ画面側（KartePage）の準備状況
+
+- `src/components/karte/KartePage.tsx` で `tabId='care-plan'` / `hash='nursing-process'` の枠組みは既設定（L59-61, L383）
+- 現状は `KarteActionBar` 側で disabled + Tooltip（HANDOVER L14 で S2 が us-33 着手時に対応済）
+- **us-37 でやるべきこと**: `KartePage.tsx` の `KarteTabContent` 内 `'care-plan'` 分岐に `<PatientCarePlan embedded patientId={patient.id} />` を埋込み、`KarteActionBar` の disabled を解除
+
+### 観点 4. PM ヒアリング設問素案（5〜8 件）
+
+mock 改修フェーズ 2 が 2026-05-04 完了済の前提で、us-37 着手判定に必要な未確定事項を抽出。**HANDOVER MASTER 待ち事項記載「ep-12〜14 担当者」「mock 改修フェーズ 2 完了見込み」は実態と乖離**しているため、設問は「現状確認 + spec 書き直しのタイミング判断」に再フォーカスする。
+
+#### Q-1. mock 改修フェーズ 2 の追加作業有無
+
+> commit `8125792`（2026-05-04）で「期間で区切る複数計画モデル」は実装完了している認識でよいか？ 残作業（バグ修正・追加要件）は無いか？
+
+期待回答: 完了 / 追加要件あり（具体内容）
+
+#### Q-2. spec 全面書き直し（Q2 再掲）の作業タイミング
+
+> 2026-05-04 整理ドキュメント Q2 で「spec の書き直しは大きい」とユーザーに尋ねている件。**MASTER で実施 / 別途依頼 / 後回し** のいずれか確定したか？ us-37 着手前に書き直しを完了させたいか？
+
+期待回答: 着手前必須 / 着手と並行で OK / us-37 完了後でも可
+
+#### Q-3. us-30 spec ファイルの削除
+
+> 2026-05-04 ユーザー判定 #14 で「us-30 評価項目立案 spec ごと削除」確定済だが、ファイルはまだ残っている。削除を MASTER に依頼してよいか？ それとも「将来検討」コメント追記で残置か？
+
+期待回答: 削除 / 残置 + 注記
+
+#### Q-4. 看護経過記録ダイアログ統合（Q4 再掲）
+
+> 2026-05-04 整理ドキュメント Q4 で 3 案（A 即統合 / B 月次評価経由のみ / C 後回し）。us-37 タブ統合と同時に踏み込むか？ ep-13 spec の「過去診断を参照」リンクは us-37 で実装するか別タスクか？
+
+期待回答: A / B / C ＋ 実装担当ワーカー
+
+#### Q-5. 月次評価画面（MonthlyEvaluation）のタブ埋込スコープ
+
+> 現状 `MonthlyEvaluation.tsx` は `embedded` 未対応・standalone 専用（`/care-plan/patients/:patientId/evaluate` 遷移）。us-37 では PatientCarePlan のみタブ埋込し、評価画面は遷移を維持してよいか？ それとも評価画面も埋込対象にしたいか？
+
+期待回答: PatientCarePlan のみ embedded / 評価画面も embedded / 別タスクで段階対応
+
+#### Q-6. us-37 担当ワーカーアサイン
+
+> us-37 着手の準備が整った場合、担当は誰にするか？ 候補: S2（us-36 完了後）/ S3（us-35 完了済・継続）/ S4（us-38 完了済・継続）/ MASTER 直轄
+
+期待回答: 担当ワーカー名
+
+#### Q-7. ep-12-13-14 担当ワーカーの不在前提の確認
+
+> HANDOVER MASTER 待ち事項に「ep-12〜14 担当ワーカー（不明）にヒアリング」とあるが、実態は **2026-05-04 にユーザー（PM）が判定 + mock 改修も同日完了** で、専従ワーカーは存在しない（恐らく PM 直轄 + MASTER 補佐）。この認識でよいか？
+
+期待回答: その通り / 別の担当者あり
+
+#### Q-8. ep-13 期間モデルの動作確認状況
+
+> commit `8125792` 後にブラウザ目視は実施済か？ 「過去期間 cp-001-prev + 現在期間 cp-001」の切替動作・自動クローズ動作を確認したか？ 未実施なら us-37 着手前に確認したいか？
+
+期待回答: 確認済 / 未確認、着手前に必要 / 未確認、着手と並行で OK
+
+### 結論（S4 推奨）
+
+us-37 は **技術的に即着手可能**。前提となる ep-13 mock 改修フェーズ 2 は 2026-05-04 完了済で、`PatientCarePlan` の `embedded` / `patientId` prop もすでに整備されている。
+
+判断必要な残事項は以下のみ:
+
+1. **spec 全面書き直し（Q-2）の実施タイミング** — us-37 着手前 / 並行 / 後回し
+2. **看護経過記録ダイアログ統合（Q-4）のスコープ** — us-37 に含めるか別タスクか
+3. **us-37 担当ワーカー（Q-6）** — S2/S3/S4 のいずれか or MASTER
+
+これらが PM 判定で確定すれば、us-37 の spec 起こし → 担当ワーカーアサイン → 着手 が連続して進められる。**HANDOVER MASTER 待ち事項の「ep-12〜14 担当者ヒアリング」は実質的に不要**で、上記 Q-1〜Q-8 を PM 自身が判定すれば前提が揃う。
+
+整理担当: S4（worker/s4） / 2026-05-07
+コード変更: なし（ドキュメント整理のみ）
