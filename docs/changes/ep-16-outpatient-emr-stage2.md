@@ -211,3 +211,58 @@ S4 担当。spec: [`us-38-navigation-state-from.spec.md`](../specs/ep-16-outpati
 - `npx tsc --noEmit` クリーン
 - `npx vite build` クリーン（既存と同程度の bundle サイズ）
 - ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
+
+---
+
+## us-38 病棟マップ等の遷移元修正 完了メモ（S4 / 2026-05-07）
+
+### 実装サマリ
+
+着手順序 [Phase 2b]「病棟マップ・入院患者一覧から /karte/:patientId への遷移先切替 + state.from 付与」を実装完了。tsc / vite build クリーン。
+
+- `src/components/wardMap/WardMap.tsx` (L77 `navigateToKarte`):
+  - `navigate(`/karte-alpha/${patientId}`)` → `navigate(`/karte/${patientId}`, { state: { from: 'ward-map' } satisfies KartePageLocationState })`
+  - 冒頭に `import type { KartePageLocationState } from '../karte/KartePage';` を追加
+- `src/components/patientList/PatientList.tsx` (L158 `navigateToKarte`):
+  - 同様に `/karte-alpha/...` → `/karte/...` + `state: { from: 'patient-list' }` 添付
+  - 冒頭に同型を import
+
+ep-15 us-32（`OutpatientList.tsx`）で確立した呼び出し側パターン（`satisfies KartePageLocationState` 付き）を踏襲。
+
+### AC 充足状況
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| AC-1 病棟マップから新カルテ画面に遷移 | ✅ | `state.from='ward-map'` を確認可 |
+| AC-2 入院患者一覧から新カルテ画面に遷移 | ✅ | `state.from='patient-list'` を確認可 |
+| AC-3 mode='inpatient' で動作 | ✅ | `KartePage` の優先順序 3（`state.from` ベース）で確定。フォールバック不要 |
+| AC-4 戻り先判定が新ルートで動作 | ✅ | `KartePage` 内部で同 state を参照（既実装） |
+| AC-5 `/karte-alpha/:patientId` 経路温存 | ✅ | `routes/index.tsx` 変更なし、ルート定義は段階 2 中保持 |
+| AC-6 既存 `/karte-alpha` 経路リグレッションなし | ✅ | spec の「それ以外（管理画面など）: 触らない」原則に従い `patientMain/`、`isolation/`、`karteAlpha/` 内部、`admission/AdmissionScheduleCalendar.tsx` は温存 |
+
+### スコープ外（温存判断）
+
+`grep -rn "navigate.*karte-alpha" src/` で 6 箇所列挙、修正対象を 2 箇所に絞込。残り 4 箇所は段階 3（ep-17）で扱う:
+
+- `src/components/patientMain/PatientMain.tsx:129` — 「カルテ(α)を開く」ボタン（α 版意図的なデバッグ用）
+- `src/components/isolation/IsolationRestraint.tsx:270` — 隔離拘束一覧画面の遷移（管理系）
+- `src/components/karteAlpha/KarteAlphaPage.tsx:258` — KarteAlphaPage 内部の前後ナビ
+- `src/components/admission/AdmissionScheduleCalendar.tsx:90` — 入退院手続き配下の管理画面
+
+### 並行干渉の経緯（記録）
+
+実装本体は **MASTER のコミット `cfc0e83`（Phase 0 完了）に並行編集で巻き込まれて push 済**。S4 が編集中に MASTER がコミットしたタイミングで `WardMap.tsx` / `PatientList.tsx` の差分が `cfc0e83` に取り込まれた（MASTER のコミットメッセージは Phase 0 だが実態には us-38 実装も含む）。
+
+その後 S4 自身のコミット `9ba5894`（メッセージ「feat(ep-16/us-38)」）には実装本体が含まれず、代わりに HANDOVER + ep-16 changes ファイル新設 + S3 の patientInfo 3 ファイル（`AttributesSubview` / `BasicInfoSubview` / `MemoSubview`）が混入した。MASTER が `3f55277` でフォロー（未 push の us-36/37 spec を push、HANDOVER に干渉事例追記）。
+
+これは段階 1 で 2 度発生した同パターン（FS 共有による index 巻き込み）の 3 例目。本セッションでは **stash 戦略**（HANDOVER 編集前に S3 の未コミット変更を `git stash` で退避）を試みたが、`git add <file>` 時点で他セッションのインデックス取り込みが発生する根本問題は防げなかった。
+
+### 共有ファイル変更
+
+なし（`types` / `store` / `mockData` の `MASTER_*` / `common` / `routes` 触らず）。`src/components/wardMap/` と `src/components/patientList/` 内に閉じる変更のみ（各 1 ファイル、+5/-1 行）。
+
+### 検証
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン
+- ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
