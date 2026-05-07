@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Box, Card, CardContent, Stack, Typography, Chip, Divider,
+  Box, Stack, Typography, Chip, Divider,
   Table, TableBody, TableRow, TableCell, LinearProgress,
 } from '@mui/material';
 import {
@@ -76,14 +76,20 @@ export default function ClinicalInfoPanel({ patient, mode }: ClinicalInfoPanelPr
       : '#1e3a5f';
 
   return (
-    <Card sx={{ mx: 2, mt: 1, mb: 0.5, overflow: 'visible' }}>
+    <Box
+      sx={{
+        bgcolor: 'background.paper',
+        borderBottom: 1,
+        borderColor: 'divider',
+      }}
+    >
       <SectionHeader
         title="診療情報"
         color={headerColor}
         open={open}
         onToggle={() => setOpen(!open)}
         rightSlot={
-          <Stack direction="row" spacing={0.25} alignItems="center" onClick={(e) => e.stopPropagation()}>
+          <Stack direction="row" spacing={0.25} alignItems="center" onClick={(e) => e.stopPropagation()} sx={{ flexWrap: 'wrap', rowGap: 0.25 }}>
             {SUB_TABS.map((t) => (
               <Chip
                 key={t.key}
@@ -96,14 +102,17 @@ export default function ClinicalInfoPanel({ patient, mode }: ClinicalInfoPanelPr
                   setSubTab(t.key);
                   if (!open) setOpen(true);
                 }}
-                sx={{ height: 22, fontSize: '0.65rem', borderRadius: 0.5 }}
+                sx={{
+                  height: 22, fontSize: '0.65rem', borderRadius: 0.5,
+                  bgcolor: subTab === t.key ? '#fff' : 'rgba(255,255,255,0.85)',
+                }}
               />
             ))}
           </Stack>
         }
       />
       {open && (
-        <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+        <Box sx={{ px: 2, py: 1 }}>
           {subTab === 'diagnosis' && <DiagnosisContent patient={patient} />}
           {subTab === 'basic' && <BasicInfoContent patient={patient} />}
           {subTab === 'gaf' && <GafContent />}
@@ -111,9 +120,9 @@ export default function ClinicalInfoPanel({ patient, mode }: ClinicalInfoPanelPr
           {subTab === 'family' && <FamilyContent />}
           {subTab === 'clinical-path' && <ClinicalPathContent />}
           {subTab === 'orders-admission' && <OrdersAdmissionContent patient={patient} />}
-        </CardContent>
+        </Box>
       )}
-    </Card>
+    </Box>
   );
 }
 
