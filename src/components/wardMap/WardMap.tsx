@@ -248,6 +248,10 @@ const WardMap: React.FC = () => {
                       <Box
                         key={bed.bed}
                         onClick={() => handleBedClick(bed)}
+                        onDoubleClick={() => {
+                          if (bed.disabled || !bed.patientId) return;
+                          navigateToKarte(bed.patientId);
+                        }}
                         sx={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                           px: 1.5, py: 1, minHeight: 56, borderBottom: '1px solid #f1f5f9',
