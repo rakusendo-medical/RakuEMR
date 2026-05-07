@@ -24,6 +24,7 @@ import KarteActionBar from './KarteActionBar';
 import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
 import PatientInfoTab from './PatientInfoTab';
 import MedicalRecordTab from './MedicalRecordTab';
+import ClinicalInfoPanel from './ClinicalInfoPanel';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -248,6 +249,8 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <KartePatientHeader patient={patient} mode={mode} onBack={handleBack} />
+
+      <ClinicalInfoPanel patient={patient} mode={mode} />
 
       <Box
         sx={{
