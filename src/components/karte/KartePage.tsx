@@ -24,6 +24,7 @@ import KarteActionBar from './KarteActionBar';
 import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
 import PatientInfoTab from './PatientInfoTab';
 import MedicalRecordTab from './MedicalRecordTab';
+import OrdersTab from './OrdersTab';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -293,6 +294,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           onPatientInfoDirty={onPatientInfoDirty}
           discardSignal={discardSignal}
           onOpenOrdersTab={() => attemptTabChange('orders')}
+          onOpenOrderStatusTab={() => attemptTabChange('order-status')}
         />
       </Box>
 
@@ -348,6 +350,7 @@ function KarteTabContent({
   onPatientInfoDirty,
   discardSignal,
   onOpenOrdersTab,
+  onOpenOrderStatusTab,
 }: {
   tabId: string;
   mode: KarteMode;
@@ -355,6 +358,7 @@ function KarteTabContent({
   onPatientInfoDirty: (d: boolean) => void;
   discardSignal: number;
   onOpenOrdersTab: () => void;
+  onOpenOrderStatusTab: () => void;
 }) {
   if (tabId === 'flowsheet') {
     return <FlowsheetPage embedded patientId={patient.id} />;
@@ -381,11 +385,17 @@ function KarteTabContent({
     );
   }
 
+  if (tabId === 'orders') {
+    return (
+      <OrdersTab
+        patient={patient}
+        mode={mode}
+        onOpenOrderStatusTab={onOpenOrderStatusTab}
+      />
+    );
+  }
+
   const meta: Record<string, { title: string; note: string }> = {
-    orders: {
-      title: '指示簿',
-      note: '段階 1 ではタブ枠のみ。オーダー一覧の埋込は別エピックで対応。',
-    },
     'order-status': {
       title: '指示状況',
       note: '段階 1 ではタブ枠のみ。実施状況・受け持ち情報は別エピックで対応。',
