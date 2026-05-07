@@ -7,7 +7,7 @@
 | 業務領域 | 外来・共通（入院機能の刷新） |
 | 想定ロール | 主治医、病棟看護師、入院担当 |
 | 主要画面 | カルテ画面 `/karte/:patientId`（mode='inpatient'）、病棟マップ `/`、入院患者一覧 `/patients` |
-| 子ストーリー | us-35 / us-36（後続） / us-37（後続） / us-38 |
+| 子ストーリー | us-35 / us-36（後続） / us-37（後続） / us-38 / us-43（診療録タブ）/ us-44〜47（患者ヘッダー・生活歴・診療情報・診療録追補）/ us-50〜52（指示簿・指示状況・スケジュール）— 2026-05-07 PM 指示で順次追加起票 |
 | ステータス | draft |
 
 ### 参考システムマニュアル（エピック横断）
@@ -71,6 +71,14 @@ ep-15（段階 1）で確立した新カルテ画面コンポーネント（`/ka
 | us-36 | 入院アクション本実装 | （後続・Phase 0 後に起こす） | Phase 0 完了後 |
 | us-37 | 看護過程タブ統合 | （後続・ep-12〜14 進捗確認後に起こす） | ep-12〜14 進捗依存 |
 | us-38 | 病棟マップ等の遷移元修正 | [us-38-navigation-state-from.spec.md](./us-38-navigation-state-from.spec.md) | us-35 と並列可（KartePage の mode 判定が動けば良い） |
+| us-43 | 診療録タブ実装（カルテ記載 + 過去カルテ参照） | [us-43-medical-record-tab.spec.md](./us-43-medical-record-tab.spec.md) | us-35 完了後着手可。us-36 サブ B（隔離拘束指示）と編集域が重なるため MASTER で調整 |
+| us-44 | 患者ヘッダー強化（mode 配色 + 8 ピクトグラム + 業務情報） | [us-44-patient-header-enhanced.spec.md](./us-44-patient-header-enhanced.spec.md) | MASTER 担当・PM 指示 2026-05-07 |
+| us-45 | 生活歴タイムラインパネル（5 行） | [us-45-life-history-timeline.spec.md](./us-45-life-history-timeline.spec.md) | デイケア列削除済（5 行構成）。後発 |
+| us-46 | 診療情報パネル + サブセクションタブ（7 種） | [us-46-clinical-info-panel.spec.md](./us-46-clinical-info-panel.spec.md) | MASTER 担当 |
+| us-47 | 診療録タブ追補（期間切替 / タグ filter / ナビ動作） | [us-47-medical-record-tab-refinements.spec.md](./us-47-medical-record-tab-refinements.spec.md) | us-43 拡張・MASTER 担当 |
+| us-50 | 指示簿タブ実装（最小実装） | [us-50-orders-tab.spec.md](./us-50-orders-tab.spec.md) | **S3 担当**・即着手可 |
+| us-51 | 指示状況タブ実装（最小実装） | [us-51-order-status-tab.spec.md](./us-51-order-status-tab.spec.md) | **S4 担当**・C-2 完了後着手 |
+| us-52 | スケジュールタブ実装（最小実装） | [us-52-schedule-tab.spec.md](./us-52-schedule-tab.spec.md) | 後発・優先度低 |
 
 ## 段階 2 着手順序
 
