@@ -9,7 +9,7 @@
 
 | セッション名 | 役割 | 対応中エピック | ステータス | 最終更新 |
 | --- | --- | --- | --- | --- |
-| MASTER | マスターセッション | **ep-15 段階 1 クローズ済**（commit `93bf3eb`）。**ブリーフィング機構導入済**（commit `72424c8`）。**ep-16 立ち上げ + Phase 0 完了**: spec 4 本（`_epic.md`/`us-35`/`us-36`/`us-37`/`us-38`）、`docs/changes/ep-16-outpatient-emr-stage2.md` 起こし（KarteAlphaPage 機能インベントリ含む）、briefings 3 本（`s2.md`/`s3.md`/`s4.md`）配備。**Phase 0 アウトプット**: KarteAlphaPage 入院系アクション 4 グループ整理、us-36 粒度判断（**1 us 単独 + 内部 3 サブタスク A/B/C 方式採用**）、us-37 着手保留判定（ep-12〜14 進捗依存）。**S3 us-35 着手中**（commit 前ローカル編集確認済: AttributesSubview / BasicInfoSubview / MemoSubview）／**S4 us-38 着手中**（commit `cfdd89e`）／**S2 us-36 アサイン済**（PM 起動待ち、briefing 指示で「S3 us-35 完了後着手」）。**次のアクション**: ① S3 / S4 完了確認 → 統合動作確認／② ep-12〜14 進捗ヒアリング（PM 経由・us-37 着手判定材料）／③ S3 完了後に S2 を起動して us-36 開始 + 高密度監督モード | ep-16 立ち上げ + Phase 0 完了 | 2026-05-06 |
+| MASTER | マスターセッション | **ep-15 段階 1 クローズ済**（commit `93bf3eb`）。**ep-16 立ち上げ + Phase 0 完了**（spec 4 本、changes、briefings 3 本配備済）。**S3 us-35 完了**（HANDOVER L21）／**S4 us-38 完了**（HANDOVER L20）／**S2 us-36 アサイン済**（PM 起動待ち）。**worktree 分離運用へ移行**（2026-05-07）: `scripts/setup-worktrees.sh` 配備、CLAUDE.md / HANDOVER 並行運用セクション全面改訂、briefings 3 本に worktree 起動手順反映。FS 共有 + 並行 `git add → commit` の index 競合に起因する 3 件の commit 巻き込み事故が構造的に解消される。**次のアクション**: ① PM が `bash scripts/setup-worktrees.sh` を実行して worktree を作成／② S2/S3/S4 セッションを各 worktree で再起動／③ S3/S4 完了分の統合動作確認（ブラウザ目視）／④ ep-12〜14 進捗ヒアリング（PM 経由・us-37 着手判定材料）／⑤ S2 を `~/project/RakuEMR-s2/` で起動して us-36 開始 + 高密度監督モード | ep-16 立ち上げ + Phase 0 完了・worktree 移行 | 2026-05-07 |
 | S2 | ワーカー | ep-05〜ep-08 隔離拘束系すべて実装完了・push 済（モック実装。ブラウザ目視は未実施）。追加: サイドバー整理完了（19 エントリを「病床管理／看護／共通・運用／開発」の 4 セクションに分割。MainLayout のみ変更、ルート・画面コンポーネントは未変更。tsc / build クリーン、ブラウザ目視は MASTER 側で実施依頼） | 完了 | 2026-05-04 |
 | S2 | ワーカー | ep-15 着手順序 \[1\]\[2\] **+ AC-10 完了 + 履歴挙動修正完了**。\[1\] design-rules §12「mode 切替（外来／入院）」本文（§12.1〜§12.6）+ 改訂履歴追記。\[2\] us-33 骨組み: `/karte/:patientId` 新規ルート / `KartePage.tsx` / `KartePatientHeader.tsx` / `KarteActionBar.tsx` / 7 タブ枠 / mode prop API 確立 / mode 判定 / 戻り先判定 / 看護過程タブ disabled + Tooltip / フローシート埋込 / mode 識別 Chip。**\[3\] AC-10 タブ状態の URL ハッシュ反映**（commit `30151eb`）: `useLocation().hash` から初期 currentTab 解決 / 戻る・進む追従 / 看護過程の語彙差（tabId=`care-plan` / hash=`nursing-process`）/ 患者情報未保存検知の確認ダイアログ経由でも URL 揃え。spec us-33 に AC-10 + URL ハッシュ ↔ タブ ID 対応表を追加（commit `25b884f`）。**\[4\] AC-10 履歴挙動修正**（PM フィードバック・本コミット）: ユーザー操作によるタブ切替を `replace: false`（履歴に積む）に変更。`commitTab(nextTab, opts?: { replace })` シグネチャ拡張、初期化時の URL 自動補正は `replace: true` を維持するルールを spec / コードコメントに明文化。spec AC-10 末尾 Note 改訂 + 「ブラウザバックで前タブに戻る」Given/When/Then 追加。changes に「AC-10 フォローアップ修正」節を追記。tsc + build クリーン、共有ファイル変更なし。**`30151eb` には S4 の段階 1 クローズ作業（#3 / #5）が並行編集で巻き込まれている**（後述・経緯記録あり）。**MASTER のレビュー + ブラウザ目視（履歴挙動含む AC-10 動作確認）待ち** | \[1\] / \[2\] / AC-10 + 履歴挙動修正 完了 | 2026-05-06 |
 | S3 | ワーカー | ep-10 看護実施（フローシート, us-17〜26）モック実装完了（10 ストーリー全 push 済）。残: KarteAlphaPage タブ統合は MASTER 待ち事項として継続管理。FlowsheetPage には `embedded` / `patientId` prop 追加済（統合準備済み） | 完了 | 2026-05-02 |
@@ -155,67 +155,99 @@ ep-15 段階 1 完了に伴い、段階 3 を後続エピックとして manifes
 
 ## 並行セッション運用
 
-### 前提：全セッションは同一 FS を共有
+### 前提: git worktree による物理的な分離（2026-05-07 移行済）
 
-MASTER / S2 / S3 / S4 は **同じ作業ディレクトリ・同じファイルを共有** している。複数セッションが同じファイルを並行編集すると以下の干渉が発生する。
+段階 1〜2 で **3 回の commit 巻き込み事故**（FS 共有 + git index 並行アクセスが原因）が発生したため、各 AI セッションを独立した worktree に分離する運用に切り替えた。
 
-#### 干渉パターンと対処
+```text
+~/project/
+├── RakuEMR/         ← MASTER 専用（main ブランチ）
+├── RakuEMR-s2/      ← S2 専用（worker/s2 ブランチ）
+├── RakuEMR-s3/      ← S3 専用（worker/s3 ブランチ）
+└── RakuEMR-s4/      ← S4 専用（worker/s4 ブランチ）
+```
 
-| 症状 | 原因 | 対処 |
+セットアップは `scripts/setup-worktrees.sh` を MASTER の worktree で 1 度実行（冪等）。各 Claude Code セッションは対応する worktree のディレクトリで起動する。
+
+| ロール | 作業ディレクトリ | 担当ブランチ | push 先 |
+| --- | --- | --- | --- |
+| MASTER | `~/project/RakuEMR/` | `main` | `origin/main`（ワーカー branch のマージ集約） |
+| S2 | `~/project/RakuEMR-s2/` | `worker/s2` | `origin/worker/s2` のみ |
+| S3 | `~/project/RakuEMR-s3/` | `worker/s3` | `origin/worker/s3` のみ |
+| S4 | `~/project/RakuEMR-s4/` | `worker/s4` | `origin/worker/s4` のみ |
+
+### 標準フロー（ワーカー）
+
+```bash
+# セッション開始時
+cd ~/project/RakuEMR-s<N>             # 自 worktree へ
+git fetch origin main                 # main の最新を取得
+git merge origin/main --ff-only       # 自 branch に取り込み（または rebase）
+
+# ... 編集 ...
+
+# 完了時
+git add <変更したファイルを明示で>     # 「.」「-A」は禁止
+git diff --cached --stat              # ステージ範囲を確認
+git commit -m "..."
+git push origin worker/s<N>           # 自 branch のみ push
+# → HANDOVER の自 row を「完了」に更新
+# → PM へ完了報告
+# → MASTER がワーカーブランチを main にマージ
+```
+
+### 標準フロー（MASTER）
+
+```bash
+cd ~/project/RakuEMR                  # main worktree
+git pull --ff-only                    # main の最新を取得
+
+# ワーカーの完了報告を受けて main にマージ
+git fetch origin worker/s<N>
+git merge origin/worker/s<N>          # 通常 fast-forward or 自動マージ
+# 競合があれば MASTER が解決
+git push origin main
+```
+
+### 干渉パターンと対処（worktree 移行後）
+
+| 症状 | 発生箇所 | 対処 |
 | --- | --- | --- |
-| Edit ツールが「File has been modified since read」で失敗 | Read してから Edit するまでの間に別セッションがそのファイルを書き換えた | **そのファイルを Read し直してから Edit リトライ**。エラーは安全装置なので素直に従う |
-| `git push` で reject される（non-fast-forward） | 別セッションが先に push 済 | `git pull --rebase` → コンフリクト解消 → 再 push |
-| `git pull` でコンフリクト | 同じ行を同時に編集 | 手動マージ。HANDOVER の場合は両方の行を残す方向で解決 |
-| HANDOVER のアクティブセッション表が壊れる | 表の構造を破壊する形でマージ | MASTER に一報。表構造を MASTER が再整備 |
+| Edit ツールが「File has been modified since read」で失敗 | **基本発生しない**（worktree が物理分離済）。HANDOVER の自 row を MASTER と worker が同時編集した場合のみ稀に発生 | Read し直してから Edit リトライ |
+| `git push` で reject される | ワーカーが `worker/s<N>` 以外に push した（ルール違反） | 自 branch に push し直す |
+| `git merge` で HANDOVER のコンフリクト | ワーカーが他 row を触った（ルール違反） or MASTER 行と同時編集 | MASTER が解決。ワーカーは「自分の row のみ編集」を再徹底 |
 
-#### 並行編集を最小化する作法
+### HANDOVER 編集規律（重要）
 
-1. **編集前に必ず `git pull`**（既存ルール再掲・徹底）
-2. **Read → Edit は短時間で実施**（Read 後に長い分析・他作業を挟むと干渉確率が上がる）
-3. **編集 → push を一気に**（特に HANDOVER は変更頻度が高い）
-4. **同じ共有ファイルへの大きな改訂は MASTER に集約**（並行ワーカーは触らずに MASTER 待ち事項に起票）
-5. **干渉を検知したら状況を HANDOVER に共有**（MASTER 待ち事項 or 該当行に注記）
+**ワーカーは `docs/HANDOVER.md` の自分の row のみ編集する**。他のワーカー / MASTER の row は読むだけ。
 
-#### 特に干渉しやすいファイル
+- 他 row を更新したい場合 → MASTER 待ち事項に起票
+- 表構造（ヘッダ・運用ルール・MASTER 待ち事項表 等）の変更は MASTER のみ
+- これを守れば worktree 間の merge は ROW レベルで競合しない
 
-- `docs/HANDOVER.md` — 全セッションが書く本ファイル
-- `docs/changes/ep-XX-*.md` — 同じエピックを複数ワーカーが触ると衝突
-- `src/routes/index.tsx` — ルート追加で衝突しやすい
-- 下記「注意：共有ファイル」一覧
+### 共有ファイルの取り扱い
 
-### 推奨: 業務領域で分担
+worktree 分離後も、論理的には複数 us から書く可能性のあるファイルがある。基本方針:
+
+| ファイル | 取り扱い |
+| --- | --- |
+| `src/types/index.ts` | 既存シグネチャ変更は MASTER 待ち事項。追加は末尾に。複数 us で同時追加が発生する場合は MASTER が事前合議 |
+| `src/stores/useAppStore.ts` | 同上 |
+| `src/data/mockData.ts` の `MASTER_*` | 同上 |
+| `src/components/common/` | 新規追加・既存改変ともに MASTER 待ち事項 |
+| `docs/screen-mapping.tsv` | 行追加は OK、既存行変更は MASTER 待ち事項 |
+| `docs/changes/ep-XX-*.md` | 末尾追記が安全。同 us を 1 worker で完結させる前提 |
+| `src/components/karteAlpha/KarteAlphaPage.tsx` | クイック操作領域への追加は MASTER 待ち事項（段階 3 で撤去予定） |
+
+### 業務領域での分担（参考）
 
 | セッション | 担当領域 | エピック |
 | --- | --- | --- |
-| A | 隔離拘束系 | ep-05, ep-06, ep-07, ep-08 |
-| B | 看護系 | ep-10, ep-12, ep-13, ep-14 |
-| C | 共通／病床管理残 | ep-04, ep-09 |
+| S2 | 隔離拘束系・入院アクション | ep-05, ep-06, ep-07, ep-08, ep-16/us-36 |
+| S3 | 看護・カルテ画面 | ep-10, ep-15/us-34, ep-16/us-35 |
+| S4 | 共通・病床管理残・遷移系 | ep-04, ep-09, ep-15/us-32, ep-16/us-38 |
 
-別領域同士は同時進行で衝突しにくい。
-
-### 注意：共有ファイル
-
-複数エピックから触られる頻度が高いファイル。**並行作業時はこれらの編集を同期させる必要がある**。
-
-- `src/types/index.ts` — 型定義の集約
-- `src/data/mockData.ts` — モックデータ・MASTER\_\* セクション
-- `src/stores/useAppStore.ts` — グローバル状態（zustand）
-- `src/components/common/` — 共通コンポーネント
-- `docs/screen-mapping.tsv` — 画面対応表（行追加が中心、衝突は起こりにくい）
-- `src/components/karteAlpha/KarteAlphaPage.tsx` — 多くのエピックの起点
-
-#### 同期戦略
-
-1. 共有ファイルへの追加は **明示的なセクション** を切って配置（例: `// ===== ep-05 隔離拘束指示 =====`）
-2. 既存定義に「干渉しない追加」を意識（既存型・関数のシグネチャは変えない）
-3. マージは main ブランチ経由で
-4. セッション開始時は `git pull` して最新化
-
-### 並行で問題が起きやすいパターン
-
-- 同じ Patient 型に複数セッションがフィールド追加 → 解決: PR で順次統合
-- 同じ store action 名の重複 → 解決: エピック prefix を付ける（例: `addIsolationOrder`）
-- 同じカルテタブのレイアウト変更 → 解決: タブごとにコンポーネント分割を先に済ませる
+別領域同士は同時進行しても衝突しにくい（worktree 分離で物理的にも保証される）。
 
 ---
 

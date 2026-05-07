@@ -17,20 +17,53 @@ React + TypeScript + MUI + Vite で構築されています。
 | S2〜S4 | AI ワーカー。割り当てられた epic／us の実装 |
 | PM | ユーザー本人 |
 
+### worktree 構成（並行運用の前提）
+
+並行 AI セッションの干渉を物理的に避けるため、git worktree で **各ロール専用の作業ディレクトリ** を分離する。
+
+```text
+~/project/
+├── RakuEMR/         ← MASTER 専用（main ブランチ）
+├── RakuEMR-s2/      ← S2 専用（worker/s2 ブランチ）
+├── RakuEMR-s3/      ← S3 専用（worker/s3 ブランチ）
+└── RakuEMR-s4/      ← S4 専用（worker/s4 ブランチ）
+```
+
+セットアップは `scripts/setup-worktrees.sh` を MASTER の worktree で 1 度実行すればよい（冪等）。
+
+| ロール | 作業ディレクトリ | 担当ブランチ | push 先 |
+| --- | --- | --- | --- |
+| MASTER | `~/project/RakuEMR/` | `main` | `origin/main`（ワーカー branch のマージ集約） |
+| S2 | `~/project/RakuEMR-s2/` | `worker/s2` | `origin/worker/s2` のみ |
+| S3 | `~/project/RakuEMR-s3/` | `worker/s3` | `origin/worker/s3` のみ |
+| S4 | `~/project/RakuEMR-s4/` | `worker/s4` | `origin/worker/s4` のみ |
+
+**ワーカーは main に直接 push しない**。完了報告 → MASTER がワーカーブランチを main にマージ → main へ push、という流れ。
+
 ### セッション起動時の役割宣言フロー
 
 セッション開始時、PM から自分のロール（`MASTER` / `S1` / `S2` / `S3` / `S4`）を告げられたら、以下を実施すること:
 
-1. 対応するロール定義ファイル `.claude/roles/<ロール>.md` を読む
+1. **自分が起動しているディレクトリを確認** (`git rev-parse --show-toplevel`)。MASTER は `RakuEMR/`、ワーカーは `RakuEMR-s<N>/` であること。違っていたら PM に正しい worktree で再起動するよう報告
+2. 対応するロール定義ファイル `.claude/roles/<ロール>.md` を読む
    - MASTER（= S1）の場合: `.claude/roles/MASTER.md`（または `S1.md` 経由）
    - ワーカーの場合: `.claude/roles/S<N>.md`（S2〜S4。共通責務は同ディレクトリの `WORKER.md` を参照）
-2. `docs/HANDOVER.md` を読み、現状把握
-3. **`.claude/briefings/common.md` を読む**（並行作法・git 衛生・教訓の共通ブリーフィング）。存在すれば **`.claude/briefings/s<N>.md`** も読む（PM からの個別指示・タスクブリーフィング）
+3. `docs/HANDOVER.md` を読み、現状把握
+4. **`.claude/briefings/common.md` を読む**（並行作法・git 衛生・教訓の共通ブリーフィング）。存在すれば **`.claude/briefings/s<N>.md`** も読む（PM からの個別指示・タスクブリーフィング）
    - `.claude/briefings/` 配下は git ignore 対象。PM が手元で都度更新する運用
-4. `docs/HANDOVER.md`「アクティブセッション」表に自身を登録（既存行があればステータス・最終更新日を更新）
-5. 自ロールの責務範囲を超える作業要請を受けた場合は、`docs/HANDOVER.md`「MASTER 待ち事項」へ起票するか、PM へ確認する
+5. `docs/HANDOVER.md`「アクティブセッション」表に自身を登録（既存行があればステータス・最終更新日を更新）
+   - **ワーカーは自分の row のみ編集**。他ワーカー / MASTER の row は読むだけ
+6. 自ロールの責務範囲を超える作業要請を受けた場合は、`docs/HANDOVER.md`「MASTER 待ち事項」へ起票するか、PM へ確認する
 
-ロール宣言が無いまま実装着手しないこと（誤って共有ファイルを単独編集すると衝突の元になる）。
+ロール宣言が無いまま実装着手しないこと。
+
+### worktree 運用ルール（重要）
+
+- **ワーカーは main を直接 push しない**。`worker/s<N>` ブランチに push して MASTER の merge を待つ
+- **編集着手前に `git fetch origin main && git merge origin/main`** で main の最新を自ブランチに取り込む（rebase でも可）
+- **HANDOVER は自分の row のみ編集**。他 row を変えたい場合は MASTER 待ち事項に起票
+- **ワーカー間の共有ファイル（`docs/changes/ep-XX.md` 等）に追記する場合**: 末尾追記が安全。同じ行を編集する事態は発生しない設計
+- **ワーカーが完了したら**: 自ブランチに push → HANDOVER の自 row を「完了」に → PM へ報告。MASTER が `git merge worker/s<N>` で main に統合
 
 ## 固有名詞ポリシー
 
