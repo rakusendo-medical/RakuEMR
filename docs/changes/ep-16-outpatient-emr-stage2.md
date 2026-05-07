@@ -347,3 +347,78 @@ PM フィードバック「Alpha では各部門の診療録やオーダーが�
 | 3 | 隔離拘束指示リンク群（`RestraintOrderLinks`）は本 us では埋込まず | us-36 サブ B との編集域重複回避。サブ B 着手時に MASTER で結合 |
 | 4 | テンプレート 4 種はハードコード | gairai `useFetchTemplateEntrySetsQuery()` 相当は段階 3 で API 化想定 |
 | 5 | 過去カルテのページングは scroll で代用 | 「最初へ ▲」「続き ▼」相当は段階 3（API 連携時に詰める） |
+
+---
+
+## us-50 指示簿タブ実装 完了メモ（S3 / 2026-05-07）
+
+### 実装サマリ
+
+KartePage の `orders` タブ（段階 1 では meta プレースホルダ）を、患者別 ORDERS の read-only 一覧に置き換えた。`npx tsc --noEmit` / `npx vite build` クリーン。ブラウザ目視は MASTER 段階 2 統合確認時に依頼。
+
+#### 新規ファイル
+
+- **`src/components/karte/OrdersTab.tsx`**（約 215 行）
+  - `ORDERS.filter((o) => o.patientId === patient.id)` で抽出（AC-1）
+  - type Chip 8 種（全て + 7 OrderType・AND 条件）／ status Chip 6 種（全て + 5 OrderStatus・AND 条件）（AC-2/3）
+  - MUI `Table` size="small"・dense 表示で 6 列（種別 / 内容 / スケジュール / 状態 / 期間 / 担当医）（AC-4）
+  - 上部右に「指示状況タブを開く」ボタン（`LaunchIcon` + `onOpenOrderStatusTab` callback）（AC-5）
+  - 件数表示 + フィルタ後 ≠ 全件のとき「（全 X 件中）」併記（AC-6）
+  - 0 件時: 患者にオーダーゼロ／フィルタ該当ゼロを別文言で表示（AC-7）
+  - mode 別アクセント: `accent`（`success`/`primary`）を SectionHeader 背景・フィルタ Chip 選択色・「指示状況タブを開く」ボタン色に反映（AC-8 / design-rules §12）
+  - type Chip カラーは既存 `OrderManagement.tsx` の `ORDER_TYPE_COLORS` を踏襲（処方=青 / 注射=ピンク / 心理検査・ECT=黄 / 入院定時=緑 / IF=紺 / 文字=灰）
+  - OrderType 値「文字」→ 表示ラベル「テキスト」変換は既存 `MedicalRecordTab.ORDER_TYPE_DESCRIPTION` 規約と同一（spec の Chip ラベル「テキスト」と整合）
+
+#### 既存改修
+
+- **`src/components/karte/KartePage.tsx`**:
+  - `OrdersTab` import 追加
+  - `KarteTabContent` の prop に `onOpenOrderStatusTab: () => void` を追加し、KartePage 本体から `() => attemptTabChange('order-status')` を渡す（us-33 AC-10 ハッシュ仕様準拠で URL ハッシュも揃う）
+  - `tabId === 'orders'` 分岐を `<OrdersTab patient mode onOpenOrderStatusTab />` 埋込に置換
+  - `meta` プレースホルダから `orders` エントリを削除（残: `order-status` / `care-plan` / `schedule`）
+
+### AC 充足状況
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| AC-1 患者別オーダ一覧（`patientId` フィルタ） | ✅ | `useMemo` でフィルタ |
+| AC-2 type フィルタ Chip 8 種 | ✅ | OrderType 7 種 + 全て |
+| AC-3 status フィルタ Chip 6 種 | ✅ | OrderStatus 5 種 + 全て |
+| AC-4 行表示（type Chip / 内容 / スケジュール / 状態 Chip / 期間 / 担当医） | ✅ | dense Table 形式 |
+| AC-5 「指示状況タブを開く」 → `commitTab('order-status')` | ✅ | KartePage 経由で `attemptTabChange('order-status')`（URL ハッシュ更新含む） |
+| AC-6 件数表示 | ✅ | フィルタ後件数 + 全件併記 |
+| AC-7 0 件時の空状態 | ✅ | 患者ゼロ／フィルタ該当ゼロで別文言 |
+| AC-8 design-rules §3 / §6 / §12 準拠 | ✅ | §3 ボタン階層・§6 dense Table・§12 mode 別アクセント |
+
+### 設計判断
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | type Chip ラベル「文字」→「テキスト」変換（OrderType 値はコード上「文字」のまま） | 既存 `MedicalRecordTab.ORDER_TYPE_DESCRIPTION` 規約踏襲。spec 画面要素「テキスト」表記とも整合 |
+| 2 | type Chip 配色は既存 `OrderManagement.tsx` の `ORDER_TYPE_COLORS` を踏襲（インライン定義） | 共有ファイル化は段階 3 で集約予定。本 us では編集域を `karte/` 内に閉じる |
+| 3 | テーブル風で実装（カード風は不採用） | 既存 `OrderManagement.tsx` のパターンと整合。dense 表示で件数増加にも対応しやすい |
+| 4 | 期間表示: `days > 0` のとき `startDate〜（X日）`、`days <= 0` で `startDate〜（継続）` | 既存 `OrderManagement.tsx` は「日数」列で `'—'` 表記。本 us では「期間」1 列に統合し、無期限オーダ（IF / 文字）の業務的意味（継続）を明示 |
+| 5 | sort は `startDate` 降順（spec「新しい順」） | `confirmedAt` は未設定エントリが多いため `startDate` 基準。仕様の「新しい順」を満たす |
+| 6 | mode 別アクセントは `accent: 'success' \| 'primary'` 1 トークンに集約し、SectionHeader 背景 / フィルタ Chip 選択色 / Launch ボタンに反映 | design-rules §12.3 のテーマ色割当に整合。タブバー本体は既定 primary 維持（§12.3） |
+
+### 並行衝突状況
+
+- **`KartePage.tsx` 編集域**: `KarteTabContent` 関数の prop 拡張（`onOpenOrderStatusTab` 追加）+ `tabId === 'orders'` 分岐追加 + `meta` から `orders` 削除。S4（us-51）は同関数の `tabId === 'order-status'` 分岐 + `meta` から `order-status` 削除を行う見込みで **編集行が隣接する**。本セッションでは `add → 確認 → commit → push` を短時間で閉じる方針
+- **新規ファイル `OrdersTab.tsx`**: 単独所有（衝突なし）
+
+### 共有ファイル変更
+
+なし（`types` / `store` / `mockData.MASTER_*` / `common` 触らず）。`SectionHeader` は既存共通コンポーネントを **import only** で利用（API 変更なし）。`src/components/karte/` 内に閉じる変更のみ（新規 1 + 既存 1 ファイル）。
+
+### 検証
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン（bundle 1505 kB / gzip 429 kB・既存と同程度）
+- ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
+
+### MASTER への申し送り
+
+- ブラウザ目視は本セッションでは未実施 → 段階 2 統合確認時に MASTER に依頼
+- 「新規指示作成・編集 / ステータス更新」「看護用オーダ（一括バイタル等）」は本 us スコープ外（spec 補足どおり別エピック）
+- ORDERS の各患者件数が薄い（多くの患者で 0〜1 件）ため、ブラウザ目視時は P001（山田 太郎）/ P003（鈴木 一郎）あたりで確認すると Chip フィルタ・テーブル表示・「指示状況タブを開く」遷移が一通り見える
+- type Chip 配色のうち「心理検査」と「ECT」が同色（黄系）。spec の意図不明瞭のため既存 `OrderManagement.tsx` を踏襲。視認性改善は将来検討（共有化と合わせて）
