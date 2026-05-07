@@ -190,7 +190,7 @@ const ChipInput: React.FC<{
           </Typography>
         )}
       </Stack>
-      <Stack direction="row" spacing={1}>
+      <Stack direction="row" spacing={1} alignItems="stretch">
         <TextField
           size="small"
           fullWidth
@@ -204,7 +204,13 @@ const ChipInput: React.FC<{
             }
           }}
         />
-        <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={add}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={add}
+          sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
           追加
         </Button>
       </Stack>
