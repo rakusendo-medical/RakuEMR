@@ -13,6 +13,7 @@ import {
 import type { Patient, Order } from '../../types';
 import { ORDERS } from '../../data/mockData';
 import SectionHeader from '../common/SectionHeader';
+import RestraintOrderLinks from '../isolation/RestraintOrderLinks';
 import type { KarteMode } from './KartePage';
 
 // ===== 集約タイムラインのレコード型 =====
@@ -118,12 +119,15 @@ interface MedicalRecordTabProps {
   mode: KarteMode;
   /** 「指示簿タブを開く」リンク用 */
   onOpenOrdersTab: () => void;
+  /** us-36 サブ B: 隔離拘束指示リンクのクリックハンドラ（mode='inpatient' のみ表示） */
+  onRequestRestraintOrder: (title: string, editOrderId?: string) => void;
 }
 
 export default function MedicalRecordTab({
   patient,
   mode,
   onOpenOrdersTab,
+  onRequestRestraintOrder,
 }: MedicalRecordTabProps) {
   // ----- 集約タイムライン -----
   const timeline = useMemo<TimelineRecord[]>(() => {
@@ -171,15 +175,23 @@ export default function MedicalRecordTab({
           open={timelineOpen}
           onToggle={() => setTimelineOpen(!timelineOpen)}
           rightSlot={
-            <Button
-              size="small"
-              variant="text"
-              onClick={(e) => { e.stopPropagation(); onOpenOrdersTab(); }}
-              startIcon={<Assignment fontSize="inherit" />}
-              sx={{ fontSize: '0.65rem', color: '#1e3a5f', minWidth: 0 }}
-            >
-              指示簿タブ
-            </Button>
+            <Stack direction="row" spacing={0.5} alignItems="center" onClick={(e) => e.stopPropagation()}>
+              {mode === 'inpatient' && (
+                <RestraintOrderLinks
+                  patient={patient}
+                  onRequestOrder={onRequestRestraintOrder}
+                />
+              )}
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => onOpenOrdersTab()}
+                startIcon={<Assignment fontSize="inherit" />}
+                sx={{ fontSize: '0.65rem', color: '#1e3a5f', minWidth: 0 }}
+              >
+                指示簿タブ
+              </Button>
+            </Stack>
           }
         />
         {timelineOpen && (

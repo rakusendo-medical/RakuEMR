@@ -27,6 +27,9 @@ import MedicalRecordTab from './MedicalRecordTab';
 import ClinicalInfoPanel from './ClinicalInfoPanel';
 import OrdersTab from './OrdersTab';
 import OrderStatusTab from './OrderStatusTab';
+import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
+import DischargeOrderDialog from '../admission/DischargeOrderDialog';
+import RestraintOrderDialog from '../isolation/RestraintOrderDialog';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -191,6 +194,25 @@ export default function KartePage({ modeOverride }: KartePageProps) {
 
   const onPatientInfoDirty = useCallback((d: boolean) => setPatientInfoDirty(d), []);
 
+  // ===== us-36 サブ A: 入退院指示（2 ボタン分割・案 2） =====
+  const [admissionOrderOpen, setAdmissionOrderOpen] = useState(false);
+  const [dischargeOrderOpen, setDischargeOrderOpen] = useState(false);
+
+  // ===== us-36 サブ B: 隔離拘束指示 =====
+  // ActionBar 経由起動（既定タイトル「隔離開始」）と RestraintOrderLinks 経由起動（タイトル指定）の両経路を
+  // 同一 state で管理する。KarteAlphaPage と同じパターン。
+  const [restraintDialog, setRestraintDialog] = useState<{
+    open: boolean;
+    title: string;
+    editId?: string;
+  }>({ open: false, title: '' });
+  const openRestraintDialog = useCallback((title: string, editOrderId?: string) => {
+    setRestraintDialog({ open: true, title, editId: editOrderId });
+  }, []);
+  const closeRestraintDialog = useCallback(() => {
+    setRestraintDialog({ open: false, title: '' });
+  }, []);
+
   if (!patient) {
     return (
       <Box sx={{ p: 3 }}>
@@ -240,6 +262,19 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   const handleAction = (actionId: string) => {
     if (actionId === 'close') {
       handleBack();
+      return;
+    }
+    if (actionId === 'admission-order') {
+      setAdmissionOrderOpen(true);
+      return;
+    }
+    if (actionId === 'discharge-order') {
+      setDischargeOrderOpen(true);
+      return;
+    }
+    if (actionId === 'isolation-order') {
+      // 既定タイトル「隔離開始」で起動。RestraintOrderLinks 経由のときはリンクのタイトルが渡る
+      openRestraintDialog('隔離開始');
       return;
     }
     setToast({
@@ -299,10 +334,15 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           discardSignal={discardSignal}
           onOpenOrdersTab={() => attemptTabChange('orders')}
           onOpenOrderStatusTab={() => attemptTabChange('order-status')}
+          onRequestRestraintOrder={openRestraintDialog}
         />
       </Box>
 
-      <KarteActionBar mode={mode} onAction={handleAction} />
+      <KarteActionBar
+        mode={mode}
+        admissionState={patient.admissionState}
+        onAction={handleAction}
+      />
 
       <Snackbar
         open={toast.open}
@@ -319,6 +359,27 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           {toast.message}
         </Alert>
       </Snackbar>
+
+      {/* us-36 サブ A: 入退院指示ダイアログ（既存ダイアログを直接起動・API 変更なし） */}
+      <AdmissionOrderDialog
+        open={admissionOrderOpen}
+        patient={patient}
+        onClose={() => setAdmissionOrderOpen(false)}
+      />
+      <DischargeOrderDialog
+        open={dischargeOrderOpen}
+        patient={patient}
+        onClose={() => setDischargeOrderOpen(false)}
+      />
+
+      {/* us-36 サブ B: 隔離拘束指示ダイアログ。ActionBar / 診療録カードの RestraintOrderLinks 双方の起動先 */}
+      <RestraintOrderDialog
+        open={restraintDialog.open}
+        patient={patient}
+        initialTitle={restraintDialog.title}
+        editOrderId={restraintDialog.editId}
+        onClose={closeRestraintDialog}
+      />
 
       {/* §10 破壊的：患者情報タブの未保存変更を破棄して離脱する確認 */}
       <Dialog
@@ -355,6 +416,7 @@ function KarteTabContent({
   discardSignal,
   onOpenOrdersTab,
   onOpenOrderStatusTab,
+  onRequestRestraintOrder,
 }: {
   tabId: string;
   mode: KarteMode;
@@ -363,6 +425,7 @@ function KarteTabContent({
   discardSignal: number;
   onOpenOrdersTab: () => void;
   onOpenOrderStatusTab: () => void;
+  onRequestRestraintOrder: (title: string, editOrderId?: string) => void;
 }) {
   if (tabId === 'flowsheet') {
     return <FlowsheetPage embedded patientId={patient.id} />;
@@ -385,6 +448,7 @@ function KarteTabContent({
         patient={patient}
         mode={mode}
         onOpenOrdersTab={onOpenOrdersTab}
+        onRequestRestraintOrder={onRequestRestraintOrder}
       />
     );
   }

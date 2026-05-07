@@ -9,6 +9,16 @@
 | 想定ロール | 主治医、病棟看護師 |
 | ステータス | draft（サブ C は実装着手時に AC 詳細追補） |
 
+### 進め方の合議結果（2026-05-07・PM）
+
+サブ A の「ボタン分割可否」（briefing 想定の合議 1 回）について、PM 判断で **案 2: 2 ボタン分割（KarteAlphaPage 同パターン）** を採用した。spec の AC-A2 / AC-A3 / 振る舞い / 想定実装ステップは本確定に追従して書き換えてある（旧版は「1 ボタン + ダイアログ内タブ切替」案）。
+
+採用理由（briefing で S2 が提示）:
+
+- KarteAlphaPage（[L480-501](../../../src/components/karteAlpha/KarteAlphaPage.tsx)）と同じ UI パターンで利用者の習熟移行コスト 0
+- 既存 `AdmissionOrderDialog` / `DischargeOrderDialog` を無変更で起動可能（API 安定）
+- 既存ダイアログ内部リファクタ（446 行級）を回避でき「重さ:小」サブタスクの粒度に整合
+
 ### 参考システムマニュアル
 
 | ファイル | ページ範囲 | 対象画面 |
@@ -38,12 +48,14 @@
 
 ## 画面要素（要素ツリー・mode='inpatient' 時の差分）
 
-```
+```text
 - KartePage (/karte/:patientId, mode='inpatient')
   - KarteActionBar (INPATIENT_ACTIONS)
-    - 入退院指示ボタン         (サブ A・本 us で disabled 解除 → 本実装)
-      → AdmissionOrDischargeOrderDialog (新設ラッパー or 既存 2 ダイアログを mode 切替で起動)
-    - 隔離拘束指示ボタン       (サブ B・同上)
+    - 入院指示ボタン           (サブ A・本 us で本実装。admissionState='outpatient' のときのみ活性)
+      → AdmissionOrderDialog (既存・直接起動)
+    - 退院指示ボタン           (サブ A・本 us で本実装。admissionState='inpatient' のときのみ活性)
+      → DischargeOrderDialog (既存・直接起動)
+    - 隔離拘束指示ボタン       (サブ B・本 us で disabled 解除 → 本実装)
       → RestraintOrderDialog (既存・ActionBar 経由起動)
     - 看護ケア記録ボタン       (サブ C・同上)
       → NursingCareDialog (新規 or 既存流用・着手時確定)
@@ -59,11 +71,13 @@
 
 ## 振る舞い
 
-### サブ A: 入退院指示
+### サブ A: 入退院指示（2 ボタン分割・案 2 採用）
 
-- **「入退院指示」ボタンクリック**: ダイアログが開く
-- **ダイアログ内で「入院指示」「退院指示」を切替**（タブ or radio）。退院指示は `Patient.admissionState === 'inpatient'` のときのみ選択可能。`'discharged'` は両方無効、`'outpatient'` は入院指示のみ
-- **保存**: 既存 `AdmissionOrderDialog` / `DischargeOrderDialog` の保存ロジック（`useAppStore.pendingOrders` に積む）に委譲
+- **ActionBar に「入院指示」「退院指示」の 2 ボタン**を表示する（KarteAlphaPage の Bottom Action Bar と同じ並び）
+- **「入院指示」ボタンクリック**: 既存 `AdmissionOrderDialog` を直接起動（`open={true}` / `patient={patient}`）
+- **「退院指示」ボタンクリック**: 既存 `DischargeOrderDialog` を直接起動（同上）
+- **ボタン活性は `Patient.admissionState` に従う**（後述「状態遷移 / バリデーション」表）。disabled の場合は理由を Tooltip で表示
+- **保存**: 既存 2 ダイアログの保存ロジック（`useAppStore.pendingOrders` に積む）をそのまま利用、API 変更なし
 
 ### サブ B: 隔離拘束指示
 
@@ -85,25 +99,27 @@
 
 ## 受け入れ基準（AC）
 
-### サブ A: 入退院指示
+### サブ A: 入退院指示（2 ボタン分割・案 2 採用）
 
-- [ ] **AC-A1: 「入退院指示」ボタンが mode='inpatient' で活性**
+- [ ] **AC-A1: ActionBar に「入院指示」「退院指示」の 2 ボタンが表示される**
   - **Given** `mode='inpatient'` の KartePage を表示
-  - **Then** ActionBar の「入退院指示」ボタンが有効（disabled でなく Tooltip も無し）
+  - **Then** ActionBar に「入院指示」「退院指示」の 2 ボタンが並ぶ（既存「入退院指示」単一ボタンは廃止）
 
-- [ ] **AC-A2: ボタンクリックでダイアログ起動**
-  - **When** 「入退院指示」ボタンクリック
-  - **Then** 入退院指示ダイアログが開く
+- [ ] **AC-A2: 各ボタンの活性は `Patient.admissionState` に従う**
+  - **Given** `admissionState === 'outpatient'`
+  - **Then** 「入院指示」が活性、「退院指示」が disabled（Tooltip「入院していません」）
+  - **Given** `admissionState === 'inpatient'`
+  - **Then** 「退院指示」が活性、「入院指示」が disabled（Tooltip「既に入院中です」）
+  - **Given** `admissionState === 'discharged'`
+  - **Then** 両方 disabled（Tooltip「既に退院済です」）
 
-- [ ] **AC-A3: ダイアログ内で入院／退院切替が可能**
-  - **Given** ダイアログ表示中
-  - **Then** 「入院指示」「退院指示」を切り替えるタブ or radio が表示される
-  - **Given** `Patient.admissionState === 'inpatient'`
-  - **Then** 退院指示が選択可能
-  - **Given** `Patient.admissionState === 'discharged'`
-  - **Then** 両方の選択肢が disabled（既に退院済）
+- [ ] **AC-A3: ボタンクリックで対応する既存ダイアログを直接起動**
+  - **When** 「入院指示」クリック
+  - **Then** 既存 `AdmissionOrderDialog` が開く（`patient` を渡し、API 変更なし）
+  - **When** 「退院指示」クリック
+  - **Then** 既存 `DischargeOrderDialog` が開く（同上）
 
-- [ ] **AC-A4: 保存ロジックは既存 AdmissionOrder/DischargeOrderDialog を踏襲**
+- [ ] **AC-A4: 保存ロジックは既存 AdmissionOrderDialog / DischargeOrderDialog を踏襲**
   - **Given** 入院指示で保存
   - **Then** `useAppStore.pendingOrders` に積まれる（既存 ep-03 仕様踏襲）
   - 退院指示も同様
@@ -158,23 +174,27 @@
   - 既存 `MedicalRecordsDense.tsx` 内で使われているコンポーネントを切り出して、新カルテの `KarteTabContent.tsx`（診療録タブ分岐）に埋込
   - 既存実装をなるべく崩さない方針（移植コストを抑える）
 - 共有ファイル変更見込み（事前申告）:
-  - `src/components/karte/KartePage.tsx`（onAction ハンドラ実装）
-  - `src/components/karte/KarteActionBar.tsx`（INPATIENT_ACTIONS の disabled 解除）
-  - `src/components/admission/AdmissionOrderDialog.tsx`（必要なら mode prop 追加・要 MASTER 合議）
-  - `src/components/admission/DischargeOrderDialog.tsx`（同上）
-  - `src/components/restraint/RestraintOrderDialog.tsx`（同上）
+  - `src/components/karte/KartePage.tsx`（`admission-order` / `discharge-order` の onAction ハンドラ追加、ダイアログ open state 2 つ追加）
+  - `src/components/karte/KarteActionBar.tsx`（INPATIENT_ACTIONS を 2 ボタン化、`admissionState` prop を追加して disabled を動的計算）
+  - **`AdmissionOrderDialog.tsx` / `DischargeOrderDialog.tsx` の API 変更は不要**（案 2 採用により回避）
+  - `src/components/restraint/RestraintOrderDialog.tsx`（サブ B で必要なら mode prop 追加・要 MASTER 合議）
   - 看護ケア記録ダイアログ（新規・サブ C 着手時）
 - **触らない**: `src/types/index.ts`（既存 `pendingOrders` 型・`Patient.admissionState` で賄える見込み）／`src/data/mockData.ts` の `MASTER_*`（変更要なら起票）
 
 ## 想定実装ステップ（ワーカー向けガイド）
 
-### サブ A（最初に着手）
+### サブ A（最初に着手・案 2: 2 ボタン分割）
 
-1. `KarteActionBar.tsx` の `admission-order` の `disabled: true` を削除、Tooltip も削除
-2. `KartePage.tsx` で `onAction('admission-order')` ハンドラ実装。`AdmissionDischargeOrderDialog`（新設ラッパー or 既存 2 ダイアログを切替表示）を開く
-3. ダイアログ内で `Patient.admissionState` 参照して入院／退院切替の活性制御
-4. 保存ボタンで既存 `pendingOrders` 積み込みロジックを呼ぶ
-5. 検証 → サブ A コミット → push
+1. `KarteActionBar.tsx` を 2 ボタン化:
+   - `INPATIENT_ACTIONS` の `admission-order` 行を「入院指示」（disabled は admissionState で動的計算）に書き換え
+   - 新規 `discharge-order` 行（「退院指示」）を `admission-order` の直後に挿入
+   - `KarteActionBarProps` に `admissionState?: AdmissionState` を追加し、INPATIENT モードの actions を `admissionState` 連動で生成
+2. `KartePage.tsx`:
+   - `KarteActionBar` 呼び出しに `admissionState={patient.admissionState}` を渡す
+   - `handleAction` に `admission-order` / `discharge-order` 分岐を追加し、それぞれ既存ダイアログの `open` state を `true` に
+   - レンダー末尾で `<AdmissionOrderDialog open patient onClose />` / `<DischargeOrderDialog open patient onClose />` を追加
+3. 既存ダイアログ API は **無変更**（案 2 採用効果）
+4. 検証（`npx tsc --noEmit` + `npx vite build`）→ サブ A コミット → push
 
 ### サブ B
 
