@@ -46,7 +46,9 @@ import {
   Bedtime,
   EditNote,
 } from "@mui/icons-material";
+import { Assignment } from "@mui/icons-material";
 import { useAppStore } from "../stores/useAppStore";
+import { EPICS } from "../components/epicReview/epicData";
 
 const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 60;
@@ -107,6 +109,16 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { key: "design-guide", label: "デザインガイド", icon: <Palette />, path: "/design-guide" },
     ],
+  },
+  {
+    key: "epic-review",
+    label: "エピック評価",
+    items: EPICS.map((e) => ({
+      key: `epic-${e.id}`,
+      label: `${e.id} ${e.title}`,
+      icon: <Assignment />,
+      path: `/epic-review/${e.id}`,
+    })),
   },
 ];
 
