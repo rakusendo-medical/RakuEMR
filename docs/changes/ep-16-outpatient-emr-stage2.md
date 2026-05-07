@@ -22,6 +22,7 @@
 | 2 | **メモは複数残置するが、各メモに表示位置・スコープのラベルを付与**（例: 「カルテ画面トップに常時表示」「このタブのみ表示」） | 2026-05-06 | us-35 / `MemoSubview` |
 | 3 | **us-36 は 1 us 単独 + 内部 3 サブタスク（A 入退院指示 / B 隔離拘束指示 / C 看護ケア記録）方式**。MASTER 高密度監督下で S2 が順次実装、各サブタスク完了で commit を区切る | 2026-05-06 | us-36 進め方 |
 | 4 | **`/karte-alpha/:patientId` ルートは段階 2 中は温存**（直 URL アクセス用、段階 3 / ep-17 で撤去） | 2026-05-06 | 段階 2 のスコープ境界 |
+| 5 | **us-36 サブ A は案 2「2 ボタン分割（KarteAlphaPage 同パターン）」採用**。spec 想定の合議 1 回（ボタン分割可否）に対する PM 判断。「入退院指示」単一ボタン + ダイアログ内タブ切替案は、既存ダイアログ（446 行級）の内部リファクタが必須となり「重さ:小」の粒度に不整合のため不採用。代わりに ActionBar に「入院指示」「退院指示」の 2 ボタンを並べ、admissionState で活性を動的計算、各ボタンが既存ダイアログを直起動する | 2026-05-07 | us-36 サブ A 実装方針 |
 
 ## サマリ
 
@@ -265,4 +266,79 @@ ep-15 us-32（`OutpatientList.tsx`）で確立した呼び出し側パターン�
 
 - `npx tsc --noEmit` クリーン
 - `npx vite build` クリーン
+- ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
+
+---
+
+## us-36 サブ A 入退院指示 完了メモ（S2 / 2026-05-07）
+
+### 実装サマリ
+
+サブ A「入退院指示」を **案 2: 2 ボタン分割（KarteAlphaPage 同パターン）** で実装完了。tsc / vite build クリーン。ブラウザ目視は MASTER 段階 2 統合確認時に依頼。
+
+設計合議の経緯は `docs/specs/ep-16-outpatient-emr-stage2/us-36-inpatient-actions.spec.md`「### 進め方の合議結果（2026-05-07・PM）」、および本ファイル「決定事項」#5 を参照。
+
+#### 変更ファイル
+
+- `src/components/karte/KarteActionBar.tsx`（全面書き換え相当）:
+  - `KarteActionBarProps` に `admissionState?: AdmissionState` を追加
+  - 旧 `INPATIENT_ACTIONS` 静的配列を `buildInpatientActions(admissionState)` に置換
+  - 「入退院指示」単一エントリ（disabled）を「入院指示」「退院指示」の 2 エントリに分割
+  - admissionState 別の disabled / Tooltip ロジック:
+    - `outpatient`: 入院指示 ✅ ／ 退院指示 ❌「入院していません」
+    - `inpatient`: 入院指示 ❌「既に入院中です」 ／ 退院指示 ✅
+    - `discharged`: 両方 ❌「既に退院済です」
+    - 未指定: `'inpatient'` 扱い（KarteAlphaPage と同じ）
+  - 隔離拘束指示・看護ケア記録は disabled 維持（サブ B / C で本実装）。Tooltip 文言を「段階 2 で実装予定（サブ B）」「段階 2 で実装予定（サブ C）」に更新
+
+- `src/components/karte/KartePage.tsx`:
+  - `import AdmissionOrderDialog` / `import DischargeOrderDialog` を追加
+  - `useState<boolean>` 2 つ（`admissionOrderOpen` / `dischargeOrderOpen`）を追加
+  - `handleAction` に `'admission-order'` / `'discharge-order'` 分岐を追加し各 setState を呼ぶ
+  - `<KarteActionBar>` の呼び出しに `admissionState={patient.admissionState}` を追加
+  - レンダー末尾（既存「未保存破棄ダイアログ」の直前）に `<AdmissionOrderDialog>` / `<DischargeOrderDialog>` を追加。`open` / `patient` / `onClose` のみ渡す（既存 API 無変更）
+
+#### 変更しなかったファイル
+
+- `src/components/admission/AdmissionOrderDialog.tsx` / `DischargeOrderDialog.tsx`: API 無変更（案 2 採用効果。既存ダイアログを直接起動）
+- `src/types/index.ts` / `src/stores/useAppStore.ts` / `src/data/mockData.ts` の `MASTER_*` / `src/components/common/`: 触らず
+- `src/components/restraint/RestraintOrderDialog.tsx`: サブ B で必要なら触る
+
+### AC 充足状況
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| AC-A1 ActionBar に「入院指示」「退院指示」の 2 ボタン表示 | ✅ | `KarteActionBar` の INPATIENT モード時、両ボタンが ActionBar 左群に並ぶ（左から `入院指示 → 退院指示 → 隔離拘束指示 → 看護ケア記録 → オーダー入力`） |
+| AC-A2 各ボタン活性が admissionState に従う | ✅ | `buildInpatientActions` 内で 3 状態 × 2 ボタンの活性を分岐。disabled は Tooltip で理由を表示 |
+| AC-A3 ボタンクリックで対応する既存ダイアログを直接起動 | ✅ | `KartePage.handleAction` で setState、`<AdmissionOrderDialog>` / `<DischargeOrderDialog>` を `open` 切替で表示 |
+| AC-A4 保存ロジックは既存ダイアログ踏襲 | ✅ | 既存ダイアログを無変更で利用するため `useAppStore.pendingOrders` への積み込みロジックは ep-03 から不変 |
+| AC-X1 design-rules §10/§11/§12 準拠 | ✅ | mode='inpatient' でのみ表示（§12 mode 切替）／既存ダイアログの破壊的アクション warning と未保存検知は既存実装どおり |
+| AC-X2 mode='outpatient' では非表示 | ✅ | `KarteActionBar` 内の `mode === 'outpatient' ? OUTPATIENT_ACTIONS : ...` 分岐により入院アクション 3 つはそもそも outpatient では出ない |
+
+### 設計判断（暫定）
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | KarteAlphaPage の 2 ボタン構成を踏襲（PM 合意・案 2） | UI 移行コスト最小、既存 API 互換、サブタスクの粒度（重さ:小）と整合 |
+| 2 | 退院指示は KarteAlphaPage の「inpatient のときのみ表示」ではなく **常時表示・disabled で示す**（spec 表に従う） | 状態の差異が画面上で透明（「なぜ押せないか」を Tooltip で示せる）。利用者が状態を見落としにくい |
+| 3 | 入院指示の disabled 文言「既に入院中です」「既に退院済です」 | 退院指示の文言「入院していません」「既に退院済です」と対称。実業務語彙と整合 |
+| 4 | `admissionState` 未指定時は `'inpatient'` 扱い（KarteAlphaPage と同じ） | 既存テストデータの一部は `admissionState` 未指定。挙動の継続性確保 |
+| 5 | INPATIENT_ACTIONS を静的配列から関数 `buildInpatientActions` に変更 | admissionState 連動 disabled の素直な実装。OUTPATIENT_ACTIONS は静的のまま（mode 連動 disabled 不要のため） |
+
+### MASTER への申し送り
+
+- ブラウザ目視は本セッションでは未実施 → **段階 2 統合確認時に MASTER に依頼**
+  - 期待挙動: `/` から病棟マップ患者カードクリック → `/karte/<id>` に遷移 → ActionBar に「入院指示（disabled）」「退院指示（活性）」が表示 → 退院指示クリックで既存 `DischargeOrderDialog` が開く
+  - 外来患者の場合: `/outpatient` から外来一覧 → カルテ → mode='outpatient' なので OUTPATIENT_ACTIONS（入退院指示は出ない）。ここは既存挙動どおり
+  - admissionState='discharged' のテスト患者があれば両方 disabled の表示確認
+- **worktree node_modules 共有問題（PM への申し送り候補）**: `scripts/setup-worktrees.sh` は `.claude/briefings/` のみ symlink を張り、`node_modules` は各 worktree で個別 install を要求する形だが、ワーカー worktree 起動直後に `npm install` を要求するのは初動コスト大（327M / 数分）。本セッションでは MASTER の `node_modules` を一時 symlink して検証を完了させた（`package.json` / `package-lock.json` 一致確認済）。setup-worktrees.sh の改善余地として、`node_modules` も symlink で共有するか別途 install ステップを案内するかの判断が必要
+
+### 共有ファイル変更
+
+なし（`types` / `store` / `mockData` の `MASTER_*` / `common` / `routes` 触らず・既存ダイアログ API 触らず）。`src/components/karte/` 内 2 ファイルに閉じる変更のみ。
+
+### 検証
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン（既存と同程度の bundle サイズ・bundle size warning は既存事象）
 - ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼

@@ -23,6 +23,8 @@ import KartePatientHeader from './KartePatientHeader';
 import KarteActionBar from './KarteActionBar';
 import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
 import PatientInfoTab from './PatientInfoTab';
+import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
+import DischargeOrderDialog from '../admission/DischargeOrderDialog';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -187,6 +189,10 @@ export default function KartePage({ modeOverride }: KartePageProps) {
 
   const onPatientInfoDirty = useCallback((d: boolean) => setPatientInfoDirty(d), []);
 
+  // ===== us-36 サブ A: 入退院指示（2 ボタン分割・案 2） =====
+  const [admissionOrderOpen, setAdmissionOrderOpen] = useState(false);
+  const [dischargeOrderOpen, setDischargeOrderOpen] = useState(false);
+
   if (!patient) {
     return (
       <Box sx={{ p: 3 }}>
@@ -236,6 +242,14 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   const handleAction = (actionId: string) => {
     if (actionId === 'close') {
       handleBack();
+      return;
+    }
+    if (actionId === 'admission-order') {
+      setAdmissionOrderOpen(true);
+      return;
+    }
+    if (actionId === 'discharge-order') {
+      setDischargeOrderOpen(true);
       return;
     }
     setToast({
@@ -294,7 +308,11 @@ export default function KartePage({ modeOverride }: KartePageProps) {
         />
       </Box>
 
-      <KarteActionBar mode={mode} onAction={handleAction} />
+      <KarteActionBar
+        mode={mode}
+        admissionState={patient.admissionState}
+        onAction={handleAction}
+      />
 
       <Snackbar
         open={toast.open}
@@ -311,6 +329,18 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           {toast.message}
         </Alert>
       </Snackbar>
+
+      {/* us-36 サブ A: 入退院指示ダイアログ（既存ダイアログを直接起動・API 変更なし） */}
+      <AdmissionOrderDialog
+        open={admissionOrderOpen}
+        patient={patient}
+        onClose={() => setAdmissionOrderOpen(false)}
+      />
+      <DischargeOrderDialog
+        open={dischargeOrderOpen}
+        patient={patient}
+        onClose={() => setDischargeOrderOpen(false)}
+      />
 
       {/* §10 破壊的：患者情報タブの未保存変更を破棄して離脱する確認 */}
       <Dialog
