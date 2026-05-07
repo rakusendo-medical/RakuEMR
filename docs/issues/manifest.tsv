@@ -48,3 +48,4 @@ user-story/us-33-karte-screen.md	[外来] カルテ画面（タブ式 TOP・mode
 user-story/us-34-patient-info-subtabs.md	[外来] 患者情報サブタブ	story,area/outpatient	epics/ep-15-outpatient-emr.md	story
 epics/ep-16-outpatient-emr-stage2.md	[外来] 外来 EMR 刷新・段階 2（入院 mode 本実装と入院機能の段階移植）	epic,area/outpatient		epic
 epics/ep-17-outpatient-emr-stage3.md	[外来] 外来 EMR 刷新・段階 3（KarteAlphaPage 撤去とルート統合）	epic,area/outpatient		epic
+user-story/us-43-medical-record-tab.md	[外来] 診療録タブ実装（カルテ記載 + 過去カルテ参照）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
