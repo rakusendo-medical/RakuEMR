@@ -342,3 +342,80 @@ ep-15 us-32（`OutpatientList.tsx`）で確立した呼び出し側パターン�
 - `npx tsc --noEmit` クリーン
 - `npx vite build` クリーン（既存と同程度の bundle サイズ・bundle size warning は既存事象）
 - ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
+
+---
+
+## us-36 サブ B 隔離拘束指示 完了メモ（S2 / 2026-05-07）
+
+### 実装サマリ
+
+サブ B「隔離拘束指示」を実装完了。tsc / vite build クリーン。ブラウザ目視は MASTER 段階 2 統合確認時に依頼。
+
+briefing 事前想定の合議 2〜3 回（既存 `RestraintOrderDialog` の API 変更可否、`RestraintOrderLinks` 移植形態）に対する判断:
+
+- **既存ダイアログ API 変更**: 不要。`RestraintOrderDialog` の現行 props `{ open, onClose, patient, initialTitle, editOrderId? }` で ActionBar 既定起動（`initialTitle='隔離開始'`）／RestraintOrderLinks 経由起動（タイトル指定 + editOrderId）の両経路をカバー可能
+- **`RestraintOrderLinks` の移植形態**: 既存コンポーネント（`src/components/isolation/RestraintOrderLinks.tsx`）を **そのまま再利用**。新カルテ用に新規作成した `MedicalRecordTab.tsx` の `<SectionHeader rightSlot>` に直接埋込。MedicalRecordsDense の本体（記事一覧・フィルタ等）は段階 3（ep-17）に温存し、サブ B では「リンクのみ表示」のスタブで spec AC-B3 を満たす
+
+#### 変更ファイル
+
+- `src/components/karte/MedicalRecordTab.tsx`（新規）:
+  - `SectionHeader`（共通）+ `Card` + `CardContent` のスタブ実装
+  - `mode='inpatient'` のとき `rightSlot` に `<RestraintOrderLinks patient={patient} onRequestOrder={onRequestRestraintOrder} />` を埋込
+  - 本体は段階 3 移植までの placeholder（コメントで段階 3/ep-17 移植予定を明記）
+- `src/components/karte/KarteActionBar.tsx`:
+  - `buildInpatientActions` 内の `isolation-order` から `disabled: true` / `disabledTooltip` を削除し活性化（KarteActionBar の右端「印刷／終了」より前に配置済の並びは維持）
+- `src/components/karte/KartePage.tsx`:
+  - `RestraintOrderDialog` / `MedicalRecordTab` を import
+  - `restraintDialog` state（`{open, title, editId?}`）+ `openRestraintDialog` / `closeRestraintDialog` ハンドラを追加（KarteAlphaPage と同じパターン）
+  - `handleAction('isolation-order')` 分岐を追加し既定タイトル「隔離開始」で `openRestraintDialog` を呼ぶ
+  - `KarteTabContent` に `medical-record` 分岐を追加して `<MedicalRecordTab>` をレンダー、`onRequestRestraintOrder` prop を新規追加
+  - レンダー末尾に `<RestraintOrderDialog open={restraintDialog.open} ... />` を追加（既存 API のまま）
+- `docs/screen-mapping.tsv`: `MedicalRecordTab.tsx` 行を新規追加（既存行は変更なし）
+
+#### 変更しなかったファイル
+
+- `src/components/isolation/RestraintOrderDialog.tsx` / `RestraintOrderLinks.tsx`: API 無変更（合議効果。両方とも自前 props で要件充足）
+- `src/components/common/SectionHeader.tsx`: 既存 `rightSlot` をそのまま使用、無変更
+- `src/components/karteAlpha/KarteAlphaPage.tsx`: 段階 3 / ep-17 まで温存（撤去対象だが本 us スコープ外）
+- `src/types/index.ts` / `src/stores/useAppStore.ts` / `src/data/mockData.ts` の `MASTER_*`: 触らず
+
+### AC 充足状況
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| AC-B1 ActionBar の「隔離拘束指示」ボタンが活性化される | ✅ | `buildInpatientActions` で disabled / Tooltip 削除、`mode='inpatient'` 時に活性表示 |
+| AC-B2 ActionBar 経由で隔離拘束指示ダイアログ起動（既定タイトル「隔離開始」） | ✅ | `handleAction('isolation-order')` → `openRestraintDialog('隔離開始')` |
+| AC-B3 診療録カードヘッダー右に `RestraintOrderLinks`（6/12 リンク UI）表示／リンククリックで対応タイトルで起動 | ✅ | `MedicalRecordTab` の `SectionHeader.rightSlot` に既存 `RestraintOrderLinks` を埋込。リンクは内部で `onRequestOrder(title, editOrderId)` を呼び `RestraintOrderDialog` を対応タイトルで起動 |
+| AC-B4 ActionBar 起動と RestraintOrderLinks 起動の動作整合 | ✅ | 両経路とも同じ `restraintDialog` state を更新する `openRestraintDialog` を経由。state 共有・併用問題なし |
+| AC-X1 design-rules §10/§11/§12 準拠 | ✅ | mode='inpatient' のときのみ ActionBar ボタン + RestraintOrderLinks を表示（§12）。ダイアログ内の破壊的アクション warning / 未保存検知は既存 `RestraintOrderDialog` 実装どおり |
+| AC-X2 mode='outpatient' では非表示 | ✅ | `KarteActionBar` の mode 分岐で OUTPATIENT_ACTIONS 利用（隔離拘束指示は出ない）。`MedicalRecordTab` の `rightSlot` は `mode === 'inpatient'` のときのみ `RestraintOrderLinks` を出す |
+
+### 設計判断（暫定）
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | 診療録タブ本体は段階 3 / ep-17 で MedicalRecordsDense 移植する前提でスタブ実装 | spec AC-B3 は「リンクが表示される／リンククリックで対応タイトルで起動」のみ要求。本体（記事一覧・フィルタ）は段階 3 スコープ。サブ B「重さ:中」の粒度を超えない |
+| 2 | `RestraintOrderLinks` を新カルテ用に切り出さず既存コンポーネントを再利用 | API（`{patient, onRequestOrder}`）が新カルテからもそのまま使える。重複実装回避 |
+| 3 | restraintDialog の state 構造（`{open, title, editId?}`）は KarteAlphaPage と同型 | KarteAlphaPage 段階 3 撤去時の挙動互換を担保。ActionBar 経由・リンク経由の両入口を 1 state で管理 |
+| 4 | `onRequestRestraintOrder` を `KarteTabContent` 経由で `MedicalRecordTab` に渡す | KartePage が dialog state を保持する責務を維持しつつ、tab content 単位の API を絞り込み |
+| 5 | `mode='outpatient'` でも `medical-record` タブ自体は表示（rightSlot だけ非表示） | 外来カルテにも診療録は概念上存在する。隔離拘束は入院専用なのでリンクのみ条件付きで非表示 |
+
+### MASTER への申し送り
+
+- ブラウザ目視は本セッションでは未実施 → **段階 2 統合確認時に MASTER に依頼**
+  - 期待挙動 1: 入院患者のカルテ → 診療録タブ → カードヘッダー右に `[隔離開始][隔離解除][拘束開始]...` のリンク群が表示。マスタ「隔離拘束変更=ON」で 12 リンク、OFF で 6 リンク
+  - 期待挙動 2: ActionBar の「隔離拘束指示」クリック → ダイアログ既定タイトル「隔離開始」で開く
+  - 期待挙動 3: 診療録ヘッダー右の `[拘束変更]` リンクが active な拘束指示でグレーアウトしないこと（既存 `RestraintOrderLinks` の disabled ロジック）
+  - 期待挙動 4: 外来モード（`/karte/:patientId` を `/outpatient` 経由で開く）では ActionBar 隔離拘束指示ボタンも `RestraintOrderLinks` も両方表示されない
+- 段階 3（ep-17）での `MedicalRecordsDense` 移植時は、`MedicalRecordTab.tsx` の `CardContent` 内 placeholder を本実装に置換するのが最小ステップ。`SectionHeader` 構成と `rightSlot` の `RestraintOrderLinks` 配置は段階 3 でも同じ構造を維持できる
+
+### 共有ファイル変更
+
+- `docs/screen-mapping.tsv`: 行追加のみ（既存行変更なし、HANDOVER ルール OK 範囲）
+- それ以外の共有ファイル（`types` / `store` / `mockData` の `MASTER_*` / `common` / 既存ダイアログ API）変更なし
+
+### 検証
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン（既存と同程度の bundle サイズ・bundle size warning は既存事象）
+- ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼

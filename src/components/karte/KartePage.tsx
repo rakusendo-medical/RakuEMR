@@ -23,8 +23,10 @@ import KartePatientHeader from './KartePatientHeader';
 import KarteActionBar from './KarteActionBar';
 import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
 import PatientInfoTab from './PatientInfoTab';
+import MedicalRecordTab from './MedicalRecordTab';
 import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
 import DischargeOrderDialog from '../admission/DischargeOrderDialog';
+import RestraintOrderDialog from '../isolation/RestraintOrderDialog';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -193,6 +195,21 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   const [admissionOrderOpen, setAdmissionOrderOpen] = useState(false);
   const [dischargeOrderOpen, setDischargeOrderOpen] = useState(false);
 
+  // ===== us-36 サブ B: 隔離拘束指示 =====
+  // ActionBar 経由起動（既定タイトル「隔離開始」）と RestraintOrderLinks 経由起動（タイトル指定）の両経路を
+  // 同一 state で管理する。KarteAlphaPage と同じパターン。
+  const [restraintDialog, setRestraintDialog] = useState<{
+    open: boolean;
+    title: string;
+    editId?: string;
+  }>({ open: false, title: '' });
+  const openRestraintDialog = useCallback((title: string, editOrderId?: string) => {
+    setRestraintDialog({ open: true, title, editId: editOrderId });
+  }, []);
+  const closeRestraintDialog = useCallback(() => {
+    setRestraintDialog({ open: false, title: '' });
+  }, []);
+
   if (!patient) {
     return (
       <Box sx={{ p: 3 }}>
@@ -252,6 +269,11 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       setDischargeOrderOpen(true);
       return;
     }
+    if (actionId === 'isolation-order') {
+      // 既定タイトル「隔離開始」で起動。RestraintOrderLinks 経由のときはリンクのタイトルが渡る
+      openRestraintDialog('隔離開始');
+      return;
+    }
     setToast({
       open: true,
       message: `[${actionId}] は段階 1 ではモック動作です（mode=${mode}）`,
@@ -305,6 +327,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           patient={patient}
           onPatientInfoDirty={onPatientInfoDirty}
           discardSignal={discardSignal}
+          onRequestRestraintOrder={openRestraintDialog}
         />
       </Box>
 
@@ -342,6 +365,15 @@ export default function KartePage({ modeOverride }: KartePageProps) {
         onClose={() => setDischargeOrderOpen(false)}
       />
 
+      {/* us-36 サブ B: 隔離拘束指示ダイアログ。ActionBar / 診療録カードの RestraintOrderLinks 双方の起動先 */}
+      <RestraintOrderDialog
+        open={restraintDialog.open}
+        patient={patient}
+        initialTitle={restraintDialog.title}
+        editOrderId={restraintDialog.editId}
+        onClose={closeRestraintDialog}
+      />
+
       {/* §10 破壊的：患者情報タブの未保存変更を破棄して離脱する確認 */}
       <Dialog
         open={!!pendingNav}
@@ -375,12 +407,14 @@ function KarteTabContent({
   patient,
   onPatientInfoDirty,
   discardSignal,
+  onRequestRestraintOrder,
 }: {
   tabId: string;
   mode: KarteMode;
   patient: Patient;
   onPatientInfoDirty: (d: boolean) => void;
   discardSignal: number;
+  onRequestRestraintOrder: (title: string, editOrderId?: string) => void;
 }) {
   if (tabId === 'flowsheet') {
     return <FlowsheetPage embedded patientId={patient.id} />;
@@ -397,11 +431,17 @@ function KarteTabContent({
     );
   }
 
+  if (tabId === 'medical-record') {
+    return (
+      <MedicalRecordTab
+        patient={patient}
+        mode={mode}
+        onRequestRestraintOrder={onRequestRestraintOrder}
+      />
+    );
+  }
+
   const meta: Record<string, { title: string; note: string }> = {
-    'medical-record': {
-      title: '診療録',
-      note: '段階 1 ではタブ枠のみ。診療録ビューは別ストーリーで実装予定。',
-    },
     orders: {
       title: '指示簿',
       note: '段階 1 ではタブ枠のみ。オーダー一覧の埋込は別エピックで対応。',
