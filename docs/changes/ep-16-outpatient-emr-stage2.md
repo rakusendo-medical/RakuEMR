@@ -422,3 +422,55 @@ KartePage の `orders` タブ（段階 1 では meta プレースホルダ）を
 - 「新規指示作成・編集 / ステータス更新」「看護用オーダ（一括バイタル等）」は本 us スコープ外（spec 補足どおり別エピック）
 - ORDERS の各患者件数が薄い（多くの患者で 0〜1 件）ため、ブラウザ目視時は P001（山田 太郎）/ P003（鈴木 一郎）あたりで確認すると Chip フィルタ・テーブル表示・「指示状況タブを開く」遷移が一通り見える
 - type Chip 配色のうち「心理検査」と「ECT」が同色（黄系）。spec の意図不明瞭のため既存 `OrderManagement.tsx` を踏襲。視認性改善は将来検討（共有化と合わせて）
+## us-51 指示状況タブ実装 完了メモ（S4・2026-05-07）
+
+spec: [us-51-order-status-tab.spec.md](../specs/ep-16-outpatient-emr-stage2/us-51-order-status-tab.spec.md)
+
+### 実装内容
+
+`src/components/karte/OrderStatusTab.tsx`（新規）+ `KartePage.tsx` の `KarteTabContent` 分岐差替で、新カルテ画面 `/karte/:patientId#order-status` の「指示状況」タブを read-only で実装。
+
+#### 新規: `OrderStatusTab.tsx`
+
+- props: `{ patient: Patient; mode: KarteMode; onOpenOrdersTab: () => void }`
+- 状態: `statusFilter: OrderStatus | 'all'`、`period: 'today' | 'week' | 'all'`（既定 `week`）
+- データ: `ORDERS.filter((o) => o.patientId === patient.id)`、受け持ち看護師は `Patient.nurse` を参照（未設定時 `—` フォールバック）
+
+#### 変更: `KartePage.tsx`
+
+- `import OrderStatusTab from './OrderStatusTab';` を追加
+- `KarteTabContent` 内に `if (tabId === 'order-status') return <OrderStatusTab ... />;` 分岐を追加
+- meta テーブルから `'order-status'` プレースホルダエントリを削除
+
+### AC 充足
+
+- [x] AC-1 ステータス別件数サマリ Chip（5 ステータス、件数 0 は outlined / >0 は filled で密度差表現）
+- [x] AC-2 ステータスフィルタ Chip 6 種（`全て` + 5 OrderStatus、active 時のみ filled + 該当色）
+- [x] AC-3 期間切替（今日 / 今週 / 全期間、`ToggleButtonGroup` 既定 `week`、color は §12 mode 連動）
+- [x] AC-4 行表示: ステータス Chip / type Chip / 内容（noWrap + ellipsis） / 担当医 / 受け持ち看護師 / 期間（`startDate` + `days` から導出 / `days <= 1` は単発で開始日のみ）
+- [x] AC-5 未対応マーカー: 「指示済」「予定」のみ右端 `<CircleIcon fontSize=10 color=warning>` を `aria-label="未対応"` 付与
+- [x] AC-6 「指示簿タブを開く」ボタン: `onOpenOrdersTab` 経由で `attemptTabChange('orders')`（spec の `commitTab('orders')` と同等、既存 `MedicalRecordTab` と同一配線）
+- [x] AC-7 0 件空状態: 「該当する指示はありません（{期間} / {ステータス}）」メッセージ表示
+- [x] AC-8 design-rules 準拠（§3 ボタン MUI 標準 / §6 行密度 dense / §7.1 Chip 色対応 + §7.2 size="small" / §12.3 業務ステータス色を mode より優先）
+
+### 共有ファイル変更（us-51）
+
+- `src/components/karte/OrderStatusTab.tsx`: 新規
+- `src/components/karte/KartePage.tsx`: 1 ファイル更新（import 1 行 + 分岐 1 ブロック追加 + meta から `order-status` 削除）
+- `src/types/index.ts` / `src/stores/useAppStore.ts` / `src/data/mockData.ts` の `MASTER_*` / `src/components/common/`: **触らず**
+
+### 検証（us-51）
+
+- `npx tsc --noEmit`: クリーン
+- `npx vite build`: 成功（chunk size 警告は既存・本変更と無関係）
+- ブラウザ目視は MASTER 段階 2 統合確認時に依頼
+
+### 設計判断（us-51）
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | OrderStatus → 色対応は info / primary / warning / default / success（§7.1 準拠） | 「指示済」を info に割当、§12.3 末尾「§7.1 Chip 色は mode より優先」に従う |
+| 2 | 「期間」は `startDate` + `days` から導出（`days <= 1` は単発） | Order 型に endDate がないため。spec L31「実施予定 or 実施完了日」は mock では具体日付がないので開始期間表示で代替 |
+| 3 | 「今日」「今週」は `startDate` 基準 | mock 既存データは 2026-02 の startDate のため、現在日（2026-05）から見ると今日・今週は 0 件想定（空状態 AC-7 のテストにもなる） |
+| 4 | フィルタ「全て」アクティブ時の色は mode 連動（outpatient=success / inpatient=primary）、各 status Chip アクティブ時は §7.1 の業務色を維持 | spec L34 mode 別配色 + §12.3 末尾の優先関係に整合 |
+| 5 | 件数表示: 「表示 N 件 / 期間内 M 件 / 全 K 件」の 3 段階 | フィルタ作用度合いを把握しやすくするため。spec L33「件数表示」を強化解釈 |

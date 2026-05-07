@@ -26,6 +26,7 @@ import PatientInfoTab from './PatientInfoTab';
 import MedicalRecordTab from './MedicalRecordTab';
 import ClinicalInfoPanel from './ClinicalInfoPanel';
 import OrdersTab from './OrdersTab';
+import OrderStatusTab from './OrderStatusTab';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -398,11 +399,17 @@ function KarteTabContent({
     );
   }
 
+  if (tabId === 'order-status') {
+    return (
+      <OrderStatusTab
+        patient={patient}
+        mode={mode}
+        onOpenOrdersTab={onOpenOrdersTab}
+      />
+    );
+  }
+
   const meta: Record<string, { title: string; note: string }> = {
-    'order-status': {
-      title: '指示状況',
-      note: '段階 1 ではタブ枠のみ。実施状況・受け持ち情報は別エピックで対応。',
-    },
     'care-plan': {
       title: '看護過程',
       note: 'mode=inpatient 時の中身は ep-12〜14 で別途実装予定。',
