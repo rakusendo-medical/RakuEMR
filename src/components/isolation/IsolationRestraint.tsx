@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Paper, Chip, Typography, Stack, Button, TextField, MenuItem,
-  Checkbox, FormControlLabel, IconButton, Tooltip,
+  Checkbox, FormControlLabel, Tooltip,
 } from '@mui/material';
-import { Print, Description as DescriptionIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import { Print, Settings as SettingsIcon } from '@mui/icons-material';
 import {
   ISOLATION_ORDERS, generateObservationRecords,
   MASTER_STAFF_FOR_SIGN, MASTER_BEHAVIOR_RESTRICT_WARDS,
@@ -313,7 +313,10 @@ const IsolationOrderListTab: React.FC = () => {
             size="small" variant="outlined"
             disabled={!karteDone}
             color={nursingDone ? 'success' : 'inherit'}
-            onClick={() => setNursingDialog({ open: true, phase, patientName: row.order.patientName })}
+            onClick={(e) => {
+              e.stopPropagation();
+              setNursingDialog({ open: true, phase, patientName: row.order.patientName });
+            }}
             sx={{ minWidth: 36, py: 0, px: 0.5, fontSize: '0.65rem' }}
           >
             {nursingDone ? '済' : '未'}
@@ -340,7 +343,10 @@ const IsolationOrderListTab: React.FC = () => {
               key={rank}
               size="small"
               variant={sign ? 'text' : 'outlined'}
-              onClick={() => openSign(row.order.id, kind)}
+              onClick={(e) => {
+                e.stopPropagation();
+                openSign(row.order.id, kind);
+              }}
               sx={{ minWidth: 36, py: 0, px: 0.5, fontSize: '0.65rem', justifyContent: 'flex-start' }}
             >
               {sign ? sign.staffName : '未'}
@@ -436,29 +442,28 @@ const IsolationOrderListTab: React.FC = () => {
             {rows.map((row) => {
               const subtypeConf = SUBTYPE_LABEL[row.subtype];
               return (
-                <TableRow key={row.order.id} hover>
+                <TableRow
+                  key={row.order.id}
+                  hover
+                  onClick={row.patient ? () => navigateToKarte(row.patient!) : undefined}
+                  sx={{ cursor: row.patient ? 'pointer' : 'default' }}
+                >
                   <TableCell sx={{ fontSize: '0.7rem' }}>
                     {row.patient ? (
                       <Button size="small" sx={{ p: 0, minWidth: 0, fontSize: '0.7rem' }}
-                        onClick={() => openBedMove(row.patient!)}>
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openBedMove(row.patient!);
+                        }}>
                         {row.order.patientId}
                       </Button>
                     ) : row.order.patientId}
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.7rem' }}>
-                    <Stack direction="row" spacing={0.3} alignItems="center">
-                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                        {row.order.patientName}
-                        {row.patient && `（${row.patient.age}）`}
-                      </Typography>
-                      {row.patient && (
-                        <Tooltip title="カルテへ">
-                          <IconButton size="small" sx={{ p: 0.2 }} onClick={() => navigateToKarte(row.patient!)}>
-                            <DescriptionIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      {row.order.patientName}
+                      {row.patient && `（${row.patient.age}）`}
+                    </Typography>
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.7rem' }}>
                     {row.patient ? patientAdmitForm(row.patient.id) : '—'}
@@ -483,7 +488,10 @@ const IsolationOrderListTab: React.FC = () => {
                         size="small"
                         variant="outlined"
                         color={row.karteStartDone ? 'success' : 'inherit'}
-                        onClick={() => openKarteOrderStart(row)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openKarteOrderStart(row);
+                        }}
                         sx={{ minWidth: 36, py: 0, px: 0.5, fontSize: '0.65rem' }}
                       >
                         {row.karteStartDone ? '済' : '未'}
@@ -500,7 +508,10 @@ const IsolationOrderListTab: React.FC = () => {
                         size="small"
                         variant="outlined"
                         color={row.karteEndDone ? 'success' : 'inherit'}
-                        onClick={() => openKarteOrderEnd(row)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openKarteOrderEnd(row);
+                        }}
                         sx={{ minWidth: 36, py: 0, px: 0.5, fontSize: '0.65rem' }}
                       >
                         {row.karteEndDone ? '済' : '未'}
