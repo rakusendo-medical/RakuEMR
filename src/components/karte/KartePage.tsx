@@ -28,6 +28,7 @@ import ClinicalInfoPanel from './ClinicalInfoPanel';
 import LifeHistoryTimeline from './LifeHistoryTimeline';
 import OrdersTab from './OrdersTab';
 import OrderStatusTab from './OrderStatusTab';
+import NursingProcessTab from './NursingProcessTab';
 import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
 import DischargeOrderDialog from '../admission/DischargeOrderDialog';
 import RestraintOrderDialog from '../isolation/RestraintOrderDialog';
@@ -476,11 +477,11 @@ function KarteTabContent({
     );
   }
 
+  if (tabId === 'care-plan') {
+    return <NursingProcessTab patient={patient} mode={mode} />;
+  }
+
   const meta: Record<string, { title: string; note: string }> = {
-    'care-plan': {
-      title: '看護過程',
-      note: 'mode=inpatient 時の中身は ep-12〜14 で別途実装予定。',
-    },
     schedule: {
       title: 'スケジュール',
       note: '段階 1 ではタブ枠のみ。予約・受診計画は別ストーリーで実装予定。',
