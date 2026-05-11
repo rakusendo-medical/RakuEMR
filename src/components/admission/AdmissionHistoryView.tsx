@@ -4,7 +4,7 @@ import {
   Button, TextField, Paper, Chip, Alert, Divider, IconButton, Tooltip,
 } from '@mui/material';
 import {
-  Restaurant as RestaurantIcon, MoveDown as MoveDownIcon, Lock as LockIcon,
+  Restaurant as RestaurantIcon, Lock as LockIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
 import type { AdmissionHistory, MedicalRecord, Patient } from '../../types';
@@ -15,11 +15,6 @@ import { useAppStore } from '../../stores/useAppStore';
 import DeleteReasonDialog from './DeleteReasonDialog';
 import AdmitFormChangeDialog from './AdmitFormChangeDialog';
 import IsolationHistoryDialog from '../isolation/IsolationHistoryDialog';
-
-interface Props {
-  /** タブ「移動歴」へ切替するためのコールバック */
-  onNavigateToTransferHistory?: () => void;
-}
 
 type DetailTab = 'admit' | 'discharge';
 
@@ -38,7 +33,7 @@ const fmtJP = (iso?: string) => {
  * 左ペインに入院期間グループを期別、各期間内の形態レコードを admitDate 昇順で表示。
  * 右ペインで詳細・編集・取消・形態変更を行う。
  */
-const AdmissionHistoryView: React.FC<Props> = ({ onNavigateToTransferHistory }) => {
+const AdmissionHistoryView: React.FC = () => {
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const optionalFeatures = useAppStore((s) => s.optionalFeatures);
   const admissionHistoryEdits = useAppStore((s) => s.admissionHistoryEdits);
@@ -317,12 +312,6 @@ const AdmissionHistoryView: React.FC<Props> = ({ onNavigateToTransferHistory }) 
               </Button>
             </span>
           </Tooltip>
-          <Button
-            size="small" variant="outlined" startIcon={<MoveDownIcon />}
-            onClick={() => onNavigateToTransferHistory?.()}
-          >
-            移動歴
-          </Button>
           {/* ===== ep-08 隔離拘束歴 ===== */}
           <Button
             size="small" variant="outlined" startIcon={<LockIcon />}

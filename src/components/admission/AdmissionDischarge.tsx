@@ -58,7 +58,7 @@ const AdmissionDischarge: React.FC = () => {
 
       {tab === 0 && <AdmissionScheduleCalendar />}
 
-      {tab === 1 && <AdmissionHistoryView onNavigateToTransferHistory={() => setTab(2)} />}
+      {tab === 1 && <AdmissionHistoryView />}
 
       {tab === 2 && (
         <TableContainer component={Paper} variant="outlined">
