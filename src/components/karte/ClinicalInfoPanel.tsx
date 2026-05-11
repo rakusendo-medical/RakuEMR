@@ -121,7 +121,9 @@ export default function ClinicalInfoPanel({ patient, mode }: ClinicalInfoPanelPr
         }
       />
       {open && (
-        <Box sx={{ px: 2, py: 1 }}>
+        // PM 指示（2026-05-11）: サブタブ切替時に高さがガチャつくのを防ぐため、
+        // 暫定固定高さ 280px + 必要時スクロール。今後コンテンツボリュームに応じて見直し。
+        <Box sx={{ px: 2, py: 1, height: 280, overflowY: 'auto' }}>
           {subTab === 'diagnosis' && <DiagnosisContent patient={patient} />}
           {subTab === 'basic' && <BasicInfoContent patient={patient} />}
           {subTab === 'gaf' && <GafContent />}

@@ -28,9 +28,57 @@ const KIND_COLOR: Record<ScheduleKind, 'primary' | 'success' | 'warning' | 'defa
   'その他':       'default',
 };
 
-// 患者ごとに固定の mock スケジュール（patient.id で異なる組合せを生成）
+// PM 指示（2026-05-11）: P001-P003 は患者像に沿った専用データに差し替え、
+// それ以外はハッシュベースのサブセット表示。
+const PATIENT_SCHEDULES: Record<string, ScheduleEntry[]> = {
+  // ===== P001 山田 太郎（52 歳 男・田村 医師・退院近い慢性期）=====
+  P001: [
+    { id: 'P001-s1',  date: '2026-02-01', time: '10:00', kind: '入退院予定', title: '入院（精神科）',                    doctor: '田村 医師', memo: '統合失調症 急性増悪' },
+    { id: 'P001-s2',  date: '2026-02-05', time: '14:30', kind: '検査予定',   title: '血液検査・心電図',                  doctor: '田村 医師', memo: '入院時定期評価' },
+    { id: 'P001-s3',  date: '2026-02-19', time: '11:00', kind: '検査予定',   title: 'WAIS-IV 検査',                      doctor: '田村 医師', memo: '初回評価・心理士同席' },
+    { id: 'P001-s4',  date: '2026-03-01',                kind: 'その他',     title: '退院支援多職種カンファ',            doctor: '田村 医師', memo: 'PSW・看護師・OT 参加' },
+    { id: 'P001-s5',  date: '2026-03-08', time: '14:00', kind: '来院予約',   title: '面会（家族・妻）',                                                       memo: '面会室 A' },
+    { id: 'P001-s6',  date: '2026-03-15', time: '11:00', kind: '検査予定',   title: 'WAIS-IV 再評価',                    doctor: '田村 医師', memo: 'ORD104 連動' },
+    { id: 'P001-s7',  date: '2026-03-22',                kind: 'その他',     title: '退院前外泊（試験）',                doctor: '田村 医師', memo: '2 泊 3 日・自宅' },
+    { id: 'P001-s8',  date: '2026-03-28', time: '10:00', kind: '入退院予定', title: '退院予定',                          doctor: '田村 医師', memo: '訪問看護導入後' },
+    { id: 'P001-s9',  date: '2026-04-04', time: '10:30', kind: '来院予約',   title: '退院後 初回外来',                   doctor: '田村 医師', memo: '採血 + 服薬指導' },
+    { id: 'P001-s10', date: '2026-04-18', time: '10:30', kind: '来院予約',   title: '外来フォロー',                      doctor: '田村 医師' },
+    { id: 'P001-s11', date: '2026-05-02', time: '10:30', kind: '来院予約',   title: '外来フォロー',                      doctor: '田村 医師' },
+    { id: 'P001-s12', date: '2026-05-16', time: '10:30', kind: '来院予約',   title: '外来フォロー',                      doctor: '田村 医師' },
+  ],
+  // ===== P002 佐藤 花子(67 歳 女・岸本 医師・認知機能評価中) =====
+  P002: [
+    { id: 'P002-s1',  date: '2026-02-15', time: '09:30', kind: '入退院予定', title: '入院(精神科)',                      doctor: '岸本 医師', memo: '双極性障害 + 認知機能低下疑い' },
+    { id: 'P002-s2',  date: '2026-02-19', time: '13:00', kind: '検査予定',   title: 'HDS-R 認知機能評価',                doctor: '岸本 医師', memo: 'ORD204 連動・実施済' },
+    { id: 'P002-s3',  date: '2026-02-25', time: '14:00', kind: 'その他',     title: '家族説明(長男)',                    doctor: '岸本 医師', memo: '治療方針・退院後体制' },
+    { id: 'P002-s4',  date: '2026-03-04', time: '14:30', kind: '検査予定',   title: 'MRI(頭部)',                         doctor: '岸本 医師', memo: '器質性除外目的・院内放射線科' },
+    { id: 'P002-s5',  date: '2026-03-11', time: '09:00', kind: '検査予定',   title: '血液生化学(リチウム血中濃度)',      doctor: '岸本 医師', memo: 'リーマス 600mg 効果確認' },
+    { id: 'P002-s6',  date: '2026-03-20', time: '13:00', kind: '検査予定',   title: 'MMSE 再評価',                       doctor: '岸本 医師', memo: 'ORD205 連動・心理士同席' },
+    { id: 'P002-s7',  date: '2026-03-27',                kind: 'その他',     title: 'ケアマネ面談',                      doctor: '岸本 医師', memo: '退院後の介護保険サービス調整' },
+    { id: 'P002-s8',  date: '2026-04-10', time: '11:30', kind: '入退院予定', title: '退院予定',                          doctor: '岸本 医師', memo: 'デイケア + 訪問看護導入' },
+    { id: 'P002-s9',  date: '2026-04-24', time: '11:00', kind: '来院予約',   title: '退院後 初回外来',                   doctor: '岸本 医師' },
+    { id: 'P002-s10', date: '2026-05-22', time: '11:00', kind: '来院予約',   title: '外来フォロー',                      doctor: '岸本 医師', memo: '血液検査同時実施' },
+  ],
+  // ===== P003 鈴木 一郎(41 歳 男・森田 医師・隔離下急性期) =====
+  P003: [
+    { id: 'P003-s1',  date: '2026-02-10', time: '02:30', kind: '入退院予定', title: '緊急入院(精神科)',                  doctor: '森田 医師', memo: '措置入院・隔離指示同時' },
+    { id: 'P003-s2',  date: '2026-02-12', time: '10:00', kind: 'その他',     title: '入院時カンファ',                    doctor: '森田 医師', memo: '主治医・病棟看護師・PSW' },
+    { id: 'P003-s3',  date: '2026-02-24', time: '14:00', kind: 'その他',     title: 'デカン酸フルフェナジン 投与',       doctor: '森田 医師', memo: 'ORD002 連動・隔週' },
+    { id: 'P003-s4',  date: '2026-03-01', time: '11:00', kind: '検査予定',   title: 'GAF 評価',                          doctor: '森田 医師', memo: 'ORD305 連動・実施済' },
+    { id: 'P003-s5',  date: '2026-03-09', time: '13:45', kind: 'その他',     title: 'リスパダール 増量検討',             doctor: '森田 医師', memo: '2mg → 3mg・ORD301 連動' },
+    { id: 'P003-s6',  date: '2026-03-18', time: '15:00', kind: 'その他',     title: '家族面談(妻)',                      doctor: '森田 医師', memo: '退院環境調整・ORD308 連動' },
+    { id: 'P003-s7',  date: '2026-03-25', time: '10:00', kind: '検査予定',   title: '隔離解除判定',                      doctor: '森田 医師', memo: '医師 2 名同席で判定' },
+    { id: 'P003-s8',  date: '2026-04-08',                kind: 'その他',     title: '退院支援カンファ',                  doctor: '森田 医師', memo: 'グループホーム見学調整' },
+    { id: 'P003-s9',  date: '2026-04-22', time: '10:00', kind: '来院予約',   title: 'ACT 訪問(試行)',                                                           memo: '退院前訪問・ACT チーム' },
+    { id: 'P003-s10', date: '2026-05-13', time: '11:30', kind: '入退院予定', title: '退院予定',                          doctor: '森田 医師', memo: 'グループホーム入居同時' },
+    { id: 'P003-s11', date: '2026-05-27', time: '14:00', kind: '来院予約',   title: '退院後 初回外来',                   doctor: '森田 医師' },
+  ],
+};
+
+// 患者ごとに固定の mock スケジュール（P001-P003 は専用データ、それ以外はハッシュベース fallback）
 function buildSchedule(patientId: string): ScheduleEntry[] {
-  // mock 1: 直近過去・直近未来をハッシュで散らす
+  if (PATIENT_SCHEDULES[patientId]) return PATIENT_SCHEDULES[patientId];
+  // P001-P003 以外: 既存ハッシュベース fallback
   const seed = patientId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const base: ScheduleEntry[] = [
     { id: `${patientId}-s1`, date: '2026-05-15', time: '10:30', kind: '来院予約',   title: '次回外来予約',           doctor: '田村 医師', memo: '採血 + 診察' },
