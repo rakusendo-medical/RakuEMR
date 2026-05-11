@@ -56,3 +56,6 @@ user-story/us-47-medical-record-tab-refinements.md	[外来] 診療録タブ追�
 user-story/us-50-orders-tab.md	[外来] 指示簿タブ実装（最小実装）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
 user-story/us-51-order-status-tab.md	[外来] 指示状況タブ実装（最小実装）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
 user-story/us-52-schedule-tab.md	[外来] スケジュールタブ実装（最小実装）	story,area/outpatient	epics/ep-16-outpatient-emr-stage2.md	story
+user-story/us-39-karte-alpha-removal.md	[外来] /karte-alpha ルート完全撤去 + ルート統合	story,area/outpatient	epics/ep-17-outpatient-emr-stage3.md	story
+user-story/us-40-legacy-assets-removal.md	[外来] 旧 karte/ 素材 + 死にコード flowsheet/FlowsheetPage 撤去	story,area/outpatient	epics/ep-17-outpatient-emr-stage3.md	story
+user-story/us-41-regression-check.md	[外来] 段階 3 リグレッション確認 + ep-17 クローズ	story,area/outpatient	epics/ep-17-outpatient-emr-stage3.md	story
