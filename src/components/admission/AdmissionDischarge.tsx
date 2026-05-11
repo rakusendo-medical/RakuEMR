@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, Paper, Chip, Typography, Button, Stack,
+  TableRow, Paper, Typography, Stack,
   ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import {
@@ -22,7 +22,6 @@ const AdmissionDischarge: React.FC = () => {
           <Tab label="入退院情報" />
           <Tab label="入院歴" />
           <Tab label="移動歴" />
-          <Tab label="新規入退院指示" />
         </Tabs>
         <Stack direction="row" spacing={1} alignItems="center" sx={{ pr: 1, flexWrap: 'wrap', rowGap: 0.5 }}>
           <Typography variant="caption" color="text.secondary">操作者ロール</Typography>
@@ -88,19 +87,6 @@ const AdmissionDischarge: React.FC = () => {
         </TableContainer>
       )}
 
-      {tab === 3 && (
-        <Paper variant="outlined" sx={{ p: 3, maxWidth: 720 }}>
-          <Typography variant="subtitle1" gutterBottom>入退院指示について</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            入退院指示（入院指示／退院指示）は<strong>カルテ画面のクイック操作</strong>から発行します。
-            患者を選んでカルテ画面を開き、画面下部のアクションバーから「入院指示」または「退院指示（入院患者のみ）」をクリックしてください。
-            指示登録後は <strong>「入退院情報」タブ</strong>のカレンダーに赤字（未確定）で反映されます。
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button variant="outlined" onClick={() => setTab(0)}>入退院情報カレンダーへ</Button>
-          </Stack>
-        </Paper>
-      )}
     </Box>
   );
 };
