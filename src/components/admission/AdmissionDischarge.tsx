@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, Paper, Typography, Stack,
+  TableRow, Paper, Typography, Stack, Tooltip,
   ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
+import { InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
 import {
   TRANSFER_HISTORY,
 } from '../../data/mockData';
@@ -24,6 +25,22 @@ const AdmissionDischarge: React.FC = () => {
           <Tab label="移動歴" />
         </Tabs>
         <Stack direction="row" spacing={1} alignItems="center" sx={{ pr: 1, flexWrap: 'wrap', rowGap: 0.5 }}>
+          <Tooltip
+            title={
+              <Box sx={{ fontSize: '0.7rem', lineHeight: 1.5 }}>
+                モック動作確認用の切替バー。本番では参考システムのマスタ設定・ログイン中ユーザーのロールに相当する。<br />
+                ・操作者ロール: 権限ガード UI（隔離拘束歴の削除権限・サイン既定者など）の出し分けを確認<br />
+                ・オプション: ダイアログ表示項目・リンク数などマスタ依存 UI の出し分けを確認
+              </Box>
+            }
+            arrow
+            placement="bottom-end"
+          >
+            <Stack direction="row" spacing={0.3} alignItems="center" sx={{ color: 'text.disabled', cursor: 'help' }}>
+              <InfoOutlinedIcon sx={{ fontSize: 14 }} />
+              <Typography variant="caption" sx={{ fontStyle: 'italic' }}>モック切替</Typography>
+            </Stack>
+          </Tooltip>
           <Typography variant="caption" color="text.secondary">操作者ロール</Typography>
           <ToggleButtonGroup
             size="small"
