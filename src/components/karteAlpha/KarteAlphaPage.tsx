@@ -26,7 +26,6 @@ import {
   ArrowForwardIos,
   Send,
   Edit,
-  NoteAdd,
   Receipt,
   MeetingRoom,
   CalendarMonth,
@@ -208,7 +207,6 @@ const SUB_TABS = [
 const ACTION_BUTTONS = [
   { label: "オーダ送信", icon: <Send />, color: "primary" as const },
   { label: "事後入力", icon: <Edit />, color: "primary" as const },
-  { label: "看護ケア", icon: <NoteAdd />, color: "secondary" as const },
   { label: "オーダ入力", icon: <Receipt />, color: "info" as const },
   { label: "患者予約", icon: <CalendarMonth />, color: "warning" as const },
   { label: "記事作成", icon: <Edit />, color: "primary" as const },

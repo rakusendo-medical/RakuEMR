@@ -482,7 +482,7 @@ export interface RehabEvaluation {
   type: "定期" | "開始時" | "終了時";
 }
 
-/** 看護ケア予定 */
+/** 看護予定 */
 export interface NursingCareSchedule {
   id: string;
   patientId: string;

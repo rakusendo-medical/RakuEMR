@@ -18,7 +18,7 @@ const NursingCarePlan: React.FC = () => {
   return (
     <Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        看護ケアの予定を一括入力・管理します
+        看護予定を一括入力・管理します
       </Typography>
       <WardFilterTabs value={wardFilter} onChange={setWardFilter} />
       <TableContainer component={Paper} variant="outlined">
