@@ -90,24 +90,33 @@ export default function ClinicalInfoPanel({ patient, mode }: ClinicalInfoPanelPr
         onToggle={() => setOpen(!open)}
         rightSlot={
           <Stack direction="row" spacing={0.25} alignItems="center" onClick={(e) => e.stopPropagation()} sx={{ flexWrap: 'wrap', rowGap: 0.25 }}>
-            {SUB_TABS.map((t) => (
-              <Chip
-                key={t.key}
-                label={t.label}
-                size="small"
-                color={subTab === t.key ? 'primary' : 'default'}
-                variant={subTab === t.key ? 'filled' : 'outlined'}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSubTab(t.key);
-                  if (!open) setOpen(true);
-                }}
-                sx={{
-                  height: 22, fontSize: '0.65rem', borderRadius: 0.5,
-                  bgcolor: subTab === t.key ? '#fff' : 'rgba(255,255,255,0.85)',
-                }}
-              />
-            ))}
+            {SUB_TABS.map((t) => {
+              const active = subTab === t.key;
+              return (
+                <Chip
+                  key={t.key}
+                  label={t.label}
+                  size="small"
+                  variant={active ? 'filled' : 'outlined'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSubTab(t.key);
+                    if (!open) setOpen(true);
+                  }}
+                  sx={{
+                    height: 22, fontSize: '0.65rem', borderRadius: 0.5,
+                    // SectionHeader 上で確実に視認できる配色を sx で明示
+                    bgcolor: active ? '#fff' : 'rgba(255,255,255,0.1)',
+                    color: active ? headerColor : '#fff',
+                    border: '1px solid rgba(255,255,255,0.7)',
+                    fontWeight: active ? 700 : 500,
+                    '&:hover': {
+                      bgcolor: active ? '#fff' : 'rgba(255,255,255,0.25)',
+                    },
+                  }}
+                />
+              );
+            })}
           </Stack>
         }
       />

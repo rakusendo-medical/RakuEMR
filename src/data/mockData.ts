@@ -524,10 +524,42 @@ export const PATIENTS: Patient[] = [
 
 // ===== オーダ =====
 export const ORDERS: Order[] = [
-  { id: 'ORD001', patientId: 'P001', patientName: '山田 太郎',   type: '処方',     content: 'リスパダール 2mg',              schedule: '朝・夕',          status: '実施中', startDate: '2026-02-20', days: 14, doctorName: '田村 医師' },
-  { id: 'ORD002', patientId: 'P003', patientName: '鈴木 一郎',   type: '注射',     content: 'デカン酸フルフェナジン 25mg',   schedule: '隔週',            status: '指示済', startDate: '2026-02-24', days: 1,  doctorName: '森田 医師' },
+  // ===== P001 山田 太郎（52 歳 男・田村 医師）=====
+  { id: 'ORD001',  patientId: 'P001', patientName: '山田 太郎',   type: '処方',     content: 'リスパダール 2mg',              schedule: '朝・夕',          status: '実施中', startDate: '2026-02-20', days: 14, doctorName: '田村 医師' },
+  { id: 'ORD101',  patientId: 'P001', patientName: '山田 太郎',   type: '処方',     content: 'ロゼレム 8mg',                  schedule: '就寝前',          status: '実施中', startDate: '2026-03-01', days: 14, doctorName: '田村 医師' },
+  { id: 'ORD102',  patientId: 'P001', patientName: '山田 太郎',   type: '処方',     content: 'エビリファイ 6mg',              schedule: '朝',              status: '実施中', startDate: '2026-03-05', days: 14, doctorName: '田村 医師' },
+  { id: 'ORD103',  patientId: 'P001', patientName: '山田 太郎',   type: '注射',     content: 'ハロペリドール デポ筋注 50mg',  schedule: '隔週',            status: '実施中', startDate: '2026-02-25', days: 1,  doctorName: '田村 医師' },
+  { id: 'ORD104',  patientId: 'P001', patientName: '山田 太郎',   type: '心理検査', content: 'WAIS-IV 再評価',                schedule: '—',               status: '予定',   startDate: '2026-03-15', days: 1,  doctorName: '田村 医師' },
+  { id: 'ORD105',  patientId: 'P001', patientName: '山田 太郎',   type: '入院定時', content: 'バイタルサイン測定',            schedule: '6時・14時・22時', status: '実施中', startDate: '2026-02-01', days: 30, doctorName: '田村 医師' },
+  { id: 'ORD106',  patientId: 'P001', patientName: '山田 太郎',   type: 'IF',       content: '服薬管理指導（自己管理移行）',  schedule: '週 2 回',         status: '実施中', startDate: '2026-03-02', days: 0,  doctorName: '田村 医師' },
+  { id: 'ORD107',  patientId: 'P001', patientName: '山田 太郎',   type: '文字',     content: '退院支援カンファ実施依頼',      schedule: '—',               status: '指示済', startDate: '2026-03-12', days: 1,  doctorName: '田村 医師' },
+  { id: 'ORD108',  patientId: 'P001', patientName: '山田 太郎',   type: '処方',     content: 'ベンゾジアゼピン（頓服）',      schedule: '不眠時',          status: '中止',   startDate: '2026-02-15', days: 14, doctorName: '田村 医師' },
+
+  // ===== P002 佐藤 花子（67 歳 女・岸本 医師）=====
+  { id: 'ORD004',  patientId: 'P002', patientName: '佐藤 花子',   type: '処方',     content: 'デパケン 400mg',                schedule: '朝・昼・夕',      status: '実施中', startDate: '2026-02-18', days: 28, doctorName: '岸本 医師' },
+  { id: 'ORD201',  patientId: 'P002', patientName: '佐藤 花子',   type: '処方',     content: 'リーマス（炭酸リチウム）600mg', schedule: '朝・夕',          status: '実施中', startDate: '2026-02-22', days: 21, doctorName: '岸本 医師' },
+  { id: 'ORD202',  patientId: 'P002', patientName: '佐藤 花子',   type: '処方',     content: 'マイスリー 10mg',               schedule: '就寝前',          status: '実施中', startDate: '2026-02-18', days: 14, doctorName: '岸本 医師' },
+  { id: 'ORD203',  patientId: 'P002', patientName: '佐藤 花子',   type: '注射',     content: 'ビタミン B 群（B1・B12）',      schedule: '週 1 回',         status: '実施中', startDate: '2026-02-20', days: 1,  doctorName: '岸本 医師' },
+  { id: 'ORD204',  patientId: 'P002', patientName: '佐藤 花子',   type: '心理検査', content: 'HDS-R（認知機能評価）',         schedule: '—',               status: '実施済', startDate: '2026-02-19', days: 1,  doctorName: '岸本 医師' },
+  { id: 'ORD205',  patientId: 'P002', patientName: '佐藤 花子',   type: '心理検査', content: 'MMSE（再評価）',                schedule: '—',               status: '予定',   startDate: '2026-03-20', days: 1,  doctorName: '岸本 医師' },
+  { id: 'ORD206',  patientId: 'P002', patientName: '佐藤 花子',   type: '入院定時', content: '血糖測定（食前・食後）',        schedule: '毎食前後',        status: '実施中', startDate: '2026-02-18', days: 30, doctorName: '岸本 医師' },
+  { id: 'ORD207',  patientId: 'P002', patientName: '佐藤 花子',   type: 'IF',       content: '転倒予防指導',                  schedule: '—',               status: '実施中', startDate: '2026-02-19', days: 0,  doctorName: '岸本 医師' },
+  { id: 'ORD208',  patientId: 'P002', patientName: '佐藤 花子',   type: '文字',     content: '排便管理（毎日記録）',          schedule: '毎日',            status: '実施中', startDate: '2026-02-18', days: 0,  doctorName: '岸本 医師' },
+
+  // ===== P003 鈴木 一郎（41 歳 男・森田 医師・隔離・要報告）=====
+  { id: 'ORD002',  patientId: 'P003', patientName: '鈴木 一郎',   type: '注射',     content: 'デカン酸フルフェナジン 25mg',   schedule: '隔週',            status: '指示済', startDate: '2026-02-24', days: 1,  doctorName: '森田 医師' },
+  { id: 'ORD301',  patientId: 'P003', patientName: '鈴木 一郎',   type: '処方',     content: 'リスパダール 3mg（増量後）',    schedule: '朝・夕',          status: '実施中', startDate: '2026-03-09', days: 14, doctorName: '森田 医師' },
+  { id: 'ORD302',  patientId: 'P003', patientName: '鈴木 一郎',   type: '処方',     content: 'バルプロ酸 400mg',              schedule: '朝・夕',          status: '実施中', startDate: '2026-02-10', days: 28, doctorName: '森田 医師' },
+  { id: 'ORD303',  patientId: 'P003', patientName: '鈴木 一郎',   type: '処方',     content: 'レンドルミン 0.25mg',           schedule: '就寝前（頓服）',  status: '実施中', startDate: '2026-02-15', days: 14, doctorName: '森田 医師' },
+  { id: 'ORD304',  patientId: 'P003', patientName: '鈴木 一郎',   type: '注射',     content: 'メチコバール（ビタミン B12）',  schedule: '週 1 回',         status: '実施中', startDate: '2026-02-20', days: 1,  doctorName: '森田 医師' },
+  { id: 'ORD305',  patientId: 'P003', patientName: '鈴木 一郎',   type: '心理検査', content: 'GAF 評価',                      schedule: '—',               status: '実施済', startDate: '2026-03-01', days: 1,  doctorName: '森田 医師' },
+  { id: 'ORD306',  patientId: 'P003', patientName: '鈴木 一郎',   type: '入院定時', content: '隔離下バイタル測定（4 時間毎）',schedule: '6時・10時・14時・18時・22時', status: '実施中', startDate: '2026-02-10', days: 30, doctorName: '森田 医師' },
+  { id: 'ORD307',  patientId: 'P003', patientName: '鈴木 一郎',   type: '文字',     content: '隔離室観察記録（15 分毎）',     schedule: '15 分毎',         status: '実施中', startDate: '2026-02-10', days: 0,  doctorName: '森田 医師' },
+  { id: 'ORD308',  patientId: 'P003', patientName: '鈴木 一郎',   type: 'IF',       content: '退院環境調整（家族同席）',      schedule: '—',               status: '予定',   startDate: '2026-03-18', days: 1,  doctorName: '森田 医師' },
+  { id: 'ORD309',  patientId: 'P003', patientName: '鈴木 一郎',   type: 'ECT',      content: '修正型電気けいれん療法（評価）',schedule: '—',               status: '中止',   startDate: '2026-02-08', days: 1,  doctorName: '森田 医師' },
+
+  // ===== その他患者（既存）=====
   { id: 'ORD003', patientId: 'P004', patientName: '高橋 美咲',   type: '心理検査', content: 'WAIS-IV',                       schedule: '—',               status: '予定',   startDate: '2026-02-25', days: 1,  doctorName: '田村 医師' },
-  { id: 'ORD004', patientId: 'P002', patientName: '佐藤 花子',   type: '処方',     content: 'デパケン 400mg',                schedule: '朝・昼・夕',      status: '実施中', startDate: '2026-02-18', days: 28, doctorName: '岸本 医師' },
   { id: 'ORD005', patientId: 'P005', patientName: '田中 健太',   type: 'ECT',      content: '修正型電気けいれん療法',        schedule: '—',               status: '予定',   startDate: '2026-02-26', days: 1,  doctorName: '岸本 医師' },
   { id: 'ORD006', patientId: 'P008', patientName: '中村 裕子',   type: '入院定時', content: 'バイタルサイン測定',            schedule: '6時・12時・18時', status: '実施中', startDate: '2026-02-01', days: 30, doctorName: '岸本 医師' },
   { id: 'ORD007', patientId: 'P011', patientName: '吉田 浩二',   type: '処方',     content: 'オランザピン 10mg',             schedule: '夕',              status: '実施中', startDate: '2026-02-15', days: 21, doctorName: '岸本 医師' },
