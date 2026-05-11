@@ -9,7 +9,7 @@
 
 | セッション名 | 役割 | 対応中エピック | ステータス | 最終更新 |
 | --- | --- | --- | --- | --- |
-| MASTER | マスターセッション | **2026-05-07 セッション終了**。本日成果: ① **ep-16 大幅進展**（us-43 診療録タブ集約タイムライン + us-44 患者ヘッダー強化 8 ピクトグラム + us-46 診療情報パネル 7 サブタブ）／② ワーカー成果取込（**S2 us-36 サブ A/B**・**S3 us-50**・**S4 us-51 + C-2**）／③ サイドバーに **エピック評価画面**（`/epic-review/:epicId`）追加・ep-01〜17 ダッシュボード化／④ spec 起票（us-44〜47, us-50〜52）／⑤ 動線統一（PatientMain・WardMap ダブルクリック → 新カルテ）／⑥ worktree 機構導入 + briefing 機構 + ロゴ favicon 等インフラ整備。**明日の TODO**: ① **ep 関係修正**（PM 翌日着手宣言）／② **us-36 サブ C 看護ケア記録**（実装方針 3 案から PM + MASTER で要件確定）／③ **us-37 看護過程タブ統合**（C-2 結論で技術的に即着手可能・担当アサイン要）／④ **ブラウザ目視統合確認**（us-43〜46 + us-50/51 + us-36）／⑤ MASTER 待ち事項処理（worktree node_modules 共有方針 / ep-12〜14 進捗ヒアリング）。**未着手で優先度低**: us-45 生活歴タイムライン / us-47 診療録追補 / us-52 スケジュール | 2026-05-07 セッション終了 | 2026-05-07 |
+| MASTER | マスターセッション | **ep-15 段階 1 クローズ済**（`93bf3eb`）。**ep-16 段階 2 クローズ済**（2026-05-11 PM OK）— α との機能等価以上を達成、`/karte/:patientId` が入院・外来両 mode で完結。S2 us-36 サブ A/B/C / S3 us-35/us-50 / S4 us-38/us-51/us-37 / MASTER us-43/us-44/us-45/us-46/us-47/us-52 + タブ配色反転 + アイコン追加 + SectionHeader 重複撤去 + サブタブ高さ固定 + 配色不具合修正 + データ厚増（P001-P003）すべて完了。前/次患者ナビは PM 判断で不採用。エピック評価画面（`/epic-review/:epicId`・ep-01〜17）+ worktree 分離運用 + briefing 機構もインフラ整備済。**次のアクション**: ① ep-17 段階 3（KarteAlphaPage 撤去 + ルート統合）の spec 起こし + us 確定 + 担当アサイン／② S2 起票の死にコード対応 3 件処理（MASTER 待ち事項）／③ ep-12〜14（看護診断 / 計画 / 評価）の段階整理（S4 の C-2 結論で技術的にはほぼ完了）／④ worktree node_modules 共有方針（MASTER 待ち事項） | 段階 2 クローズ済・ep-17 着手判定 | 2026-05-11 |
 | S2 | ワーカー | ep-05〜ep-08 隔離拘束系すべて実装完了・push 済（モック実装。ブラウザ目視は未実施）。追加: サイドバー整理完了（19 エントリを「病床管理／看護／共通・運用／開発」の 4 セクションに分割。MainLayout のみ変更、ルート・画面コンポーネントは未変更。tsc / build クリーン、ブラウザ目視は MASTER 側で実施依頼） | 完了 | 2026-05-04 |
 | S2 | ワーカー | ep-15 着手順序 \[1\]\[2\] **+ AC-10 完了 + 履歴挙動修正完了**。\[1\] design-rules §12「mode 切替（外来／入院）」本文（§12.1〜§12.6）+ 改訂履歴追記。\[2\] us-33 骨組み: `/karte/:patientId` 新規ルート / `KartePage.tsx` / `KartePatientHeader.tsx` / `KarteActionBar.tsx` / 7 タブ枠 / mode prop API 確立 / mode 判定 / 戻り先判定 / 看護過程タブ disabled + Tooltip / フローシート埋込 / mode 識別 Chip。**\[3\] AC-10 タブ状態の URL ハッシュ反映**（commit `30151eb`）: `useLocation().hash` から初期 currentTab 解決 / 戻る・進む追従 / 看護過程の語彙差（tabId=`care-plan` / hash=`nursing-process`）/ 患者情報未保存検知の確認ダイアログ経由でも URL 揃え。spec us-33 に AC-10 + URL ハッシュ ↔ タブ ID 対応表を追加（commit `25b884f`）。**\[4\] AC-10 履歴挙動修正**（PM フィードバック・本コミット）: ユーザー操作によるタブ切替を `replace: false`（履歴に積む）に変更。`commitTab(nextTab, opts?: { replace })` シグネチャ拡張、初期化時の URL 自動補正は `replace: true` を維持するルールを spec / コードコメントに明文化。spec AC-10 末尾 Note 改訂 + 「ブラウザバックで前タブに戻る」Given/When/Then 追加。changes に「AC-10 フォローアップ修正」節を追記。tsc + build クリーン、共有ファイル変更なし。**`30151eb` には S4 の段階 1 クローズ作業（#3 / #5）が並行編集で巻き込まれている**（後述・経緯記録あり）。**MASTER のレビュー + ブラウザ目視（履歴挙動含む AC-10 動作確認）待ち** | \[1\] / \[2\] / AC-10 + 履歴挙動修正 完了 | 2026-05-06 |
 | S3 | ワーカー | ep-10 看護実施（フローシート, us-17〜26）モック実装完了（10 ストーリー全 push 済）。残: KarteAlphaPage タブ統合は MASTER 待ち事項として継続管理。FlowsheetPage には `embedded` / `patientId` prop 追加済（統合準備済み） | 完了 | 2026-05-02 |
@@ -138,6 +138,7 @@
 | ep-09 患者情報 | us-16 | `/patients` |
 | ep-10 看護実施（フローシート） | us-17〜us-26 | `/nursing/*`、カルテタブ埋込済（S3 が us-17 バイタルグラフ補修を 2026-05-06 完了 push 済） |
 | ep-15 外来 EMR 刷新（段階 1） | us-32, us-33, us-34 | `/outpatient`, `/karte/:patientId`（外来 mode）。段階 1 完了（2026-05-06 PM OK）。`OutpatientKartePage` 撤去済、`/outpatient/:patientId/basic` は `/karte/:patientId#patient-info` に互換リダイレクト |
+| ep-16 外来 EMR 刷新（段階 2） | us-35〜38, us-43〜47, us-50〜52 | `/karte/:patientId`（入院 + 外来 両 mode）。段階 2 完了（2026-05-11 PM OK）。**α との機能等価以上を達成**（KarteAlphaPage の準備中タブが新カルテで実装済・8 ピクトグラム / ClinicalInfoPanel / 集約タイムライン / 編集ダイアログ等で進化）。前/次患者ナビは PM 判断で不採用。α 撤去は ep-17（段階 3）で実施予定 |
 
 ### 🟠 進行中
 
@@ -146,13 +147,12 @@
 | ep-12 看護診断 | 看護 | us-28 | spec 確定（方針 Y）／mock 改修フェーズ 2 進行中 |
 | ep-13 看護計画 | 看護 | us-29 | 同上（期間複数計画モデル実装中） |
 | ep-14 看護評価 | 看護 | us-30, us-31 | 同上 |
-| ep-16 外来 EMR 刷新（段階 2） | 外来・共通 | us-35, us-36（後続）, us-37（後続）, us-38 | spec 起こし済（`docs/specs/ep-16-outpatient-emr-stage2/`）。**S3 が us-35（入院 mode 本実装）にアサイン済**、**S4 が us-38（呼び出し元修正）にアサイン済**（並列）。us-36 / us-37 は後続（Phase 0 / ep-12〜14 進捗依存） |
 
 ### 🟡 残（未着手）
 
-ep-15 段階 1 完了に伴い、段階 3 を後続エピックとして manifest 登録済:
+ep-16 段階 2 完了に伴い、段階 3 が次の対象:
 
-- **ep-17** 外来 EMR 刷新・段階 3（`docs/issues/epics/ep-17-outpatient-emr-stage3.md`）: `/karte-alpha` を新カルテに置換、`KarteAlphaPage` 撤去。想定子ストーリー us-39〜41（仮、ep-16 完了後に確定）
+- **ep-17** 外来 EMR 刷新・段階 3（`docs/issues/epics/ep-17-outpatient-emr-stage3.md`）: `/karte-alpha` を新カルテに置換、`KarteAlphaPage` 撤去。想定子ストーリー us-39〜41（仮、ep-16 完了で着手判定可能に）。**S2 が起票した死にコード対応 3 件**（MASTER 待ち事項参照）も段階 3 の整理スコープに統合候補
 
 ### 全エピック完了後
 
