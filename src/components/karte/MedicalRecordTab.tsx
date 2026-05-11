@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
-  Box, Card, CardContent, Paper, Stack, Typography, Chip, TextField, Button, IconButton,
+  Box, Paper, Stack, Typography, Chip, TextField, Button, IconButton,
   Tooltip, MenuItem, Select, FormControl, InputLabel, Snackbar, Alert,
   Divider, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
@@ -12,7 +12,6 @@ import {
 } from '@mui/icons-material';
 import type { Patient, Order } from '../../types';
 import { ORDERS } from '../../data/mockData';
-import SectionHeader from '../common/SectionHeader';
 import RestraintOrderLinks from '../isolation/RestraintOrderLinks';
 import type { KarteMode } from './KartePage';
 
@@ -136,7 +135,6 @@ export default function MedicalRecordTab({
   }, [patient.id]);
 
   const [activeFilter, setActiveFilter] = useState<RecordCategory | 'all'>('all');
-  const [timelineOpen, setTimelineOpen] = useState(true);
 
   const groupedRecords = useMemo<Record<string, TimelineRecord[]>>(() => {
     const filtered = activeFilter === 'all' ? timeline : timeline.filter((r) => r.category === activeFilter);
@@ -167,43 +165,37 @@ export default function MedicalRecordTab({
 
   return (
     <Stack spacing={1}>
-      {/* ===== 集約タイムライン（参照） ===== */}
-      <Card sx={{ overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
-        <SectionHeader
-          title="診療録（集約タイムライン・参照）"
-          color="#1e3a5f"
-          open={timelineOpen}
-          onToggle={() => setTimelineOpen(!timelineOpen)}
-          rightSlot={
-            <Stack direction="row" spacing={0.5} alignItems="center" onClick={(e) => e.stopPropagation()}>
-              {mode === 'inpatient' && (
-                <RestraintOrderLinks
-                  patient={patient}
-                  onRequestOrder={onRequestRestraintOrder}
-                />
-              )}
-              <Button
-                size="small"
-                variant="text"
-                onClick={() => onOpenOrdersTab()}
-                startIcon={<Assignment fontSize="inherit" />}
-                sx={{ fontSize: '0.65rem', color: '#1e3a5f', minWidth: 0 }}
-              >
-                指示簿タブ
-              </Button>
-            </Stack>
-          }
-        />
-        {timelineOpen && (
-          <CardContent sx={{ py: 1.25, '&:last-child': { pb: 1.25 } }}>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                {activeFilter === 'all' ? '最近の6日分' : `${activeFilter} 抽出`}
-              </Typography>
-              <Box sx={{ flex: 1 }} />
-              <Button size="small" variant="text" sx={{ fontSize: '0.65rem' }}>最初へ ▲</Button>
-              <Button size="small" variant="outlined" sx={{ fontSize: '0.65rem' }}>続き ▼</Button>
-            </Stack>
+      {/* ===== タブ上部ツールバー: 隔離拘束指示リンク（入院 mode のみ）+ 指示簿タブへの導線 ===== */}
+      <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
+        {mode === 'inpatient' && (
+          <RestraintOrderLinks
+            patient={patient}
+            onRequestOrder={onRequestRestraintOrder}
+          />
+        )}
+        <Box sx={{ flex: 1 }} />
+        <Button
+          size="small"
+          variant="text"
+          onClick={() => onOpenOrdersTab()}
+          startIcon={<Assignment fontSize="inherit" />}
+          sx={{ fontSize: '0.65rem', minWidth: 0 }}
+        >
+          指示簿タブ
+        </Button>
+      </Stack>
+
+      {/* ===== 集約タイムライン期間ヘッダー + ページング ===== */}
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+          {activeFilter === 'all' ? '最近の6日分' : `${activeFilter} 抽出`}
+        </Typography>
+        <Box sx={{ flex: 1 }} />
+        <Button size="small" variant="text" sx={{ fontSize: '0.65rem' }}>最初へ ▲</Button>
+        <Button size="small" variant="outlined" sx={{ fontSize: '0.65rem' }}>続き ▼</Button>
+      </Stack>
+
+      {/* ===== タイムライン本体（フィルタ Chip + 日付サイドバー + レコード一覧） ===== */}
 
             <Stack direction="row" spacing={0.5} sx={{ mb: 1, overflowX: 'auto', pb: 0.5 }}>
               <Chip
@@ -375,9 +367,6 @@ export default function MedicalRecordTab({
                 )}
               </Box>
             </Box>
-          </CardContent>
-        )}
-      </Card>
 
       {/* ===== 参照画面用アクションバー（編集はダイアログで） ===== */}
       <Paper elevation={2} sx={{ p: 0.75, position: 'sticky', bottom: 0, zIndex: 1, bgcolor: 'background.paper', borderRadius: 1 }}>

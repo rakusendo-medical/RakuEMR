@@ -86,9 +86,8 @@ const OrderStatusTab: React.FC<Props> = ({ patient, mode, onOpenOrdersTab }) => 
 
   return (
     <Stack spacing={2}>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-          <Typography variant="h6">指示状況</Typography>
+      <Box>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ mb: 1.5 }}>
           <Button
             startIcon={<ListAltIcon />}
             variant="outlined"
@@ -153,7 +152,7 @@ const OrderStatusTab: React.FC<Props> = ({ patient, mode, onOpenOrdersTab }) => 
             ))}
           </ToggleButtonGroup>
         </Stack>
-      </Paper>
+      </Box>
 
       {/* AC-4 行表示 / AC-5 未対応マーカー / AC-7 0 件空状態 */}
       <Stack spacing={1}>
