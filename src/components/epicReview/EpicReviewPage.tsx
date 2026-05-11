@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Box, Card, CardContent, Stack, Typography, Chip, Button, Divider,
-  List, ListItem, ListItemIcon, ListItemText, Paper, Alert,
+  Paper, Alert,
+  Accordion, AccordionSummary, AccordionDetails,
 } from '@mui/material';
 import {
   CheckCircle as DoneIcon,
@@ -10,9 +11,12 @@ import {
   HourglassBottom as ProgressIcon,
   OpenInNew as OpenIcon,
   ArrowBack as ArrowBackIcon,
-  Description as SpecIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { EPICS, type EpicMeta, type EpicStatus } from './epicData';
+import { getStoryDoc, type StoryDoc } from './storyContent';
 
 const STATUS_LABEL: Record<EpicStatus, string> = {
   completed: '完了',
@@ -124,25 +128,17 @@ export default function EpicReviewPage() {
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
             子ストーリー（{epic.stories.length} 件）
           </Typography>
-          <List dense disablePadding>
-            {epic.stories.map((s) => (
-              <ListItem key={s.id} sx={{ py: 0.25, borderBottom: '1px dashed', borderColor: 'grey.200' }}>
-                <ListItemIcon sx={{ minWidth: 28 }}>
-                  <SpecIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 700, minWidth: 56 }}>
-                        {s.id}
-                      </Box>
-                      <Typography variant="body2">{s.label}</Typography>
-                    </Stack>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            各行を展開すると spec / issue ドラフトの本文を表示します。
+          </Typography>
+          <Stack spacing={0.5}>
+            {epic.stories.map((s) => {
+              const doc = getStoryDoc(s.id);
+              return (
+                <StoryAccordion key={s.id} storyId={s.id} label={s.label} doc={doc} />
+              );
+            })}
+          </Stack>
         </CardContent>
       </Card>
 
@@ -181,5 +177,125 @@ export default function EpicReviewPage() {
         </CardContent>
       </Card>
     </Box>
+  );
+}
+
+function StoryAccordion({
+  storyId,
+  label,
+  doc,
+}: {
+  storyId: string;
+  label: string;
+  doc: StoryDoc | null;
+}) {
+  const sourceChip = doc ? (
+    <Chip
+      size="small"
+      variant="outlined"
+      label={doc.source === 'spec' ? 'spec' : 'issue'}
+      color={doc.source === 'spec' ? 'primary' : 'default'}
+      sx={{ fontFamily: 'monospace' }}
+    />
+  ) : (
+    <Chip size="small" variant="outlined" label="未起票" color="warning" />
+  );
+
+  return (
+    <Accordion disableGutters elevation={0} square sx={{ '&:before': { display: 'none' }, borderBottom: '1px dashed', borderColor: 'grey.200' }}>
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        sx={{
+          minHeight: 36,
+          px: 1,
+          '& .MuiAccordionSummary-content': { my: 0.5, alignItems: 'center' },
+        }}
+      >
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+          <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 700, minWidth: 56, flexShrink: 0 }}>
+            {storyId}
+          </Box>
+          <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {label}
+          </Typography>
+          {sourceChip}
+        </Stack>
+      </AccordionSummary>
+      <AccordionDetails sx={{ pt: 0, pb: 1.5, px: 2, bgcolor: 'grey.50' }}>
+        {doc ? (
+          <Box>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', mb: 1, fontFamily: 'monospace' }}
+            >
+              {doc.path}
+            </Typography>
+            <Box
+              sx={{
+                fontSize: '0.9rem',
+                lineHeight: 1.6,
+                '& h1': { fontSize: '1.35rem', mt: 2, mb: 1, fontWeight: 700 },
+                '& h2': { fontSize: '1.15rem', mt: 2, mb: 1, fontWeight: 700 },
+                '& h3': { fontSize: '1.02rem', mt: 1.5, mb: 0.5, fontWeight: 700 },
+                '& h4': { fontSize: '0.96rem', mt: 1.25, mb: 0.5, fontWeight: 700 },
+                '& p': { my: 0.75 },
+                '& code': {
+                  fontFamily: 'monospace',
+                  bgcolor: 'grey.200',
+                  px: 0.5,
+                  py: 0.1,
+                  borderRadius: 0.5,
+                  fontSize: '0.85em',
+                },
+                '& pre': {
+                  bgcolor: '#1e293b',
+                  color: '#f1f5f9',
+                  p: 1.5,
+                  borderRadius: 1,
+                  overflow: 'auto',
+                  my: 1,
+                },
+                '& pre code': { bgcolor: 'transparent', color: 'inherit', p: 0, fontSize: '0.85em' },
+                '& table': {
+                  borderCollapse: 'collapse',
+                  my: 1,
+                  display: 'block',
+                  overflowX: 'auto',
+                  maxWidth: '100%',
+                },
+                '& th, & td': {
+                  border: '1px solid',
+                  borderColor: 'grey.300',
+                  px: 1,
+                  py: 0.5,
+                  textAlign: 'left',
+                  verticalAlign: 'top',
+                },
+                '& th': { bgcolor: 'grey.100', fontWeight: 700 },
+                '& blockquote': {
+                  borderLeft: '4px solid',
+                  borderColor: 'grey.300',
+                  pl: 1.5,
+                  ml: 0,
+                  color: 'text.secondary',
+                  my: 1,
+                },
+                '& ul, & ol': { pl: 3, my: 0.5 },
+                '& li': { my: 0.25 },
+                '& hr': { my: 1.5, border: 0, borderTop: '1px solid', borderColor: 'grey.300' },
+                '& a': { color: 'primary.main' },
+              }}
+            >
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.content}</ReactMarkdown>
+            </Box>
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            spec / issue ドラフトが見つかりませんでした（未起票）。
+          </Typography>
+        )}
+      </AccordionDetails>
+    </Accordion>
   );
 }
