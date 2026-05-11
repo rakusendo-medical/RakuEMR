@@ -20,9 +20,10 @@
 | --- | --- | --- | --- |
 | 1 | **預かり金セクションは外来・入院ともに非表示**（別システム連携でリンク／API 表示する想定）。現時点ではスタブコメントを残置 | 2026-05-06 | us-35 / `BasicInfoSubview` |
 | 2 | **メモは複数残置するが、各メモに表示位置・スコープのラベルを付与**（例: 「カルテ画面トップに常時表示」「このタブのみ表示」） | 2026-05-06 | us-35 / `MemoSubview` |
-| 3 | **us-36 は 1 us 単独 + 内部 3 サブタスク（A 入退院指示 / B 隔離拘束指示 / C 看護ケア記録）方式**。MASTER 高密度監督下で S2 が順次実装、各サブタスク完了で commit を区切る | 2026-05-06 | us-36 進め方 |
+| 3 | **us-36 は 1 us 単独 + 内部 3 サブタスク（A 入退院指示 / B 隔離拘束指示 / C 看護記録）方式**。MASTER 高密度監督下で S2 が順次実装、各サブタスク完了で commit を区切る | 2026-05-06 | us-36 進め方 |
 | 4 | **`/karte-alpha/:patientId` ルートは段階 2 中は温存**（直 URL アクセス用、段階 3 / ep-17 で撤去） | 2026-05-06 | 段階 2 のスコープ境界 |
 | 5 | **us-36 サブ A は案 2「2 ボタン分割（KarteAlphaPage 同パターン）」採用**。spec 想定の合議 1 回（ボタン分割可否）に対する PM 判断。「入退院指示」単一ボタン + ダイアログ内タブ切替案は、既存ダイアログ（446 行級）の内部リファクタが必須となり「重さ:小」の粒度に不整合のため不採用。代わりに ActionBar に「入院指示」「退院指示」の 2 ボタンを並べ、admissionState で活性を動的計算、各ボタンが既存ダイアログを直起動する | 2026-05-07 | us-36 サブ A 実装方針 |
+| 6 | **us-36 サブ C は用語「看護ケア記録」を廃止し「看護記録」に統一、案 b（ep-10 流用）採用**。マニュアル調査（S2・2026-05-11）で参考システムに「看護ケア記録」対応機能が無いと判明（業務 `看護` 配下は `看護実施 / 看護記録（個別 / 一括）/ 看護診断 / 看護計画 / 看護評価` 構成）。本ボタンが対応すべきは「看護記録」と整理し、ep-10 既存 `NursingRecordDialog` を `initialMode='new'` で起動する。「看護経過記録」は造語の要否を含めて別 us で整理（本 us スコープ外） | 2026-05-11 | us-36 サブ C 用語 + 実装方針 |
 
 ## サマリ
 
@@ -45,7 +46,7 @@ us-36 着手前に MASTER が `KarteAlphaPage.tsx`（1117 行）を解析し、�
 
 | グループ | 場所 | ボタン | 起動先 | 備考 |
 | --- | --- | --- | --- | --- |
-| **A** プレースホルダ | `ACTION_BUTTONS` 配列（L208-215） | オーダ送信／事後入力／看護ケア／オーダ入力／患者予約／記事作成 | onClick 未実装（プレースホルダ） | 「看護ケア」が us-36 看護ケア記録の前身候補 |
+| **A** プレースホルダ | `ACTION_BUTTONS` 配列（L208-215） | オーダ送信／事後入力／看護ケア／オーダ入力／患者予約／記事作成 | onClick 未実装（プレースホルダ） | 「看護ケア」が us-36 看護記録の前身候補 |
 | **B** ep-03 入退院指示 | `Bottom Action Bar` 内（L480-501） | 入院指示／退院指示 | `AdmissionOrderDialog` / `DischargeOrderDialog`（既存） | 退院指示は `admissionState === 'inpatient'` のみ表示 |
 | **C** 共通フッター | `Bottom Action Bar` 末尾（L503-508） | 印刷／終了 | onClick 未実装 | KartePage の `OUTPATIENT_ACTIONS` / `INPATIENT_ACTIONS` に既に存在（活性） |
 | **D** ep-05 隔離拘束指示 | **ActionBar ではなく** 診療録カード（`MedicalRecordsDense`）のヘッダー右（L880-906） | `RestraintOrderLinks` コンポーネント（6/12 リンク・マスタトグルで切替） | `RestraintOrderDialog`（既存）を `onRequestRestraintOrder` prop で起動 | 隔離拘束指示は **ActionBar の外** にある点に注意 |
@@ -69,14 +70,14 @@ us-36 着手前に MASTER が `KarteAlphaPage.tsx`（1117 行）を解析し、�
 | `src/components/admission/AdmissionOrderDialog.tsx`（既存） | 必要に応じて mode prop 追加 or 既存シグネチャ流用 | **要 MASTER 合議**（既存ダイアログ API 変更） |
 | `src/components/admission/DischargeOrderDialog.tsx`（既存） | 同上 | **要 MASTER 合議** |
 | `src/components/restraint/RestraintOrderDialog.tsx`（既存） | 起動経路追加に伴うシグネチャ調整 | **要 MASTER 合議** |
-| 看護ケア記録ダイアログ（新規） | 新規実装 | 設計時に PM/MASTER 合意必要 |
+| 看護記録ダイアログ（新規） | 新規実装 | 設計時に PM/MASTER 合意必要 |
 
-### 「看護ケア記録」未確定論点
+### 「看護記録」未確定論点
 
 us-36 サブ C の前提整理:
 
 1. ep-10（フローシート）の **看護記録**（NursingRecord）系と機能が重複しないか
-2. 看護ケア記録は「**実施済の看護ケア**」を記録する想定か、「**指示**」か（業務的位置付け確認）
+2. 看護記録は「**実施済の看護ケア**」を記録する想定か、「**指示**」か（業務的位置付け確認）
 3. 既存ダイアログがあるなら流用、無ければ新規 spec 必要
 
 **MASTER の暫定判断**: us-36 サブ C 着手時に S2 と PM が改めて要件詰める。spec では「**新規ダイアログ要件は着手時確定**」として TBD 残置。
@@ -396,7 +397,7 @@ KartePage の `orders` タブ（段階 1 では meta プレースホルダ）を
     - `inpatient`: 入院指示 ❌「既に入院中です」 ／ 退院指示 ✅
     - `discharged`: 両方 ❌「既に退院済です」
     - 未指定: `'inpatient'` 扱い（KarteAlphaPage と同じ）
-  - 隔離拘束指示・看護ケア記録は disabled 維持（サブ B / C で本実装）。Tooltip 文言を「段階 2 で実装予定（サブ B）」「段階 2 で実装予定（サブ C）」に更新
+  - 隔離拘束指示・看護記録は disabled 維持（サブ B / C で本実装）。Tooltip 文言を「段階 2 で実装予定（サブ B）」「段階 2 で実装予定（サブ C）」に更新
 
 - `src/components/karte/KartePage.tsx`:
   - `import AdmissionOrderDialog` / `import DischargeOrderDialog` を追加
@@ -443,7 +444,7 @@ KartePage の `orders` タブ（段階 1 では meta プレースホルダ）を
 ### 共有ファイル変更
 
 なし（`types` / `store` / `mockData.MASTER_*` / `common` 触らず）。`SectionHeader` は既存共通コンポーネントを **import only** で利用（API 変更なし）。`src/components/karte/` 内に閉じる変更のみ（新規 1 + 既存 1 ファイル）。
-| AC-A1 ActionBar に「入院指示」「退院指示」の 2 ボタン表示 | ✅ | `KarteActionBar` の INPATIENT モード時、両ボタンが ActionBar 左群に並ぶ（左から `入院指示 → 退院指示 → 隔離拘束指示 → 看護ケア記録 → オーダー入力`） |
+| AC-A1 ActionBar に「入院指示」「退院指示」の 2 ボタン表示 | ✅ | `KarteActionBar` の INPATIENT モード時、両ボタンが ActionBar 左群に並ぶ（左から `入院指示 → 退院指示 → 隔離拘束指示 → 看護記録 → オーダー入力`） |
 | AC-A2 各ボタン活性が admissionState に従う | ✅ | `buildInpatientActions` 内で 3 状態 × 2 ボタンの活性を分岐。disabled は Tooltip で理由を表示 |
 | AC-A3 ボタンクリックで対応する既存ダイアログを直接起動 | ✅ | `KartePage.handleAction` で setState、`<AdmissionOrderDialog>` / `<DischargeOrderDialog>` を `open` 切替で表示 |
 | AC-A4 保存ロジックは既存ダイアログ踏襲 | ✅ | 既存ダイアログを無変更で利用するため `useAppStore.pendingOrders` への積み込みロジックは ep-03 から不変 |
@@ -615,3 +616,101 @@ briefing 事前想定の合議 2〜3 回（既存 `RestraintOrderDialog` の API
 - `npx tsc --noEmit` クリーン
 - `npx vite build` クリーン（既存と同程度の bundle サイズ・bundle size warning は既存事象）
 - ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
+
+---
+
+## us-36 サブ C 看護記録 完了メモ（S2 / 2026-05-11）
+
+### 実装サマリ
+
+サブ C を **案 b（ep-10 既存 `NursingRecordDialog` 流用）** で実装完了。tsc / vite build クリーン。ブラウザ目視は MASTER 段階 2 統合確認時に依頼。
+
+着手前合議の経緯:
+
+- PM から「看護ケア記録」用語のマニュアル仕様確認依頼 → S2 が `既存マニュアル対応表.xlsx` を全行スキャン
+- マニュアル上に「看護ケア記録」「看護ケア」を含む業務／機能エントリは 0 件と確認（KarteAlphaPage 由来のプレースホルダ概念だった）
+- PM 判断: ① 用語「看護ケア記録」を **「看護記録」** に統一して廃止 ② 実装方針は案 b（ep-10 流用） ③「看護経過記録」は別 us で整理
+
+### 用語修正の対象範囲
+
+「看護ケア記録」→「看護記録」の文字列置換を以下に適用（PM 指示）:
+
+| 区分 | ファイル | 内容 |
+| --- | --- | --- |
+| code | `src/components/karte/KarteActionBar.tsx` | INPATIENT_ACTIONS の id `nursing-care` → `nursing-record`、label「看護ケア記録」→「看護記録」 |
+| spec | `docs/specs/ep-16-outpatient-emr-stage2/us-36-inpatient-actions.spec.md` | 全件置換 + 進め方の合議結果 サブ C 節追加 + AC-C1〜C4 確定 + 想定実装ステップ書き換え |
+| spec | `docs/specs/ep-16-outpatient-emr-stage2/_epic.md` | スコープ記述の用語修正 |
+| spec | `docs/specs/ep-16-outpatient-emr-stage2/us-35-inpatient-mode.spec.md` | 補足の us-36 参照箇所 |
+| changes | `docs/changes/ep-16-outpatient-emr-stage2.md` | 全件置換 + 決定事項 #6 追加 + サブ C 完了メモ追記（本節） |
+| handover | `docs/HANDOVER.md` | 自 S2 row 内の記述 |
+
+スコープ外（履歴文書として残置・MASTER が後日判断）:
+
+- `docs/specs/ep-15-outpatient-emr/us-33-karte-screen.spec.md`（段階 1 spec、ep-15 クローズ済）
+- `docs/changes/ep-15-outpatient-emr.md`（段階 1 changes、ep-15 クローズ済）
+- `src/components/karteAlpha/KarteAlphaPage.tsx`（段階 3 / ep-17 で撤去予定）
+
+「看護ケア予定」（`src/components/nursingCare/NursingCarePlan.tsx` / サイドバー / mockData の `MASTER_*` セクション等）は **別機能で本サブタスクと無関係**のため触らず。
+
+#### 変更ファイル（コード）
+
+- `src/components/karte/KarteActionBar.tsx`:
+  - `buildInpatientActions` 内の `nursing-care` 行を id `nursing-record` / label「看護記録」に rename + 活性化（disabled / Tooltip 削除）
+
+- `src/components/karte/KartePage.tsx`:
+  - `NursingRecordDialog` を `../../features/flowsheet/components/NursingRecordDialog` から import
+  - `useState<boolean>` で `nursingRecordOpen` を追加（サブ A の admission/discharge と同パターン）
+  - `handleAction` に `'nursing-record'` 分岐を追加し `setNursingRecordOpen(true)` を呼ぶ
+  - レンダー末尾に `<NursingRecordDialog open={nursingRecordOpen} patientId={patient.id} initialMode='new' onClose />` を追加
+
+#### 変更しなかったファイル
+
+- `src/features/flowsheet/components/NursingRecordDialog.tsx`: API 無変更（流用効果）
+- `src/features/flowsheet/store.ts`（`useFlowsheetStore`）: API 無変更
+- `src/types/index.ts` / `src/stores/useAppStore.ts` / `src/data/mockData.ts` の `MASTER_*` / `src/components/common/`: 触らず
+- `src/components/karte/MedicalRecordTab.tsx`: 触らず（us-43 で本実装済、`看護記録` カテゴリも既存タイムラインに含まれる）
+
+### AC 充足状況
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| AC-C1 「看護記録」ボタンが mode='inpatient' で活性 | ✅ | `buildInpatientActions` で `disabled` / `disabledTooltip` 削除、`mode='inpatient'` 時に活性表示 |
+| AC-C2 ボタンクリックで `NursingRecordDialog` が新規入力モードで開く | ✅ | `handleAction('nursing-record')` → `setNursingRecordOpen(true)`。レンダーされた `<NursingRecordDialog initialMode='new'>` が開く |
+| AC-C3 保存ロジックは ep-10 既存 `useFlowsheetStore` を踏襲 | ✅ | 既存ダイアログを `initialMode='new'` で起動するだけ。ep-10 内の保存ロジックが完全に再利用される |
+| AC-C4 既存記録の閲覧は診療録タブのタイムラインで行う | ✅ | us-43 で本実装済の `MedicalRecordTab` 集約タイムラインに `'看護記録'` カテゴリ（`CATEGORY_COLORS['看護記録']`）が混在表示される。本 AC は確認のみ |
+| AC-X1 design-rules §10/§11/§12 準拠 | ✅ | mode='inpatient' のときのみ活性表示（§12）／ダイアログ内の破壊的アクション warning と未保存検知は既存 `NursingRecordDialog` 実装どおり |
+| AC-X2 mode='outpatient' では非表示 | ✅ | `KarteActionBar` の mode 分岐で OUTPATIENT_ACTIONS 利用（看護記録ボタンは出ない） |
+
+### 設計判断（暫定）
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | 用語を「看護記録」に統一し「看護ケア記録」を廃止 | マニュアル整合・PM 確認済 |
+| 2 | id を `nursing-care` から `nursing-record` に rename | 用語統一の徹底（label とコード対応の一貫性） |
+| 3 | `NursingRecordDialog` を `initialMode='new'` で起動 | ActionBar クリックの最自然な意味は「新規記録を起こす」。閲覧は診療録タブのタイムラインに集約 |
+| 4 | 既存記録一覧（`/nursing/records?patientId=<id>`）への navigate ボタンは設けない | 診療録タブのタイムラインで日常運用は完結。必要時はサイドバー経由で `/nursing/records` に手動アクセス可能。本 us スコープを最小化 |
+| 5 | 「看護経過記録」用語整理は本 us スコープ外 | PM 指示。必要なら別 us で位置づけ |
+
+### MASTER への申し送り
+
+- ブラウザ目視は本セッションでは未実施 → **段階 2 統合確認時に MASTER に依頼**
+  - 期待挙動 1: 入院患者のカルテ → ActionBar の「看護記録」ボタンクリック → ep-10 既存 `NursingRecordDialog` が新規入力モードで開く（FOCUS / SOAP / フリーの 3 形式選択 + 連携設定 + 報告先のフォーム）
+  - 期待挙動 2: 入力 → 保存 → ep-10 既存 `useFlowsheetStore.nursingRecords` に積まれる。診療録タブのタイムラインに即時反映（us-43 実装どおり）
+  - 期待挙動 3: 外来モード（`/karte/:patientId` を `/outpatient` 経由）では「看護記録」ボタンは表示されない（OUTPATIENT_ACTIONS）
+  - 期待挙動 4: 入院モードでも `admissionState='discharged'` 患者で「看護記録」ボタンは活性（看護記録自体は退院済患者の遡及記録も想定されるため。disabled しない）
+- **「看護経過記録」概念の整理**: PM 指示で本 us 外。必要に応じて別 us（例: us-XX「看護経過記録の業務上の位置づけ」）で扱う
+- **ep-15 系の用語修正**: 本 us では `docs/specs/ep-15-outpatient-emr/` と `docs/changes/ep-15-outpatient-emr.md` の「看護ケア記録」記述は履歴として残置した。MASTER が ep-15 クローズ後の用語統一を行うかどうか別途判断
+
+### 共有ファイル変更
+
+なし（`types` / `store` / `mockData` の `MASTER_*` / `common` / 既存ダイアログ API いずれも触らず）。`src/components/karte/` 内 2 ファイルの編集のみ。
+
+### 検証
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン（bundle size warning は既存事象）
+- ブラウザ目視: 未実施 → MASTER 段階 2 統合確認時に依頼
+
+### us-36 全体クローズ
+
+サブ A・B・C すべて完了。AC-A1〜A4 / B1〜B4 / C1〜C4 / X1〜X2 全達成。us-36「入院アクション本実装」全体クローズ可能。MASTER の段階 2 統合確認（ブラウザ目視）後に正式クローズ判定を依頼。
