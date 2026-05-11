@@ -38,6 +38,7 @@ import LifeHistoryTimeline from './LifeHistoryTimeline';
 import OrdersTab from './OrdersTab';
 import OrderStatusTab from './OrderStatusTab';
 import NursingProcessTab from './NursingProcessTab';
+import ScheduleTab from './ScheduleTab';
 import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
 import DischargeOrderDialog from '../admission/DischargeOrderDialog';
 import RestraintOrderDialog from '../isolation/RestraintOrderDialog';
@@ -533,22 +534,15 @@ function KarteTabContent({
     return <NursingProcessTab patient={patient} mode={mode} />;
   }
 
-  const meta: Record<string, { title: string; note: string }> = {
-    schedule: {
-      title: 'スケジュール',
-      note: '段階 1 ではタブ枠のみ。予約・受診計画は別ストーリーで実装予定。',
-    },
-  };
+  if (tabId === 'schedule') {
+    return <ScheduleTab patient={patient} mode={mode} />;
+  }
 
-  const m = meta[tabId];
+  // すべての tabId が上記分岐で処理されるが、念のため未実装タブのフォールバック
   return (
     <Paper variant="outlined" sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        {m?.title ?? tabId}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {m?.note ?? '未実装タブです。'}
-      </Typography>
+      <Typography variant="h6" gutterBottom>{tabId}</Typography>
+      <Typography variant="body2" color="text.secondary">未実装タブです。</Typography>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
         現在 mode: <code>{mode}</code> / patientId: <code>{patient.id}</code>
       </Typography>
