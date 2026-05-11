@@ -25,6 +25,7 @@ import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
 import PatientInfoTab from './PatientInfoTab';
 import MedicalRecordTab from './MedicalRecordTab';
 import ClinicalInfoPanel from './ClinicalInfoPanel';
+import LifeHistoryTimeline from './LifeHistoryTimeline';
 import OrdersTab from './OrdersTab';
 import OrderStatusTab from './OrderStatusTab';
 import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
@@ -288,6 +289,8 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       <KartePatientHeader patient={patient} mode={mode} onBack={handleBack} />
 
       <ClinicalInfoPanel patient={patient} mode={mode} />
+
+      <LifeHistoryTimeline patient={patient} mode={mode} />
 
       <Box
         sx={{
