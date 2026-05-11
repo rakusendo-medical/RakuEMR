@@ -3,7 +3,7 @@ import {
   Box, Stack, Typography, Tabs, Tab, FormControl, Select, MenuItem, InputLabel,
   Button, IconButton, Paper, Divider, Tooltip,
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today as TodayIcon } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today as TodayIcon, InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import type { AdmissionOrder, WardId } from '../../types';
 import { ADMISSION_ORDERS, PATIENTS } from '../../data/mockData';
@@ -147,6 +147,31 @@ const AdmissionScheduleCalendar: React.FC = () => {
       <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
         {/* カレンダー */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* 凡例（カレンダー右上・実セル配色と揃え） */}
+          <Stack direction="row" spacing={0.75} justifyContent="flex-end" alignItems="center" sx={{ mb: 0.75, flexWrap: 'wrap', rowGap: 0.5 }}>
+            <Tooltip
+              title={
+                <Box sx={{ fontSize: '0.7rem', lineHeight: 1.5 }}>
+                  色は次に行う操作（クリック挙動）を表します。<br />
+                  ・確定済（青/黒）= クリックでカルテへ遷移<br />
+                  ・未確定（赤）= クリックで入退院手続きダイアログを表示<br />
+                  ※ us-07 仕様準拠（状態依存遷移）
+                </Box>
+              }
+              arrow
+              placement="bottom-end"
+            >
+              <Stack direction="row" spacing={0.3} alignItems="center" sx={{ color: 'text.disabled', cursor: 'help', mr: 0.5 }}>
+                <InfoOutlinedIcon sx={{ fontSize: 14 }} />
+                <Typography variant="caption" sx={{ fontStyle: 'italic' }}>凡例 = 次の操作</Typography>
+              </Stack>
+            </Tooltip>
+            <LegendChip label="入院確定" color="#1d4ed8" bgcolor="#eff6ff" />
+            <LegendChip label="退院確定" color="#0f172a" bgcolor="#eff6ff" />
+            <LegendChip label="未確定（指示）" color="#b91c1c" bgcolor="#fef2f2" />
+            <LegendChip label="今日" color="primary.main" bgcolor="#eff6ff" bordered />
+          </Stack>
+
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.5 }}>
             {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
               <Box key={d} sx={{ textAlign: 'center', py: 0.5, fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary', bgcolor: '#f8fafc', borderRadius: 0.5 }}>
@@ -209,13 +234,6 @@ const AdmissionScheduleCalendar: React.FC = () => {
             })}
           </Box>
 
-          {/* 凡例 */}
-          <Stack direction="row" spacing={2} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 0.5 }}>
-            <LegendDot color="#1d4ed8" label="入院確定" />
-            <LegendDot color="#0f172a" label="退院確定" />
-            <LegendDot color="#b91c1c" label="未確定（指示）" />
-            <LegendDot color="#eff6ff" label="今日" filled />
-          </Stack>
         </Box>
 
         {/* 日付未定者パネル */}
@@ -278,11 +296,24 @@ const AdmissionScheduleCalendar: React.FC = () => {
   );
 };
 
-const LegendDot: React.FC<{ color: string; label: string; filled?: boolean }> = ({ color, label, filled }) => (
-  <Stack direction="row" spacing={0.5} alignItems="center">
-    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: filled ? color : 'transparent', border: filled ? 'none' : `2px solid ${color}` }} />
-    <Typography variant="caption" color="text.secondary">{label}</Typography>
-  </Stack>
+const LegendChip: React.FC<{ label: string; color: string; bgcolor: string; bordered?: boolean }> = ({ label, color, bgcolor, bordered }) => (
+  <Box
+    sx={{
+      fontSize: '0.6875rem',
+      fontWeight: 600,
+      color,
+      bgcolor,
+      px: 0.75,
+      py: 0.25,
+      borderRadius: 0.5,
+      border: bordered ? '1px solid' : 'none',
+      borderColor: bordered ? 'divider' : 'transparent',
+      lineHeight: 1.3,
+      whiteSpace: 'nowrap',
+    }}
+  >
+    {label}
+  </Box>
 );
 
 export default AdmissionScheduleCalendar;
