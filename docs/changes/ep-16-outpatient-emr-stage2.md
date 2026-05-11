@@ -694,3 +694,51 @@ PM の「epでカルテが関係してる所一旦確認してほしい」要望
 - KarteAlphaPage（`/karte-alpha/:patientId`）も段階 3 まで温存されているため、両方の動作確認が可能
 - NG / 違和感を見つけたら本リストに `[NG: 詳細]` で追記して MASTER に共有
 - 段階 3（ep-17）で `KarteAlphaPage` 撤去するため、本リスト全て ✅ になったら段階 2 クローズ判定可
+## us-37 看護過程タブ統合 完了メモ（S4・2026-05-08）
+
+spec: [us-37-nursing-process-tab.spec.md](../specs/ep-16-outpatient-emr-stage2/us-37-nursing-process-tab.spec.md)
+
+### 実装内容
+
+新カルテ画面 `/karte/:patientId#nursing-process` の「看護過程」タブを、既存 `src/features/carePlan/pages/PatientCarePlan` の埋込で実装。最小実装の方針通り、`PatientCarePlan` を無変更で `embedded` + `patientId` prop 経由で呼び出す。
+
+#### 新規: `src/components/karte/NursingProcessTab.tsx`
+
+- props: `{ patient: Patient; mode: KarteMode }`
+- 本体: `<Box><PatientCarePlan embedded patientId={patient.id} /></Box>` のみ
+- `mode` は将来拡張用に prop で受け取り（mode='outpatient' は `KartePage` の TABS で `disabledIn: ['outpatient']` 指定済のため到達しない想定。コメント明記）
+
+#### 変更: `KartePage.tsx`
+
+- `import NursingProcessTab from './NursingProcessTab';` を追加（OrdersTab / OrderStatusTab の隣）
+- `KarteTabContent` 内に `if (tabId === 'care-plan') return <NursingProcessTab patient={patient} mode={mode} />;` 分岐を追加
+- `meta` テーブルから `'care-plan'` プレースホルダエントリを削除
+
+### AC 充足
+
+- [x] AC（spec の全 AC）: `PatientCarePlan` 既存実装で充足（看護診断・看護計画・看護評価の入口、期間プルダウン、明細追加、評価遷移、印刷など）
+- [x] `KarteAlphaPage.tsx:449` と同じ埋込パターンを踏襲（API 不一致なし）
+- [x] design-rules §12: `mode='outpatient'` 時は `disabledIn: ['outpatient']` で到達しない／`mode='inpatient'` 時の配色は `PatientCarePlan` 内部実装に委譲（外殻からの上書きなし）
+- [x] PM 指示「タブ内容先頭の SectionHeader 撤去」: 本タブは `PatientCarePlan` を直接 Box ラップのみ。`Card + SectionHeader` の殻なし
+
+### 共有ファイル変更（us-37）
+
+- `src/components/karte/NursingProcessTab.tsx`: 新規
+- `src/components/karte/KartePage.tsx`: 1 ファイル更新（import 1 行 + 分岐 1 ブロック追加 + meta から `care-plan` エントリ削除）
+- `src/features/carePlan/` 配下: **無変更**（既存実装をそのまま埋込）
+- `src/types/index.ts` / `src/stores/useAppStore.ts` / `src/data/mockData.ts` の `MASTER_*` / `src/components/common/`: **触らず**
+
+### 検証（us-37）
+
+- `npx tsc --noEmit`: クリーン（node v24.14.1）
+- `npx vite build`: 成功（bundle 1552 kB、chunk size 警告は既存と同等で本変更無関係）
+- ブラウザ目視: MASTER 段階 2 統合確認時に依頼
+
+### 設計判断（us-37）
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | ラッパーは `<Box>` のみ、`Stack` 等の余計なレイアウト要素を入れない | `PatientCarePlan` 内部に Container / Stack が既にあり、ラッパー側で重ねるとパディングや余白が二重になる。最小実装に徹する |
+| 2 | サブセクション切替 UI（看護診断 / 看護計画 / 看護評価）を新カルテ側で持たない | spec L19-20「段階 2 では『最小実装』として既存画面を埋込し、本格的な看護過程連携 UI は ep-17 以降で深化」「サブセクション切替 or 統合表示は判断に任せる」に従い、既存 `PatientCarePlan` の画面構成（期間プルダウン + 計画明細リスト + 評価リンク）をそのまま提示 |
+| 3 | `mode` prop は受け取るが内部で未使用 | spec の例示シグネチャ `<NursingProcessTab patient={patient} mode={mode} />` に揃える。将来 mode 別の挙動が必要になった際に props を変更せず実装追加できる |
+| 4 | `KarteAlphaPage.tsx:449` の `<PatientCarePlan embedded patientId={patient.id} />` と完全同型 | 既存埋込パターンとの整合（段階 3 / ep-17 で `KarteAlphaPage` 撤去時に「`PatientCarePlan` 埋込パターン」として一意化される） |
