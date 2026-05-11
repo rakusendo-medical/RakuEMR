@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Box, Paper, Stack, Typography, Chip, TextField, Button, IconButton,
   Tooltip, MenuItem, Select, FormControl, InputLabel, Snackbar, Alert,
@@ -97,13 +97,35 @@ function ordersToTimeline(patientId: string): TimelineRecord[] {
 // ===== カテゴリ別フィルタ Chip =====
 
 const FILTER_TABS: { key: RecordCategory | 'all'; label: string }[] = [
-  { key: 'all',         label: '最近の6日分' },
+  { key: 'all',         label: '全て' },
   { key: '医師記録',    label: '医師記録' },
   { key: '看護記録',    label: '看護記録' },
   { key: '看護サマリ',  label: '看護サマリ' },
   { key: '入退院記録',  label: '入退院記録' },
   { key: 'オーダー',    label: 'オーダー' },
 ];
+
+// ===== us-47: タグベースフィルタ Chip（KarteAlphaPage 旧版踏襲） =====
+
+const TAG_FILTERS = [
+  '全体カンファレンス',
+  'NSTカンファレンス',
+  '褥瘡カンファレンス',
+  '臨床記録',
+  '行動範囲',
+  '外出/外泊',
+  '日勤帯記録',
+];
+
+// ===== us-47: 期間切替 =====
+
+type PeriodKey = '6days' | '30days' | 'all';
+
+const PERIOD_LABELS: Record<PeriodKey, string> = {
+  '6days': '最近の6日分',
+  '30days': '最近の30日分',
+  'all': '全件',
+};
 
 const TAG_BG_COLOR_MAP: Record<string, string> = {
   '退院支援':       'error.light',
@@ -135,16 +157,40 @@ export default function MedicalRecordTab({
   }, [patient.id]);
 
   const [activeFilter, setActiveFilter] = useState<RecordCategory | 'all'>('all');
+  // us-47: 期間切替（既定 6 日分）
+  const [period, setPeriod] = useState<PeriodKey>('6days');
+  // us-47: タグフィルタ（null = 全件）
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  // us-47: 「最初へ ▲」スクロール用
+  const timelineBodyRef = useRef<HTMLDivElement | null>(null);
 
   const groupedRecords = useMemo<Record<string, TimelineRecord[]>>(() => {
-    const filtered = activeFilter === 'all' ? timeline : timeline.filter((r) => r.category === activeFilter);
+    // category + tag フィルタを AND 条件で適用
+    let filtered = activeFilter === 'all' ? timeline : timeline.filter((r) => r.category === activeFilter);
+    if (activeTag) {
+      filtered = filtered.filter((r) => r.tags.includes(activeTag));
+    }
+    // 期間フィルタ: 最新の日付グループから N 個まで（6days / 30days / all）
     const result: Record<string, TimelineRecord[]> = {};
     filtered.forEach((r) => {
       if (!result[r.date]) result[r.date] = [];
       result[r.date].push(r);
     });
-    return result;
-  }, [timeline, activeFilter]);
+    if (period === 'all') return result;
+    const dateKeys = Object.keys(result); // timestamp 降順ソート済 → date も降順
+    const keep = period === '6days' ? 6 : 30;
+    const sliced = dateKeys.slice(0, keep);
+    const periodFiltered: Record<string, TimelineRecord[]> = {};
+    sliced.forEach((d) => { periodFiltered[d] = result[d]; });
+    return periodFiltered;
+  }, [timeline, activeFilter, activeTag, period]);
+
+  // us-47: 「最初へ ▲」スクロールトップ
+  const scrollToTop = useCallback(() => {
+    if (timelineBodyRef.current) {
+      timelineBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
 
   // ----- ダイアログ群 -----
   const [newRecordOpen, setNewRecordOpen] = useState(false);
@@ -185,14 +231,68 @@ export default function MedicalRecordTab({
         </Button>
       </Stack>
 
-      {/* ===== 集約タイムライン期間ヘッダー + ページング ===== */}
-      <Stack direction="row" alignItems="center" spacing={1}>
+      {/* ===== 期間切替 + ページング操作（us-47） ===== */}
+      <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-          {activeFilter === 'all' ? '最近の6日分' : `${activeFilter} 抽出`}
+          期間:
         </Typography>
+        {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((p) => (
+          <Chip
+            key={p}
+            label={PERIOD_LABELS[p]}
+            size="small"
+            color={period === p ? 'primary' : 'default'}
+            variant={period === p ? 'filled' : 'outlined'}
+            onClick={() => setPeriod(p)}
+            sx={{ fontSize: '0.65rem', height: 22 }}
+          />
+        ))}
         <Box sx={{ flex: 1 }} />
-        <Button size="small" variant="text" sx={{ fontSize: '0.65rem' }}>最初へ ▲</Button>
-        <Button size="small" variant="outlined" sx={{ fontSize: '0.65rem' }}>続き ▼</Button>
+        <Typography variant="caption" color="text.secondary">
+          {Object.keys(groupedRecords).length} 日分 / {Object.values(groupedRecords).reduce((s, arr) => s + arr.length, 0)} 件
+        </Typography>
+        <Button
+          size="small"
+          variant="text"
+          sx={{ fontSize: '0.65rem' }}
+          onClick={scrollToTop}
+        >
+          最初へ ▲
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          sx={{ fontSize: '0.65rem' }}
+          onClick={() => showSnackbar('これ以上のレコードはありません（mock）', 'info')}
+        >
+          続き ▼
+        </Button>
+      </Stack>
+
+      {/* ===== タグフィルタ Chip 行（us-47・KarteAlphaPage 踏襲・OR 条件 1 つ選択） ===== */}
+      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ overflowX: 'auto', pb: 0.5 }}>
+        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mr: 0.5, flexShrink: 0 }}>
+          タグ:
+        </Typography>
+        <Chip
+          label="全て"
+          size="small"
+          color={activeTag === null ? 'primary' : 'default'}
+          variant={activeTag === null ? 'filled' : 'outlined'}
+          onClick={() => setActiveTag(null)}
+          sx={{ fontSize: '0.65rem', height: 22, flexShrink: 0 }}
+        />
+        {TAG_FILTERS.map((tag) => (
+          <Chip
+            key={tag}
+            label={tag}
+            size="small"
+            color={activeTag === tag ? 'primary' : 'default'}
+            variant={activeTag === tag ? 'filled' : 'outlined'}
+            onClick={() => setActiveTag(tag)}
+            sx={{ fontSize: '0.65rem', height: 22, flexShrink: 0 }}
+          />
+        ))}
       </Stack>
 
       {/* ===== タイムライン本体（フィルタ Chip + 日付サイドバー + レコード一覧） ===== */}
@@ -267,7 +367,7 @@ export default function MedicalRecordTab({
               </Box>
 
               {/* レコード本体 */}
-              <Box sx={{ flex: 1, overflowY: 'auto' }}>
+              <Box ref={timelineBodyRef} sx={{ flex: 1, overflowY: 'auto' }}>
                 {Object.entries(groupedRecords).map(([date, records], gi) => (
                   <Box key={date} id={`mr-record-date-${date.replace(/\//g, '-')}`}>
                     <Box

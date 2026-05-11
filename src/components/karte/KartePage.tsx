@@ -16,6 +16,15 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import {
+  Description as MedicalRecordIcon,
+  ShowChart as FlowsheetIcon,
+  ListAlt as OrdersIcon,
+  AssignmentTurnedIn as OrderStatusIcon,
+  MedicalServices as CarePlanIcon,
+  PersonOutline as PatientInfoIcon,
+  EventNote as ScheduleIcon,
+} from '@mui/icons-material';
 import { PATIENTS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import type { Patient } from '../../types';
@@ -53,25 +62,27 @@ interface TabDef {
   label: string;
   /** URL ハッシュ（`#` 抜き）。AC-10 の対応表に準拠。看護過程のみ tabId（`care-plan`）と異なる */
   hash: string;
+  icon: React.ReactElement;
   /** この mode のとき disabled */
   disabledIn?: KarteMode[];
   disabledTooltip?: string;
 }
 
 const TABS: TabDef[] = [
-  { id: 'medical-record', label: '診療録', hash: 'medical-record' },
-  { id: 'flowsheet', label: 'フローシート', hash: 'flowsheet' },
-  { id: 'orders', label: '指示簿', hash: 'orders' },
-  { id: 'order-status', label: '指示状況', hash: 'order-status' },
+  { id: 'medical-record', label: '診療録', hash: 'medical-record', icon: <MedicalRecordIcon fontSize="small" /> },
+  { id: 'flowsheet', label: 'フローシート', hash: 'flowsheet', icon: <FlowsheetIcon fontSize="small" /> },
+  { id: 'orders', label: '指示簿', hash: 'orders', icon: <OrdersIcon fontSize="small" /> },
+  { id: 'order-status', label: '指示状況', hash: 'order-status', icon: <OrderStatusIcon fontSize="small" /> },
   {
     id: 'care-plan',
     label: '看護過程',
     hash: 'nursing-process',
+    icon: <CarePlanIcon fontSize="small" />,
     disabledIn: ['outpatient'],
     disabledTooltip: '外来では利用しません',
   },
-  { id: 'patient-info', label: '患者情報', hash: 'patient-info' },
-  { id: 'schedule', label: 'スケジュール', hash: 'schedule' },
+  { id: 'patient-info', label: '患者情報', hash: 'patient-info', icon: <PatientInfoIcon fontSize="small" /> },
+  { id: 'schedule', label: 'スケジュール', hash: 'schedule', icon: <ScheduleIcon fontSize="small" /> },
 ];
 
 const DEFAULT_TAB = 'medical-record';
@@ -294,9 +305,9 @@ export default function KartePage({ modeOverride }: KartePageProps) {
 
       <Box
         sx={{
-          borderBottom: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          bgcolor: mode === 'outpatient' ? '#16a34a' : '#1e3a5f',
+          px: 1,
+          pt: 0.5,
         }}
       >
         <Tabs
@@ -304,12 +315,53 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           onChange={(_, v) => attemptTabChange(v)}
           variant="scrollable"
           scrollButtons="auto"
-          textColor={mode === 'outpatient' ? 'inherit' : 'primary'}
+          sx={{
+            minHeight: 40,
+            '& .MuiTabs-scrollButtons': { color: 'rgba(255,255,255,0.85)' },
+            '& .MuiTab-root': {
+              minHeight: 40,
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              px: 1.5,
+              gap: 0.5,
+              minWidth: 'auto',
+              color: 'rgba(255,255,255,0.85)',
+              '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' },
+            },
+            '& .MuiTab-iconWrapper': {
+              marginBottom: '0 !important',
+              marginRight: '4px',
+            },
+            '& .MuiTab-root.Mui-disabled': {
+              color: 'rgba(255,255,255,0.4)',
+            },
+            '& .MuiTab-root.Mui-selected': {
+              fontWeight: 700,
+              bgcolor: 'background.paper',
+              color: mode === 'outpatient' ? 'success.dark' : 'primary.main',
+              borderTopLeftRadius: 6,
+              borderTopRightRadius: 6,
+            },
+            // インジケーターは白タブ上の足元バーとして表現
+            '& .MuiTabs-indicator': {
+              height: 3,
+              borderRadius: '2px 2px 0 0',
+              backgroundColor: mode === 'outpatient' ? '#16a34a' : '#1e3a5f',
+            },
+          }}
         >
           {TABS.map((t) => {
             const disabled = !!t.disabledIn?.includes(mode);
             const tab = (
-              <Tab key={t.id} value={t.id} label={t.label} disabled={disabled} />
+              <Tab
+                key={t.id}
+                value={t.id}
+                label={t.label}
+                icon={t.icon}
+                iconPosition="start"
+                disabled={disabled}
+              />
             );
             if (disabled && t.disabledTooltip) {
               return (
