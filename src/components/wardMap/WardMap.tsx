@@ -71,14 +71,11 @@ const WardMap: React.FC = () => {
     if (!patient) return;
     setSelectedPatient(patient);
     setWardMapNavigation(wardOrderedPatientIds);
-    if (patient.primaryRecordType === 'nursing-record') {
-      // 部門記録簿（看護記録）画面へ
-      navigate('/nursing');
-    } else {
-      navigate(`/karte/${patientId}`, {
-        state: { from: 'ward-map' } satisfies KartePageLocationState,
-      });
-    }
+    // PM 指示（2026-05-08）: 病棟マップ → カルテ遷移は患者種別問わず新カルテに統一
+    // （旧: primaryRecordType='nursing-record' のみ /nursing へ分岐していた）
+    navigate(`/karte/${patientId}`, {
+      state: { from: 'ward-map' } satisfies KartePageLocationState,
+    });
   }, [navigate, setSelectedPatient, setWardMapNavigation, wardOrderedPatientIds]);
 
   const handleBedClick = (bed: Bed) => {

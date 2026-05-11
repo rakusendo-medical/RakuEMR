@@ -110,35 +110,32 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
 
   return (
     <Stack spacing={2}>
-      <Box>
-        <SectionHeader title="指示簿" color={sectionHeaderColor} />
-        <Paper variant="outlined" sx={{ p: 2, borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
-          <Stack spacing={1.5}>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              flexWrap="wrap"
-              gap={1}
-            >
-              <Typography variant="body2" color="text.secondary">
-                {filtered.length} 件
-                {filtered.length !== all.length && (
-                  <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
-                    （全 {all.length} 件中）
-                  </Typography>
-                )}
+      <Stack spacing={1.5}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          gap={1}
+        >
+          <Typography variant="body2" color="text.secondary">
+            {filtered.length} 件
+            {filtered.length !== all.length && (
+              <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+                （全 {all.length} 件中）
               </Typography>
-              <Button
-                size="small"
-                variant="outlined"
-                color={accent}
-                startIcon={<LaunchIcon />}
-                onClick={onOpenOrderStatusTab}
-              >
-                指示状況タブを開く
-              </Button>
-            </Stack>
+            )}
+          </Typography>
+          <Button
+            size="small"
+            variant="outlined"
+            color={accent}
+            startIcon={<LaunchIcon />}
+            onClick={onOpenOrderStatusTab}
+          >
+            指示状況タブを開く
+          </Button>
+        </Stack>
 
             <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
               <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
@@ -171,9 +168,7 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
                 />
               ))}
             </Stack>
-          </Stack>
-        </Paper>
-      </Box>
+      </Stack>
 
       {filtered.length === 0 ? (
         <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
