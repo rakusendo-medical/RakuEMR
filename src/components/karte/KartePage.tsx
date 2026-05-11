@@ -42,6 +42,7 @@ import ScheduleTab from './ScheduleTab';
 import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
 import DischargeOrderDialog from '../admission/DischargeOrderDialog';
 import RestraintOrderDialog from '../isolation/RestraintOrderDialog';
+import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
@@ -227,6 +228,11 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     setRestraintDialog({ open: false, title: '' });
   }, []);
 
+  // ===== us-36 サブ C: 看護記録（案 b: ep-10 流用）=====
+  // ActionBar クリックで ep-10 既存 `NursingRecordDialog` を `initialMode='new'` で起動する。
+  // 既存記録の閲覧は診療録タブ（MedicalRecordTab）の集約タイムラインで行う運用。
+  const [nursingRecordOpen, setNursingRecordOpen] = useState(false);
+
   if (!patient) {
     return (
       <Box sx={{ p: 3 }}>
@@ -289,6 +295,11 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     if (actionId === 'isolation-order') {
       // 既定タイトル「隔離開始」で起動。RestraintOrderLinks 経由のときはリンクのタイトルが渡る
       openRestraintDialog('隔離開始');
+      return;
+    }
+    if (actionId === 'nursing-record') {
+      // ep-10 既存 NursingRecordDialog を新規入力モードで開く（案 b: 流用）
+      setNursingRecordOpen(true);
       return;
     }
     setToast({
@@ -436,6 +447,14 @@ export default function KartePage({ modeOverride }: KartePageProps) {
         initialTitle={restraintDialog.title}
         editOrderId={restraintDialog.editId}
         onClose={closeRestraintDialog}
+      />
+
+      {/* us-36 サブ C: 看護記録ダイアログ（案 b: ep-10 流用）。ActionBar クリックで新規入力モードで起動 */}
+      <NursingRecordDialog
+        open={nursingRecordOpen}
+        patientId={patient.id}
+        initialMode="new"
+        onClose={() => setNursingRecordOpen(false)}
       />
 
       {/* §10 破壊的：患者情報タブの未保存変更を破棄して離脱する確認 */}

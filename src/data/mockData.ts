@@ -254,7 +254,6 @@ export const actionButtons = [
   '事後入力',
   'Rオーダ',
   '文字オーダ',
-  '看護ケア',
   '医療先制',
   '患者予約',
   '記事作成',
@@ -1146,7 +1145,7 @@ export const REHAB_EVALUATIONS: RehabEvaluation[] = [
   { id: 'RE002', rehabOrderId: 'RH002', patientId: 'P005', date: '2026-02-01', evaluator: 'OT 高田', content: '初回評価。意欲は高いが疲労感強い。短時間での活動から開始。', type: '開始時' },
 ];
 
-// ===== 看護ケア予定 =====
+// ===== 看護予定 =====
 export const NURSING_CARE_SCHEDULES: NursingCareSchedule[] = [
   { id: 'NC001', patientId: 'P001', patientName: '山田 太郎', careType: '入浴介助',       scheduledDate: '2026-02-24', wardId: 'ward1', completed: true },
   { id: 'NC002', patientId: 'P002', patientName: '佐藤 花子', careType: '口腔ケア',       scheduledDate: '2026-02-24', wardId: 'ward1', completed: false },

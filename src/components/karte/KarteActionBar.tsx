@@ -52,12 +52,7 @@ function buildInpatientActions(admissionState?: AdmissionState): ActionDef[] {
       disabledTooltip: dischargeTooltip,
     },
     { id: 'isolation-order', label: '隔離拘束指示' },
-    {
-      id: 'nursing-care',
-      label: '看護ケア記録',
-      disabled: true,
-      disabledTooltip: '段階 2 で実装予定（サブ C）',
-    },
+    { id: 'nursing-record', label: '看護記録' },
     { id: 'order-input', label: 'オーダー入力' },
     { id: 'print', label: '印刷', alignEnd: true },
     { id: 'close', label: '終了', variant: 'contained', color: 'error', alignEnd: true },
