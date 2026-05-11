@@ -25,13 +25,13 @@ const daysBetween = (from: ISODate, to: ISODate): number => {
 
 interface FlowsheetPageProps {
   /**
-   * 親コンポーネント（例: `KarteAlphaPage` のフローシートタブ）から埋め込みで使うときに true。
+   * 親コンポーネント（例: `KartePage` のフローシートタブ）から埋め込みで使うときに true。
    * - 親側で患者ヘッダーが既に表示されている前提なので、本コンポーネント上部の Paper（氏名・年齢・主病名）を非表示にする
    * - 単独ルート (/flowsheet/:patientId) では false（既定）で、患者ヘッダーを表示
    */
   embedded?: boolean;
   /**
-   * 親から patientId を直接渡したい場合に指定（例: `/karte-alpha/:patientId` のパラメータをそのまま流用）。
+   * 親から patientId を直接渡したい場合に指定（例: `/karte/:patientId` のパラメータをそのまま流用）。
    * 未指定時は `useParams` の `:patientId` を使う。
    */
   patientId?: string;

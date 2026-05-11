@@ -214,7 +214,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
 
   // ===== us-36 サブ B: 隔離拘束指示 =====
   // ActionBar 経由起動（既定タイトル「隔離開始」）と RestraintOrderLinks 経由起動（タイトル指定）の両経路を
-  // 同一 state で管理する。KarteAlphaPage と同じパターン。
+  // 同一 state で管理する。
   const [restraintDialog, setRestraintDialog] = useState<{
     open: boolean;
     title: string;

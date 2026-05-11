@@ -26,6 +26,7 @@ import ObservationBulkDialog from './ObservationBulkDialog';
 import ObservationRecordDialog from './ObservationRecordDialog';
 import IsolationHistoryView from './IsolationHistoryView';
 import BedMoveDialog, { type BedMoveTarget } from '../wardMap/BedMoveDialog';
+import type { KartePageLocationState } from '../karte/KartePage';
 
 const OBS_COLORS: Record<ObservationState, string> = {
   '未記入':   '#f1f5f9',
@@ -267,7 +268,7 @@ const IsolationOrderListTab: React.FC = () => {
 
   const navigateToKarte = (p: Patient) => {
     if (p.primaryRecordType === 'nursing-record') navigate('/nursing');
-    else navigate(`/karte-alpha/${p.id}`);
+    else navigate(`/karte/${p.id}`, { state: { from: 'patient-list' } satisfies KartePageLocationState });
   };
 
   const openBedMove = (p: Patient) => {

@@ -105,7 +105,7 @@ const FILTER_TABS: { key: RecordCategory | 'all'; label: string }[] = [
   { key: 'オーダー',    label: 'オーダー' },
 ];
 
-// ===== us-47: タグベースフィルタ Chip（KarteAlphaPage 旧版踏襲） =====
+// ===== us-47: タグベースフィルタ Chip =====
 
 const TAG_FILTERS = [
   '全体カンファレンス',
@@ -269,7 +269,7 @@ export default function MedicalRecordTab({
         </Button>
       </Stack>
 
-      {/* ===== タグフィルタ Chip 行（us-47・KarteAlphaPage 踏襲・OR 条件 1 つ選択） ===== */}
+      {/* ===== タグフィルタ Chip 行（us-47・OR 条件 1 つ選択） ===== */}
       <Stack direction="row" spacing={0.5} alignItems="center" sx={{ overflowX: 'auto', pb: 0.5 }}>
         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mr: 0.5, flexShrink: 0 }}>
           タグ:

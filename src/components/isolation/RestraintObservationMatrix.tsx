@@ -8,8 +8,7 @@
 // 開放時間に該当する時間枠には開放時間アイコンを重畳表示（spec AC-9）。
 //
 // 連携先メモ:
-// - 配置: KarteAlphaPage 統合まで FlowsheetPage の isolation タブから直接 import される
-// - legacy `src/components/flowsheet/Flowsheet.tsx` は触らない（S3 確認済の方針）
+// - 配置: FlowsheetPage の isolation タブから直接 import される
 import React from 'react';
 import { Box, Stack, Typography, Tooltip, Chip, Paper } from '@mui/material';
 import {

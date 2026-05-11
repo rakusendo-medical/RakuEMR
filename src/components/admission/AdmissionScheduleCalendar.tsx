@@ -11,6 +11,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import AdmissionConfirmDialog from './AdmissionConfirmDialog';
 import DischargeConfirmDialog from './DischargeConfirmDialog';
 import RelatedFeatureDialogs from '../wardMap/RelatedFeatureDialogs';
+import type { KartePageLocationState } from '../karte/KartePage';
 
 type ScheduleType = '入院' | '退院';
 type WardFilter = WardId | 'all';
@@ -87,7 +88,7 @@ const AdmissionScheduleCalendar: React.FC = () => {
       const patient = PATIENTS.find((p) => p.id === o.patientId);
       if (patient) {
         setSelectedPatient(patient);
-        navigate(`/karte-alpha/${patient.id}`);
+        navigate(`/karte/${patient.id}`, { state: { from: 'patient-list' } satisfies KartePageLocationState });
       }
       return;
     }

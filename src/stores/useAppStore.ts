@@ -111,7 +111,7 @@ interface AppState {
 
   // ep-02/ep-03: カルテ記事への動的書込（永続化対象）
   // patientId をキーに、確定時に追記された MedicalRecord 配列を保持。
-  // KarteAlphaPage では PATIENTS 由来の静的 records と、ここの動的 records をマージして表示する想定。
+  // 新カルテ画面（KartePage）では PATIENTS 由来の静的 records と、ここの動的 records をマージして表示する。
   dynamicMedicalRecords: Record<string, MedicalRecord[]>;
   appendMedicalRecord: (patientId: string, record: MedicalRecord) => void;
 
@@ -251,7 +251,7 @@ export const useAppStore = create<AppState>()(
       removeScheduledMove: (id) => set((state) => ({ scheduledMoves: state.scheduledMoves.filter((x) => x.id !== id) })),
 
       dynamicMedicalRecords: {},
-      // カルテ記事追加: 入退院確定や指示登録時に呼び出される。KarteAlphaPage が表示時にマージする。
+      // カルテ記事追加: 入退院確定や指示登録時に呼び出される。新カルテ画面（KartePage）が表示時にマージする。
       appendMedicalRecord: (patientId, record) =>
         set((state) => ({
           dynamicMedicalRecords: {

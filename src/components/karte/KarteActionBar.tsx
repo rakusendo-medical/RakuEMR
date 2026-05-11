@@ -28,7 +28,7 @@ const OUTPATIENT_ACTIONS: ActionDef[] = [
 
 // admissionState ごとに「入院指示／退院指示」の活性を決める。
 // 'discharged' は両方 disabled、'inpatient' は退院指示のみ活性、'outpatient' は入院指示のみ活性。
-// 未指定は KarteAlphaPage と同じく 'inpatient' 扱い。
+// 未指定は 'inpatient' 扱い。
 function buildInpatientActions(admissionState?: AdmissionState): ActionDef[] {
   const state = admissionState ?? 'inpatient';
   const admissionDisabled = state !== 'outpatient';

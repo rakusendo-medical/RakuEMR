@@ -17,7 +17,6 @@ import OrderManagement from '../components/orders/OrderManagement';
 import NursingCarePlan from '../components/nursingCare/NursingCarePlan';
 import DocumentManagement from '../components/documents/DocumentManagement';
 import WardManagement from '../components/wardManagement/WardManagement';
-import KarteAlphaPage from '../components/karteAlpha/KarteAlphaPage';
 import KartePage from '../components/karte/KartePage';
 import DesignGuide from '../components/designGuide/DesignGuide';
 import EpicReviewPage from '../components/epicReview/EpicReviewPage';
@@ -40,7 +39,6 @@ const AppRoutes: React.FC = () => (
       <Route path="/" element={<WardMap />} />
       <Route path="/patients" element={<PatientList />} />
       <Route path="/patients/:patientId" element={<PatientMain />} />
-      <Route path="/karte-alpha/:patientId" element={<KarteAlphaPage />} />
       <Route path="/karte/:patientId" element={<KartePage />} />
       <Route path="/outpatient" element={<OutpatientList />} />
       <Route path="/outpatient/:patientId/basic" element={<RedirectToPatientInfo />} />
@@ -60,6 +58,7 @@ const AppRoutes: React.FC = () => (
       <Route path="/epic-review" element={<Navigate to="/epic-review/ep-01" replace />} />
       {CARE_PLAN_ROUTES}
       {FLOWSHEET_ROUTES}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Route>
   </Routes>
 );

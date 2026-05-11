@@ -409,47 +409,45 @@ const MainLayout: React.FC = () => {
         }}
       >
         {/* Top Bar */}
-        {!location.pathname.startsWith("/karte-alpha") && (
-            <AppBar
-              position="static"
-              elevation={0}
-              sx={{
-                bgcolor: "background.paper",
-                borderBottom: "1px solid",
-                borderColor: "divider",
-              }}
-            >
-              <Toolbar
-                variant="dense"
-                sx={{ justifyContent: "space-between", minHeight: 48 }}
+        <AppBar
+          position="static"
+          elevation={0}
+          sx={{
+            bgcolor: "background.paper",
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Toolbar
+            variant="dense"
+            sx={{ justifyContent: "space-between", minHeight: 48 }}
+          >
+            <Typography variant="h6" color="text.primary">
+              {currentNav?.label || "電子カルテ"}
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Typography variant="caption" color="text.secondary">
+                {currentTime.toLocaleDateString("ja-JP")}{" "}
+                {currentTime.toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Typography>
+              <Divider orientation="vertical" flexItem />
+              <Avatar
+                sx={{
+                  width: 30,
+                  height: 30,
+                  bgcolor: "primary.light",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                }}
               >
-                <Typography variant="h6" color="text.primary">
-                  {currentNav?.label || "電子カルテ"}
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {currentTime.toLocaleDateString("ja-JP")}{" "}
-                    {currentTime.toLocaleTimeString("ja-JP", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Typography>
-                  <Divider orientation="vertical" flexItem />
-                  <Avatar
-                    sx={{
-                      width: 30,
-                      height: 30,
-                      bgcolor: "primary.light",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                    }}
-                  >
-                    看
-                  </Avatar>
-                </Box>
-              </Toolbar>
-            </AppBar>
-          )}
+                看
+              </Avatar>
+            </Box>
+          </Toolbar>
+        </AppBar>
 
         {/* Content */}
         <Box

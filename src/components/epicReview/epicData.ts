@@ -72,10 +72,9 @@ export const EPICS: EpicMeta[] = [
       { id: 'us-09', label: '退院指示' },
     ],
     mainScreens: [
-      { label: 'カルテ α（クイック操作で起動）', path: '/karte-alpha/P001', hint: 'AdmissionOrderDialog / DischargeOrderDialog' },
-      { label: '新カルテ（段階 2 で統合予定）', path: '/karte/P001' },
+      { label: 'カルテ（入院 mode・KarteActionBar から起動）', path: '/karte/P001', hint: 'AdmissionOrderDialog / DischargeOrderDialog' },
     ],
-    description: '主治医による入退院指示。新カルテ画面のアクションバーへの統合は ep-16 us-36 サブ A で対応。',
+    description: '主治医による入退院指示。新カルテ画面のアクションバーから起動（ep-16 us-36 サブ A で統合完了）。',
   },
   {
     id: 'ep-04',
@@ -100,7 +99,7 @@ export const EPICS: EpicMeta[] = [
     ],
     mainScreens: [
       { label: '隔離拘束', path: '/isolation' },
-      { label: 'カルテ α（診療録ヘッダ右の RestraintOrderLinks）', path: '/karte-alpha/P003' },
+      { label: 'カルテ（診療録タブの RestraintOrderLinks）', path: '/karte/P003' },
     ],
     description: '隔離開始 / 隔離解除 / 拘束開始 / 拘束解除 等の指示モーダル。',
   },

@@ -127,9 +127,9 @@
 
 | Epic | 子ストーリー | 主要画面 |
 | --- | --- | --- |
-| ep-01 病棟マップ | us-01〜us-04 | `/`, `/karte-alpha/:patientId` |
+| ep-01 病棟マップ | us-01〜us-04 | `/`, `/karte/:patientId` |
 | ep-02 入退院手続き | us-05〜us-07 | `/admission` |
-| ep-03 入退院指示 | us-08, us-09 | `/karte-alpha/:patientId`（クイック操作） |
+| ep-03 入退院指示 | us-08, us-09 | `/karte/:patientId`（KarteActionBar クイック操作） |
 | ep-04 入退院歴 | us-10 | `/admission`（タブ「入院歴」「移動歴」） |
 | ep-05 隔離拘束指示 | us-11 | `/restraint/order` 系 |
 | ep-06 隔離拘束一覧 | us-12 | `/restraint/list` |
