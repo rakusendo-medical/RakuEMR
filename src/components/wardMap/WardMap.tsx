@@ -2,19 +2,17 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Card, CardContent, Typography, Checkbox, Button, Chip,
-  Grid, Stack, Tabs, Tab, Paper, Divider, IconButton,
+  Grid, Stack, Tabs, Tab, Paper, IconButton,
 } from '@mui/material';
 import {
-  ArrowForward, Clear, BedOutlined, EventAvailable,
-  PeopleAltOutlined, FlightTakeoff, InfoOutlined,
-  OpenInFull as OpenInFullIcon, Close as CloseIcon, MoveDown as MoveDownIcon,
+  ArrowForward, Clear, EventAvailable,
+  Close as CloseIcon, MoveDown as MoveDownIcon,
   ArticleOutlined as ArticleIcon,
-  LogoutOutlined, AssignmentReturnedOutlined,
   Lock as LockIcon,
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, UnassignedPatient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, UNASSIGNED_PATIENTS } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
 import { useAppStore } from '../../stores/useAppStore';
@@ -22,9 +20,12 @@ import BedFlagIcons, { BedFlagLegend } from './BedFlagIcons';
 import RelatedFeatureDialogs from './RelatedFeatureDialogs';
 import type { RelatedFeatureKey } from './RelatedFeatureDialogs';
 import UnassignedPatientsPanel from './UnassignedPatientsPanel';
+import WardMapSidebar from './WardMapSidebar';
 import BedMoveDialog, { BedMoveMode, BedMoveTarget, BedMoveSubmitParams } from './BedMoveDialog';
 import DischargeConfirmDialog from '../admission/DischargeConfirmDialog';
 import DischargeOrderDialog from '../admission/DischargeOrderDialog';
+import AdmissionConfirmDialog from '../admission/AdmissionConfirmDialog';
+import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
 import IsolationHistoryDialog from '../isolation/IsolationHistoryDialog';
 
 const WardMap: React.FC = () => {
@@ -35,7 +36,9 @@ const WardMap: React.FC = () => {
     setWardMapNavigation, showSnackbar,
     scheduledMoves, addScheduledMove,
     pendingOrders, confirmedAdmissionIds,
+    sidebarOpen,
   } = useAppStore();
+  const sidebarWidth = sidebarOpen ? 220 : 60;
   const [ward, setWard] = React.useState<WardId>('ward1');
 
   const [activeFeature, setActiveFeature] = React.useState<RelatedFeatureKey | null>(null);
@@ -50,6 +53,9 @@ const WardMap: React.FC = () => {
   // ※ 隔離指示・拘束指示など他の指示系（ep-05 隔離拘束指示）は将来このセクションに追加する想定。
   const [dischargeConfirmOrder, setDischargeConfirmOrder] = React.useState<AdmissionOrder | null>(null);
   const [dischargeOrderPatient, setDischargeOrderPatient] = React.useState<Patient | null>(null);
+  // 右サイドバーから直接起動する入院系ダイアログ
+  const [admissionConfirmOrder, setAdmissionConfirmOrder] = React.useState<AdmissionOrder | null>(null);
+  const [admissionOrderPatient, setAdmissionOrderPatient] = React.useState<Patient | null>(null);
   // ===== ep-08 隔離拘束歴 =====
   const [isolationHistoryPatientId, setIsolationHistoryPatientId] = React.useState<string | null>(null);
 
@@ -171,44 +177,51 @@ const WardMap: React.FC = () => {
   };
 
   return (
-    <Box sx={{ pb: selectedBedPatient ? 14 : 0 }}>
-      {/* ヘッダー: 病棟タブ + 関連機能エントリ群 */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+    <Box sx={{ pb: selectedBedPatient ? 8 : 0 }}>
+      {/* ヘッダー: 病棟タブ */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
         <Tabs value={ward} onChange={(_, v) => setWard(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tab label={`${WARD_LABELS.ward1}マップ`} value="ward1" />
           <Tab label={`${WARD_LABELS.ward2}マップ`} value="ward2" />
         </Tabs>
-        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
-          <Button size="small" variant="outlined" startIcon={<EventAvailable />} onClick={() => setActiveFeature('vacancy')}>
-            空床照会
-          </Button>
-          <Button size="small" variant="outlined" startIcon={<PeopleAltOutlined />} onClick={() => setUnassignedOpen(true)}>
-            未割当者
-          </Button>
-          <Button size="small" variant="outlined" startIcon={<BedOutlined />} onClick={() => setActiveFeature('admission-schedule')}>
-            入退院予定
-          </Button>
-          <Button size="small" variant="outlined" startIcon={<FlightTakeoff />} onClick={() => setActiveFeature('absent')}>
-            不在者
-          </Button>
-          <Button size="small" variant="outlined" startIcon={<InfoOutlined />} onClick={() => setActiveFeature('admission-info')}>
-            入退院情報
-          </Button>
-          {selectedRooms.size > 0 && (
-            <>
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-              <Typography variant="body2" color="text.secondary">選択中: {selectedRooms.size}室</Typography>
-              <Button variant="contained" size="small" endIcon={<ArrowForward />} onClick={() => navigate('/nursing/bulk-vitals')}>
-                一括バイタル入力へ
-              </Button>
-              <Button size="small" startIcon={<Clear />} onClick={clearSelectedRooms}>解除</Button>
-            </>
-          )}
-        </Stack>
       </Stack>
 
-      {/* メイン: 病室カードグリッド */}
-      <Grid container spacing={1.5}>
+      {/* アクションバー: 空床照会 + 一括入力 */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
+        <Button
+          size="small"
+          variant="contained"
+          color="primary"
+          startIcon={<EventAvailable />}
+          onClick={() => setActiveFeature('vacancy')}
+        >
+          空床照会
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          disabled={selectedRooms.size === 0}
+          endIcon={<ArrowForward />}
+          onClick={() => navigate('/nursing/bulk-vitals')}
+        >
+          一括入力へ
+        </Button>
+        {selectedRooms.size > 0 && (
+          <Button size="small" startIcon={<Clear />} onClick={clearSelectedRooms}>
+            解除
+          </Button>
+        )}
+        {selectedRooms.size > 0 && (
+          <Typography variant="caption" color="text.secondary">
+            選択中: {selectedRooms.size}室
+          </Typography>
+        )}
+      </Stack>
+
+      {/* メイン: 病室カードグリッド + 右サイドバー */}
+      <Box sx={{ display: 'flex', gap: 1.5 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Grid container spacing={1.5}>
         {rooms.map((room) => {
           const isSelected = selectedRooms.has(room.roomNumber);
           return (
@@ -317,88 +330,138 @@ const WardMap: React.FC = () => {
             </Grid>
           );
         })}
-      </Grid>
+        </Grid>
 
-      {/* 凡例: ステータス + 運用フラグ */}
-      <Stack spacing={0.75} sx={{ mt: 2 }}>
-        <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
-          {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-            <Stack key={key} direction="row" spacing={0.5} alignItems="center">
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: cfg.color }} />
-              <Typography variant="caption" color="text.secondary">{cfg.label}</Typography>
+        {/* 凡例: ステータス + 運用フラグ */}
+        <Stack spacing={0.75} sx={{ mt: 2 }}>
+          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
+            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+              <Stack key={key} direction="row" spacing={0.5} alignItems="center">
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: cfg.color }} />
+                <Typography variant="caption" color="text.secondary">{cfg.label}</Typography>
+              </Stack>
+            ))}
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Box sx={{
+                width: 16, height: 8, borderRadius: 0.5,
+                backgroundImage: 'repeating-linear-gradient(45deg, #e2e8f0 0 4px, #f1f5f9 4px 8px)',
+              }} />
+              <Typography variant="caption" color="text.secondary">使用不可</Typography>
             </Stack>
-          ))}
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <Box sx={{
-              width: 16, height: 8, borderRadius: 0.5,
-              backgroundImage: 'repeating-linear-gradient(45deg, #e2e8f0 0 4px, #f1f5f9 4px 8px)',
-            }} />
-            <Typography variant="caption" color="text.secondary">使用不可</Typography>
           </Stack>
+          <BedFlagLegend />
         </Stack>
-        <BedFlagLegend />
-      </Stack>
+        </Box>
+        {/* 右サイドバー: 未割当者 / 入院予定 / 不在者 / 入院者情報 */}
+        <Box sx={{ width: 220, flexShrink: 0 }}>
+          <WardMapSidebar
+            ward={ward}
+            onOpenUnassigned={(uid) => {
+              // 未割当者[詳細] → 入院手続きダイアログ。AdmissionOrder を合成して渡す
+              const u = UNASSIGNED_PATIENTS.find((x) => x.id === uid);
+              if (!u) return;
+              const synthetic: AdmissionOrder = {
+                id: `synthetic-admit-${u.id}`,
+                patientId: u.id,
+                patientName: u.name,
+                type: '入院',
+                status: '指示済',
+                scheduledDate: u.scheduledAdmitAt?.slice(0, 10) ?? '',
+                doctorName: u.doctorName,
+                roomNumber: u.designatedRoomNumber === 'tentative' ? '—' : u.designatedRoomNumber,
+                bedLabel: u.designatedBedLabel === 'tentative' ? '—' : u.designatedBedLabel,
+                wardId: u.designatedWardId === 'tentative' ? 'ward1' : u.designatedWardId,
+              };
+              setAdmissionConfirmOrder(synthetic);
+            }}
+            onOpenAdmissionSchedule={(orderId) => {
+              // 入院予定[詳細] → 入院指示ダイアログ
+              const o = ADMISSION_ORDERS.find((x) => x.id === orderId);
+              if (!o) return;
+              // PATIENTS にあればそれを、無ければ order 情報から合成
+              const found = PATIENTS.find((p) => p.id === o.patientId);
+              const p: Patient = found ?? {
+                id: o.patientId,
+                name: o.patientName,
+                age: 0,
+                gender: 'M',
+                wardId: o.wardId,
+                roomNumber: o.roomNumber === '—' ? '' : o.roomNumber,
+                bedLabel: o.bedLabel === '—' ? '' : o.bedLabel,
+                status: 'stable',
+                admitDate: o.scheduledDate,
+                doctorName: o.doctorName,
+                admissionState: 'outpatient',
+              };
+              setAdmissionOrderPatient(p);
+            }}
+            onOpenAbsent={() => navigate('/outing')}
+          />
+        </Box>
+      </Box>
 
-      {/* フッター: 患者操作メニュー（選択時のみ） */}
+      {/* フッター: 患者操作メニュー（選択時のみ）— スクショ準拠の細長メニューバー */}
       {selectedBedPatient && (
         <Paper
           elevation={4}
           sx={{
             position: 'fixed',
-            left: 0,
+            left: sidebarWidth,
             right: 0,
             bottom: 0,
-            zIndex: 1100,
-            borderTop: '2px solid',
-            borderColor: 'primary.main',
+            // MUI の drawer(1200) より下、appBar(1100) と同等。サイドバーは常に上に出る
+            zIndex: (theme) => theme.zIndex.drawer - 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
             borderRadius: 0,
+            bgcolor: 'background.paper',
+            transition: 'left 0.2s ease',
           }}
         >
-          <Box sx={{ maxWidth: 1280, mx: 'auto', px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" fontWeight={700} noWrap>
-                {selectedBedPatient.name}
-                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                  ({selectedBedPatient.age}歳{selectedBedPatient.gender === 'M' ? '男性' : '女性'}) / {selectedBedPatient.roomNumber}号室 {selectedBedPatient.bedLabel} / 主治医 {selectedBedPatient.doctorName}
-                </Typography>
-              </Typography>
-              {selectedBedPatient.diagnosis && (
-                <Typography variant="caption" color="text.secondary">{selectedBedPatient.diagnosis}</Typography>
-              )}
-            </Box>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Button variant="contained" size="small" startIcon={<OpenInFullIcon />} onClick={() => navigateToKarte(selectedBedPatient.id)}>
-                カルテ
-              </Button>
-              <Button variant="outlined" size="small" startIcon={<MoveDownIcon />} onClick={() => handleMove(selectedBedPatient)}>
-                移動
-              </Button>
-              {/* ep-02 入退院手続き: 退院指示済の入院患者向け */}
-              {(selectedBedPatient.admissionState ?? 'inpatient') === 'inpatient' && (
-                <Button variant="outlined" size="small" startIcon={<AssignmentReturnedOutlined />} onClick={() => handleOpenDischargeConfirm(selectedBedPatient)}>
-                  退院手続き
+          <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 1.5, overflowX: 'auto' }}>
+            <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+              メニュー:
+            </Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+              {selectedBedPatient.id} {selectedBedPatient.name} [{selectedBedPatient.roomNumber}号室]-[{selectedBedPatient.bedLabel}]
+            </Typography>
+            <Stack direction="row" spacing={0.75} sx={{ ml: 1, flex: 1, flexWrap: 'nowrap' }}>
+              {([
+                { label: '移動', onClick: () => handleMove(selectedBedPatient), icon: <MoveDownIcon sx={{ fontSize: 14 }} /> },
+                { label: '隔離歴', onClick: () => setIsolationHistoryPatientId(selectedBedPatient.id), icon: <LockIcon sx={{ fontSize: 14 }} /> },
+                { label: 'フローシート', onClick: () => navigate(`/karte/${selectedBedPatient.id}#flowsheet`) },
+                { label: '患者情報', onClick: () => navigate(`/patients/${selectedBedPatient.id}`) },
+                { label: '食事', onClick: () => showSnackbar('食事画面は未実装(モック)', 'info') },
+                { label: '外出外泊', onClick: () => navigate('/outing') },
+                { label: '行動制限', onClick: () => navigate('/behavior') },
+                { label: '予定表', onClick: () => navigate('/schedule') },
+                { label: '診療録', onClick: () => navigateToKarte(selectedBedPatient.id) },
+                { label: '文書', onClick: () => navigate('/documents') },
+                { label: '看護ケア', onClick: () => navigate('/nursing-care') },
+                { label: '定期評価', onClick: () => navigate(`/care-plan/patients/${selectedBedPatient.id}/evaluate`) },
+              ] as const).map((btn) => (
+                <Button
+                  key={btn.label}
+                  variant="text"
+                  onClick={btn.onClick}
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    minWidth: 0,
+                    px: 1,
+                    py: 0.5,
+                    color: 'text.primary',
+                    whiteSpace: 'nowrap',
+                    '&:hover': { bgcolor: '#f1f5f9' },
+                  }}
+                >
+                  [{btn.label}]
                 </Button>
-              )}
-              {/* ep-03 入退院指示: 主治医発行（入院患者のみ表示） */}
-              {(selectedBedPatient.admissionState ?? 'inpatient') === 'inpatient' && (
-                <Button variant="outlined" size="small" startIcon={<LogoutOutlined />} onClick={() => handleOpenDischargeOrder(selectedBedPatient)}>
-                  退院指示
-                </Button>
-              )}
-              {/* === 将来追加位置 ===
-                  ep-05 隔離拘束指示: 隔離指示／拘束指示ボタンをここに追加する。
-                  条件: 入院患者かつ既に隔離拘束指示が出ていない場合などをここで判定。 */}
-              {/* ===== ep-08 隔離拘束歴 ===== */}
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<LockIcon />}
-                onClick={() => setIsolationHistoryPatientId(selectedBedPatient.id)}
-              >
-                隔離歴
-              </Button>
-              <IconButton size="small" onClick={() => setBedMenuPatientId(null)}><CloseIcon /></IconButton>
+              ))}
             </Stack>
+            <IconButton size="small" onClick={() => setBedMenuPatientId(null)}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
           </Box>
         </Paper>
       )}
@@ -440,6 +503,22 @@ const WardMap: React.FC = () => {
         open={!!dischargeOrderPatient}
         patient={dischargeOrderPatient}
         onClose={() => setDischargeOrderPatient(null)}
+      />
+
+      {/* 右サイドバー 未割当者[詳細] → 入院手続きダイアログ */}
+      <AdmissionConfirmDialog
+        open={!!admissionConfirmOrder}
+        order={admissionConfirmOrder}
+        onClose={() => setAdmissionConfirmOrder(null)}
+        onConfirmed={() => setAdmissionConfirmOrder(null)}
+        onOpenVacancy={() => setActiveFeature('vacancy')}
+      />
+
+      {/* 右サイドバー 入院予定[詳細] → 入院指示ダイアログ */}
+      <AdmissionOrderDialog
+        open={!!admissionOrderPatient}
+        patient={admissionOrderPatient}
+        onClose={() => setAdmissionOrderPatient(null)}
       />
 
       {/* ===== ep-08 隔離拘束歴 ===== */}

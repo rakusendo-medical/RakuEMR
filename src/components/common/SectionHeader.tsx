@@ -34,12 +34,28 @@ const SectionHeader: React.FC<Props> = ({
         '&:hover': collapsible ? { opacity: 0.92 } : undefined,
       }}
     >
-      <Typography sx={{ fontWeight: 700, color: '#fff' }}>
+      <Typography
+        sx={{
+          fontWeight: 700,
+          color: '#fff',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
         {title}
       </Typography>
-      <Box sx={{ flex: 1 }} />
       {rightSlot && (
-        <Box onClick={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 0.5,
+            minWidth: 0, // チップが flex-wrap で折り返せるよう shrink を許可
+          }}
+        >
           {rightSlot}
         </Box>
       )}

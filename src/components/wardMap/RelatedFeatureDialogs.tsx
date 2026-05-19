@@ -1,9 +1,15 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography,
-  Tabs, Tab, Stack, Chip, Divider, Grid,
+  Tabs, Tab, Stack, Chip, Divider, Grid, FormControl, InputLabel, MenuItem, Select,
+  IconButton, Drawer,
 } from '@mui/material';
-import { CalendarMonth as CalendarIcon, OpenInNew as OpenInNewIcon } from '@mui/icons-material';
+import {
+  OpenInNew as OpenInNewIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Close as CloseIcon,
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import type { WardId } from '../../types';
 import { ROOMS, PATIENTS, ADMISSION_ORDERS } from '../../data/mockData';
@@ -33,89 +39,235 @@ const RelatedFeatureDialogs: React.FC<Props> = ({ open, feature, ward, onClose }
   const navigate = useNavigate();
   const [scheduleTab, setScheduleTab] = React.useState<'admit' | 'discharge'>('admit');
 
-  if (!feature) return null;
+  // 閉じる過程(feature が null に戻る)でも内容を保持してアニメ完了させる
+  const [lastFeature, setLastFeature] = React.useState<RelatedFeatureKey | null>(feature);
+  React.useEffect(() => {
+    if (feature) setLastFeature(feature);
+  }, [feature]);
+  const activeFeature = feature ?? lastFeature;
 
-  const fullScreenPath = (feature === 'admission-schedule' || feature === 'admission-info') ? '/admission' : null;
+  // 各モードの open フラグ(コンポーネントは常駐マウントし、open のみで開閉してアニメを揃える)
+  const drawerOpen = open && (activeFeature === 'admission-schedule' || activeFeature === 'absent');
+  const dialogOpen = open && (activeFeature === 'vacancy' || activeFeature === 'admission-info');
+  const fullScreenPath = (activeFeature === 'admission-schedule' || activeFeature === 'admission-info') ? '/admission' : null;
+
+  const drawerTitle = activeFeature === 'admission-schedule' ? '入退院予定一覧'
+    : activeFeature === 'absent' ? '不在者一覧' : '';
+  const drawerSubtitle = activeFeature === 'admission-schedule' ? '入院・退院予定の患者一覧'
+    : activeFeature === 'absent' ? '外出・外泊中の患者一覧' : '';
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ pb: 1 }}>{titleMap[feature]}</DialogTitle>
-      <DialogContent dividers>
-        {feature === 'vacancy' && <VacancyContent ward={ward} />}
-        {feature === 'admission-schedule' && (
-          <>
-            <Tabs value={scheduleTab} onChange={(_, v) => setScheduleTab(v)} sx={{ mb: 2 }}>
-              <Tab value="admit" label="入院予定" />
-              <Tab value="discharge" label="退院予定" />
-            </Tabs>
-            <AdmissionScheduleContent type={scheduleTab} ward={ward} />
-          </>
+    <>
+      {/* 右側 Drawer: 入退院予定 / 不在者 — UnassignedPatientsPanel と同じ構造で常駐レンダ */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={onClose}
+        PaperProps={{ sx: { width: 380, p: 0 } }}
+      >
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6" fontWeight={700}>{drawerTitle}</Typography>
+            <Typography variant="caption" color="text.secondary">{drawerSubtitle}</Typography>
+          </Box>
+          <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
+        </Box>
+        <Box sx={{ p: 1.5, overflow: 'auto', flex: 1 }}>
+          {activeFeature === 'admission-schedule' && (
+            <>
+              <Tabs value={scheduleTab} onChange={(_, v) => setScheduleTab(v)} sx={{ mb: 1.5 }}>
+                <Tab value="admit" label="入院予定" />
+                <Tab value="discharge" label="退院予定" />
+              </Tabs>
+              <AdmissionScheduleContent type={scheduleTab} ward={ward} />
+            </>
+          )}
+          {activeFeature === 'absent' && <AbsentContent ward={ward} />}
+        </Box>
+        {fullScreenPath && activeFeature === 'admission-schedule' && (
+          <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Button
+              fullWidth
+              startIcon={<OpenInNewIcon />}
+              onClick={() => { onClose(); navigate(fullScreenPath); }}
+            >
+              入退院情報画面で開く
+            </Button>
+          </Box>
         )}
-        {feature === 'absent' && <AbsentContent ward={ward} />}
-        {feature === 'admission-info' && <AdmissionInfoContent ward={ward} />}
-      </DialogContent>
-      <DialogActions>
-        {fullScreenPath && (
-          <Button
-            startIcon={<OpenInNewIcon />}
-            onClick={() => { onClose(); navigate(fullScreenPath); }}
-          >
-            入退院情報画面で開く
-          </Button>
-        )}
-        <Button onClick={onClose}>閉じる</Button>
-      </DialogActions>
-    </Dialog>
+      </Drawer>
+
+      {/* Dialog: 空床照会 / 入退院情報 — こちらも常駐レンダ */}
+      <Dialog
+        open={dialogOpen}
+        onClose={onClose}
+        maxWidth={activeFeature === 'vacancy' ? 'lg' : 'md'}
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          {activeFeature === 'vacancy' ? '空床照会'
+            : activeFeature === 'admission-info' ? '入退院情報' : ''}
+        </DialogTitle>
+        <DialogContent dividers>
+          {activeFeature === 'vacancy' && <VacancyContent ward={ward} />}
+          {activeFeature === 'admission-info' && <AdmissionInfoContent ward={ward} />}
+        </DialogContent>
+        <DialogActions>
+          {fullScreenPath && activeFeature === 'admission-info' && (
+            <Button
+              startIcon={<OpenInNewIcon />}
+              onClick={() => { onClose(); navigate(fullScreenPath); }}
+            >
+              入退院情報画面で開く
+            </Button>
+          )}
+          <Button onClick={onClose}>閉じる</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
 const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
-  const rooms = ROOMS.filter((r) => r.wardId === ward);
-  // 参考システム仕様: 青色=使用中、白色=空床、表示のみ。
-  // 各セルは、その病室の病床ごとに 1 マスを表示する想定（モックでは全日同じ占有状態を表示）
-  const days = ['今日', '明日', '明後日', '3日後', '4日後', '5日後', '6日後'];
-  const OCCUPIED = '#1d4ed8'; // 使用中（青）
-  const EMPTY_BG = '#ffffff'; // 空床（白）
-  const DISABLED = '#cbd5e1'; // 使用不可（グレー）
+  const [selectedWard, setSelectedWard] = React.useState<WardId>(ward);
+  const [yearMonth, setYearMonth] = React.useState<{ y: number; m: number }>({ y: 2026, m: 5 });
+
+  const rooms = ROOMS.filter((r) => r.wardId === selectedWard);
+  const daysInMonth = new Date(yearMonth.y, yearMonth.m, 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  // 表示色
+  const OCCUPIED = '#29b6e7'; // 使用中(明るい青)
+  const EMPTY_BG = '#ffffff';
+  const DISABLED = '#cbd5e1';
+
+  // モック: 各 (room/bed/day) に対し疑似乱数で空床/使用中を決定し、視覚的なまだら模様を作る
+  const occupied = (roomNumber: string, bedLabel: string, day: number): boolean => {
+    const bedNum = parseInt(bedLabel, 10) || 0;
+    const seed = (roomNumber.charCodeAt(0) * 31 + bedNum * 17 + day) % 7;
+    return seed >= 1 && seed <= 5;
+  };
+
+  const dayColor = (day: number) => {
+    const d = new Date(yearMonth.y, yearMonth.m - 1, day).getDay();
+    if (d === 0) return '#dc2626'; // 日曜
+    if (d === 6) return '#1d4ed8'; // 土曜
+    return '#1e293b';
+  };
+
+  const changeMonth = (dir: -1 | 1) => {
+    setYearMonth((cur) => {
+      const m = cur.m + dir;
+      if (m < 1) return { y: cur.y - 1, m: 12 };
+      if (m > 12) return { y: cur.y + 1, m: 1 };
+      return { y: cur.y, m };
+    });
+  };
+
   return (
     <Box>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
-        <CalendarIcon fontSize="small" color="primary" />
-        <Typography variant="body2" color="text.secondary">
-          カレンダー形式の空床状況（青=使用中／白=空床／グレー=使用不可・表示のみ）
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>病棟</InputLabel>
+          <Select
+            label="病棟"
+            value={selectedWard}
+            onChange={(e) => setSelectedWard(e.target.value as WardId)}
+          >
+            <MenuItem value="ward1">第1病棟</MenuItem>
+            <MenuItem value="ward2">第2病棟</MenuItem>
+          </Select>
+        </FormControl>
+        <Box sx={{ flex: 1 }} />
+        <Typography variant="body2" color="text.secondary">表示月</Typography>
+        <IconButton size="small" onClick={() => changeMonth(-1)}>
+          <ChevronLeftIcon fontSize="small" />
+        </IconButton>
+        <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'center', fontWeight: 600 }}>
+          {yearMonth.y}年{yearMonth.m}月
         </Typography>
+        <IconButton size="small" onClick={() => changeMonth(1)}>
+          <ChevronRightIcon fontSize="small" />
+        </IconButton>
       </Stack>
-      <Box sx={{ overflowX: 'auto' }}>
-        <Box component="table" sx={{ borderCollapse: 'collapse', fontSize: '0.75rem', width: '100%' }}>
+
+      <Box sx={{ overflow: 'auto', maxHeight: 480, border: '1px solid #e2e8f0' }}>
+        <Box
+          component="table"
+          sx={{
+            borderCollapse: 'collapse',
+            fontSize: '0.7rem',
+            '& th, & td': { border: '1px solid #e2e8f0' },
+          }}
+        >
           <thead>
             <tr>
-              <Box component="th" sx={{ border: '1px solid #e2e8f0', p: 1, bgcolor: '#f8fafc', textAlign: 'left' }}>病室 / 床</Box>
+              <Box
+                component="th"
+                sx={{
+                  p: 0.5, bgcolor: '#f8fafc', position: 'sticky',
+                  left: 0, top: 0, zIndex: 3, minWidth: 70, textAlign: 'center',
+                }}
+              >
+                病室
+              </Box>
+              <Box
+                component="th"
+                sx={{
+                  p: 0.5, bgcolor: '#f8fafc', position: 'sticky',
+                  left: 70, top: 0, zIndex: 3, minWidth: 50, textAlign: 'center',
+                }}
+              >
+                ベッド
+              </Box>
               {days.map((d) => (
-                <Box key={d} component="th" sx={{ border: '1px solid #e2e8f0', p: 0.75, bgcolor: '#f8fafc' }}>{d}</Box>
+                <Box
+                  key={d}
+                  component="th"
+                  sx={{
+                    p: 0.5, bgcolor: '#f8fafc', position: 'sticky',
+                    top: 0, zIndex: 2, minWidth: 26, textAlign: 'center',
+                    color: dayColor(d), fontWeight: 700,
+                  }}
+                >
+                  {d}
+                </Box>
               ))}
             </tr>
           </thead>
           <tbody>
             {rooms.flatMap((r) =>
-              r.beds.map((bed) => (
+              r.beds.map((bed, bedIdx) => (
                 <tr key={`${r.roomNumber}-${bed.bed}`}>
-                  <Box component="td" sx={{ border: '1px solid #e2e8f0', p: 0.75, fontWeight: 600 }}>
-                    {r.roomNumber}号室 {bed.bed}
+                  {bedIdx === 0 && (
+                    <Box
+                      component="td"
+                      rowSpan={r.beds.length}
+                      sx={{
+                        p: 0.5, bgcolor: '#f8fafc', position: 'sticky',
+                        left: 0, zIndex: 1, fontWeight: 600, textAlign: 'center',
+                        verticalAlign: 'top',
+                      }}
+                    >
+                      {r.roomNumber}号室
+                    </Box>
+                  )}
+                  <Box
+                    component="td"
+                    sx={{
+                      p: 0.5, bgcolor: '#f8fafc', position: 'sticky',
+                      left: 70, zIndex: 1, textAlign: 'center',
+                    }}
+                  >
+                    {bed.bed}
                   </Box>
                   {days.map((d) => {
-                    const bg = bed.disabled ? DISABLED : (bed.patientId ? OCCUPIED : EMPTY_BG);
+                    const bg = bed.disabled ? DISABLED : (occupied(r.roomNumber, bed.bed, d) ? OCCUPIED : EMPTY_BG);
                     return (
                       <Box
                         key={d}
                         component="td"
-                        sx={{
-                          border: '1px solid #e2e8f0',
-                          p: 0.75,
-                          minWidth: 36,
-                          height: 28,
-                          textAlign: 'center',
-                          bgcolor: bg,
-                        }}
+                        sx={{ height: 22, bgcolor: bg }}
                       />
                     );
                   })}
@@ -124,6 +276,12 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
             )}
           </tbody>
         </Box>
+      </Box>
+
+      <Box sx={{ mt: 1.5, fontSize: '0.7rem', color: 'text.secondary' }}>
+        <div>青色は、使用されているベッドを表します。</div>
+        <div>白色は空床状態を表します。</div>
+        <div style={{ fontWeight: 700 }}>表示のみで、ベッドの選択はできません。</div>
       </Box>
     </Box>
   );

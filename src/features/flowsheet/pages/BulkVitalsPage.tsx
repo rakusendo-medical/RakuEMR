@@ -145,8 +145,14 @@ const BulkVitalsPage: React.FC = () => {
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>病室</InputLabel>
-            <Select label="病室" value={room} onChange={(e) => setRoom(e.target.value)} displayEmpty>
+            <InputLabel shrink>病室</InputLabel>
+            <Select
+              label="病室"
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              displayEmpty
+              notched
+            >
               <MenuItem value=""><em>全室</em></MenuItem>
               {roomsForWard.map((r) => (
                 <MenuItem key={r} value={r}>{r}</MenuItem>
@@ -239,7 +245,7 @@ const BulkVitalsPage: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <MuiLink component={RouterLink} to={`/flowsheet/${p.id}`}>
+                      <MuiLink component={RouterLink} to={`/karte/${p.id}#flowsheet`}>
                         {p.id}
                       </MuiLink>
                     </TableCell>

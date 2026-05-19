@@ -13,6 +13,8 @@ import {
   Snackbar,
   Tab,
   Tabs,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -24,13 +26,15 @@ import {
   MedicalServices as CarePlanIcon,
   PersonOutline as PatientInfoIcon,
   EventNote as ScheduleIcon,
+  ViewAgenda as LayoutStackIcon,
+  ViewColumn as LayoutSideBySideIcon,
 } from '@mui/icons-material';
 import { PATIENTS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import type { Patient } from '../../types';
 import KartePatientHeader from './KartePatientHeader';
 import KarteActionBar from './KarteActionBar';
-import FlowsheetPage from '../../features/flowsheet/pages/FlowsheetPage';
+import FlowsheetView from '../flowsheet/Flowsheet';
 import PatientInfoTab from './PatientInfoTab';
 import MedicalRecordTab from './MedicalRecordTab';
 import ClinicalInfoPanel from './ClinicalInfoPanel';
@@ -233,6 +237,12 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   // 既存記録の閲覧は診療録タブ（MedicalRecordTab）の集約タイムラインで行う運用。
   const [nursingRecordOpen, setNursingRecordOpen] = useState(false);
 
+  // 診療録タブの上部パネル配置: 'A' = 縦並び(従来) / 'B' = 横並び(生活歴 2fr : 診療情報 1fr)
+  const [recordLayout, setRecordLayout] = useState<'A' | 'B'>('A');
+
+  // 新規記載ダイアログのトリガー(KarteActionBar からインクリメントで MedicalRecordTab に通知)
+  const [newRecordTrigger, setNewRecordTrigger] = useState(0);
+
   if (!patient) {
     return (
       <Box sx={{ p: 3 }}>
@@ -302,6 +312,15 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       setNursingRecordOpen(true);
       return;
     }
+    if (actionId === 'new-record') {
+      // 診療録(SOAP/フリー)の新規記載ダイアログを開く
+      // 現在のタブが診療録でなければ自動で切替
+      if (currentTab !== 'medical-record') {
+        attemptTabChange('medical-record');
+      }
+      setNewRecordTrigger((n) => n + 1);
+      return;
+    }
     setToast({
       open: true,
       message: `[${actionId}] は段階 1 ではモック動作です（mode=${mode}）`,
@@ -312,15 +331,15 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <KartePatientHeader patient={patient} mode={mode} onBack={handleBack} />
 
-      <ClinicalInfoPanel patient={patient} mode={mode} />
-
-      <LifeHistoryTimeline patient={patient} mode={mode} />
-
       <Box
         sx={{
-          bgcolor: mode === 'outpatient' ? '#16a34a' : '#1e3a5f',
+          bgcolor: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
           px: 1,
           pt: 0.5,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: 1,
         }}
       >
         <Tabs
@@ -329,8 +348,9 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           variant="scrollable"
           scrollButtons="auto"
           sx={{
+            flex: 1,
             minHeight: 40,
-            '& .MuiTabs-scrollButtons': { color: 'rgba(255,255,255,0.85)' },
+            '& .MuiTabs-scrollButtons': { color: '#64748b' },
             '& .MuiTab-root': {
               minHeight: 40,
               fontSize: '0.85rem',
@@ -339,24 +359,24 @@ export default function KartePage({ modeOverride }: KartePageProps) {
               px: 1.5,
               gap: 0.5,
               minWidth: 'auto',
-              color: 'rgba(255,255,255,0.85)',
-              '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' },
+              color: '#64748b',
+              '&:hover': {
+                color: mode === 'outpatient' ? '#16a34a' : '#1e3a5f',
+                bgcolor: '#f1f5f9',
+              },
             },
             '& .MuiTab-iconWrapper': {
               marginBottom: '0 !important',
               marginRight: '4px',
             },
             '& .MuiTab-root.Mui-disabled': {
-              color: 'rgba(255,255,255,0.4)',
+              color: '#cbd5e1',
             },
             '& .MuiTab-root.Mui-selected': {
               fontWeight: 700,
-              bgcolor: 'background.paper',
-              color: mode === 'outpatient' ? 'success.dark' : 'primary.main',
-              borderTopLeftRadius: 6,
-              borderTopRightRadius: 6,
+              color: mode === 'outpatient' ? '#16a34a' : '#1e3a5f',
             },
-            // インジケーターは白タブ上の足元バーとして表現
+            // インジケーター: アクティブタブ下に強調バー
             '& .MuiTabs-indicator': {
               height: 3,
               borderRadius: '2px 2px 0 0',
@@ -391,6 +411,44 @@ export default function KartePage({ modeOverride }: KartePageProps) {
             return tab;
           })}
         </Tabs>
+        {/* 診療録タブのときだけ、生活歴・診療情報の配置切替トグルを表示 */}
+        {currentTab === 'medical-record' && (
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={recordLayout}
+            onChange={(_, v) => v && setRecordLayout(v)}
+            aria-label="生活歴・診療情報の配置"
+            sx={{
+              mb: 0.5,
+              bgcolor: '#f1f5f9',
+              borderRadius: 1,
+              '& .MuiToggleButton-root': {
+                color: '#64748b',
+                border: 'none',
+                px: 1,
+                py: 0.5,
+                '&:hover': { bgcolor: '#e2e8f0' },
+                '&.Mui-selected': {
+                  bgcolor: mode === 'outpatient' ? '#16a34a' : '#1e3a5f',
+                  color: '#fff',
+                  '&:hover': { bgcolor: mode === 'outpatient' ? '#15803d' : '#172554' },
+                },
+              },
+            }}
+          >
+            <Tooltip title="縦並び(見た目A)" disableInteractive>
+              <ToggleButton value="A" aria-label="縦並び">
+                <LayoutStackIcon fontSize="small" />
+              </ToggleButton>
+            </Tooltip>
+            <Tooltip title="横並び(見た目B)" disableInteractive>
+              <ToggleButton value="B" aria-label="横並び">
+                <LayoutSideBySideIcon fontSize="small" />
+              </ToggleButton>
+            </Tooltip>
+          </ToggleButtonGroup>
+        )}
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', bgcolor: 'background.default', p: 2 }}>
@@ -403,6 +461,8 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           onOpenOrdersTab={() => attemptTabChange('orders')}
           onOpenOrderStatusTab={() => attemptTabChange('order-status')}
           onRequestRestraintOrder={openRestraintDialog}
+          recordLayout={recordLayout}
+          newRecordTrigger={newRecordTrigger}
         />
       </Box>
 
@@ -493,6 +553,8 @@ function KarteTabContent({
   onOpenOrdersTab,
   onOpenOrderStatusTab,
   onRequestRestraintOrder,
+  recordLayout,
+  newRecordTrigger,
 }: {
   tabId: string;
   mode: KarteMode;
@@ -502,9 +564,11 @@ function KarteTabContent({
   onOpenOrdersTab: () => void;
   onOpenOrderStatusTab: () => void;
   onRequestRestraintOrder: (title: string, editOrderId?: string) => void;
+  recordLayout: 'A' | 'B';
+  newRecordTrigger: number;
 }) {
   if (tabId === 'flowsheet') {
-    return <FlowsheetPage embedded patientId={patient.id} />;
+    return <FlowsheetView patientId={patient.id} />;
   }
 
   if (tabId === 'patient-info') {
@@ -520,12 +584,38 @@ function KarteTabContent({
 
   if (tabId === 'medical-record') {
     return (
-      <MedicalRecordTab
-        patient={patient}
-        mode={mode}
-        onOpenOrdersTab={onOpenOrdersTab}
-        onRequestRestraintOrder={onRequestRestraintOrder}
-      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {/* 上部パネル(生活歴 + 診療情報): A=縦、B=横(2:1)。トグルはタブバー右端 */}
+        <Box
+          sx={
+            recordLayout === 'B'
+              ? {
+                  display: 'grid',
+                  gap: 1.5,
+                  gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, // 1280px 未満で自動的に縦並び
+                  alignItems: 'stretch',
+                  // 子の Paper が grid セルの高さに合わせて伸びるよう、孫要素まで高さを伝搬
+                  '& > *': { height: '100%', display: 'flex', flexDirection: 'column' },
+                }
+              : {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                }
+          }
+        >
+          <LifeHistoryTimeline patient={patient} mode={mode} />
+          <ClinicalInfoPanel patient={patient} mode={mode} />
+        </Box>
+
+        <MedicalRecordTab
+          patient={patient}
+          mode={mode}
+          onOpenOrdersTab={onOpenOrdersTab}
+          onRequestRestraintOrder={onRequestRestraintOrder}
+          newRecordTrigger={newRecordTrigger}
+        />
+      </Box>
     );
   }
 

@@ -142,6 +142,11 @@ interface MedicalRecordTabProps {
   onOpenOrdersTab: () => void;
   /** us-36 サブ B: 隔離拘束指示リンクのクリックハンドラ（mode='inpatient' のみ表示） */
   onRequestRestraintOrder: (title: string, editOrderId?: string) => void;
+  /**
+   * 親(KartePage)から「新規記載」ダイアログを開くためのトリガー。
+   * インクリメントされた値が渡されると新規記載ダイアログが開く。
+   */
+  newRecordTrigger?: number;
 }
 
 export default function MedicalRecordTab({
@@ -149,6 +154,7 @@ export default function MedicalRecordTab({
   mode,
   onOpenOrdersTab,
   onRequestRestraintOrder,
+  newRecordTrigger,
 }: MedicalRecordTabProps) {
   // ----- 集約タイムライン -----
   const timeline = useMemo<TimelineRecord[]>(() => {
@@ -195,6 +201,16 @@ export default function MedicalRecordTab({
   // ----- ダイアログ群 -----
   const [newRecordOpen, setNewRecordOpen] = useState(false);
 
+  // 親からのトリガーで新規記載ダイアログを開く
+  const lastTriggerRef = useRef<number | undefined>(undefined);
+  if (newRecordTrigger !== undefined && newRecordTrigger !== lastTriggerRef.current) {
+    lastTriggerRef.current = newRecordTrigger;
+    if (newRecordTrigger > 0 && !newRecordOpen) {
+      // setState は次レンダーで反映: 同期的に呼んで OK
+      setNewRecordOpen(true);
+    }
+  }
+
   // ----- スナックバー -----
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' }>({
     open: false, message: '', severity: 'info',
@@ -211,26 +227,6 @@ export default function MedicalRecordTab({
 
   return (
     <Stack spacing={1}>
-      {/* ===== タブ上部ツールバー: 隔離拘束指示リンク（入院 mode のみ）+ 指示簿タブへの導線 ===== */}
-      <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
-        {mode === 'inpatient' && (
-          <RestraintOrderLinks
-            patient={patient}
-            onRequestOrder={onRequestRestraintOrder}
-          />
-        )}
-        <Box sx={{ flex: 1 }} />
-        <Button
-          size="small"
-          variant="text"
-          onClick={() => onOpenOrdersTab()}
-          startIcon={<Assignment fontSize="inherit" />}
-          sx={{ fontSize: '0.65rem', minWidth: 0 }}
-        >
-          指示簿タブ
-        </Button>
-      </Stack>
-
       {/* ===== 期間切替 + ページング操作（us-47） ===== */}
       <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
@@ -320,9 +316,15 @@ export default function MedicalRecordTab({
               ))}
             </Stack>
 
-            <Box sx={{ display: 'flex', gap: 1, maxHeight: 480, minHeight: 240 }}>
-              {/* 日付サイドバー */}
-              <Box sx={{ width: 110, flexShrink: 0, overflowY: 'auto', borderRight: '1px solid', borderColor: 'divider', pr: 0.5 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              {/* 日付サイドバー(ページスクロールに追従しつつ可視に保つため sticky) */}
+              <Box sx={{
+                width: 110, flexShrink: 0,
+                borderRight: '1px solid', borderColor: 'divider', pr: 0.5,
+                position: 'sticky',
+                top: 0,
+                alignSelf: 'flex-start',
+              }}>
                 <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.6rem', display: 'block', mb: 0.5 }}>
                   【最近の{Object.keys(groupedRecords).length}日分】
                 </Typography>
@@ -366,8 +368,8 @@ export default function MedicalRecordTab({
                 )}
               </Box>
 
-              {/* レコード本体 */}
-              <Box ref={timelineBodyRef} sx={{ flex: 1, overflowY: 'auto' }}>
+              {/* レコード本体(ページ全体スクロールに追従) */}
+              <Box ref={timelineBodyRef} sx={{ flex: 1, minWidth: 0 }}>
                 {Object.entries(groupedRecords).map(([date, records], gi) => (
                   <Box key={date} id={`mr-record-date-${date.replace(/\//g, '-')}`}>
                     <Box
@@ -468,29 +470,7 @@ export default function MedicalRecordTab({
               </Box>
             </Box>
 
-      {/* ===== 参照画面用アクションバー（編集はダイアログで） ===== */}
-      <Paper elevation={2} sx={{ p: 0.75, position: 'sticky', bottom: 0, zIndex: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
-        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap alignItems="center">
-          <Button
-            size="small"
-            variant="contained"
-            color={mode === 'outpatient' ? 'success' : 'primary'}
-            startIcon={<NoteAdd />}
-            onClick={() => setNewRecordOpen(true)}
-          >
-            新規記載
-          </Button>
-          <Button size="small" variant="outlined" startIcon={<Print />} onClick={handlePrint}>
-            印刷
-          </Button>
-          <Box sx={{ flex: 1 }} />
-          <Button size="small" variant="outlined" startIcon={<ExitToApp />} onClick={() => showSnackbar('診療録を閉じました（mock）', 'info')}>
-            閉じる
-          </Button>
-        </Stack>
-      </Paper>
-
-      {/* ===== 新規記載ダイアログ（編集はここで完結） ===== */}
+      {/* ===== 新規記載ダイアログ(KarteActionBar 等の外部トリガーから起動可能なまま保持) ===== */}
       <NewRecordDialog
         open={newRecordOpen}
         mode={mode}
@@ -503,7 +483,7 @@ export default function MedicalRecordTab({
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
           {snackbar.message}
@@ -736,7 +716,7 @@ function NewRecordDialog({
         open={innerSnackbar.open}
         autoHideDuration={3500}
         onClose={() => setInnerSnackbar({ open: false, message: '' })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert severity="info" variant="filled" onClose={() => setInnerSnackbar({ open: false, message: '' })}>
           {innerSnackbar.message}

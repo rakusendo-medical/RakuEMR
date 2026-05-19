@@ -17,10 +17,14 @@ import {
   Alert,
   Divider,
   Tooltip,
+  Collapse,
+  Stack,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
   LocalHospital,
   People,
   MeetingRoom,
@@ -125,6 +129,14 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const { sidebarOpen, toggleSidebar, snackbar, hideSnackbar } = useAppStore();
   const [currentTime, setCurrentTime] = useState(new Date());
+  // 折りたたみ可能なセクション(現在はエピック評価のみ)。初期値は閉じた状態。
+  // ただし現在閲覧中のパスが該当セクションのアイテムなら自動で開く。
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    'epic-review': !location.pathname.startsWith('/epic-review'),
+  });
+  const isCollapsible = (key: string) => key === 'epic-review';
+  const toggleSection = (key: string) =>
+    setCollapsedSections((s) => ({ ...s, [key]: !s[key] }));
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -191,13 +203,13 @@ const MainLayout: React.FC = () => {
                 mt: 1,
               }}
             >
-              EMR
+              RakuEMR
             </Typography>
             <Typography
               variant="caption"
               sx={{ color: "#64748b", fontSize: "0.625rem" }}
             >
-              電子カルテシステム
+              🌿 先生がちょっと楽になる電子カルテ
             </Typography>
           </Box>
         ) : (
@@ -320,79 +332,142 @@ const MainLayout: React.FC = () => {
 
         {/* Nav Items */}
         <List sx={{ flex: 1, overflowY: "auto", py: 1 }} component="nav">
-          {NAV_SECTIONS.map((section, sectionIndex) => (
-            <React.Fragment key={section.key}>
-              {sidebarOpen ? (
-                <ListSubheader
-                  component="div"
-                  disableSticky
-                  sx={{
-                    bgcolor: "transparent",
-                    color: "#64748b",
-                    fontSize: "0.6875rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    lineHeight: 1.6,
-                    px: 2,
-                    mt: sectionIndex === 0 ? 0 : 1.25,
-                  }}
+          {NAV_SECTIONS.map((section, sectionIndex) => {
+            const collapsible = isCollapsible(section.key);
+            const collapsed = collapsedSections[section.key] ?? false;
+            const renderItem = (item: NavItem) => {
+              const isActive = currentNav?.key === item.key;
+              return (
+                <Tooltip
+                  key={item.key}
+                  title={sidebarOpen ? "" : item.label}
+                  placement="right"
                 >
-                  {section.label}
-                </ListSubheader>
-              ) : (
-                sectionIndex > 0 && (
-                  <Divider
-                    sx={{ borderColor: "#1e293b", my: 0.75, mx: 1 }}
-                  />
-                )
-              )}
-              {section.items.map((item) => {
-                const isActive = currentNav?.key === item.key;
-                return (
-                  <Tooltip
-                    key={item.key}
-                    title={sidebarOpen ? "" : item.label}
-                    placement="right"
+                  <ListItemButton
+                    onClick={() => navigate(item.path)}
+                    sx={{
+                      minHeight: 38,
+                      px: sidebarOpen ? 2 : 1.5,
+                      justifyContent: sidebarOpen ? "flex-start" : "center",
+                      bgcolor: isActive ? "#1e3a5f" : "transparent",
+                      borderLeft: isActive
+                        ? "3px solid #3b82f6"
+                        : "3px solid transparent",
+                      color: isActive ? "#fff" : "#94a3b8",
+                      "&:hover": { bgcolor: "#1e293b" },
+                    }}
                   >
-                    <ListItemButton
-                      onClick={() => navigate(item.path)}
+                    <ListItemIcon
                       sx={{
-                        minHeight: 38,
-                        px: sidebarOpen ? 2 : 1.5,
-                        justifyContent: sidebarOpen ? "flex-start" : "center",
-                        bgcolor: isActive ? "#1e3a5f" : "transparent",
-                        borderLeft: isActive
-                          ? "3px solid #3b82f6"
-                          : "3px solid transparent",
-                        color: isActive ? "#fff" : "#94a3b8",
+                        color: "inherit",
+                        minWidth: sidebarOpen ? 36 : "auto",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {React.cloneElement(item.icon, { fontSize: "small" })}
+                    </ListItemIcon>
+                    {sidebarOpen && (
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{
+                          fontSize: "0.8125rem",
+                          noWrap: true,
+                        }}
+                      />
+                    )}
+                  </ListItemButton>
+                </Tooltip>
+              );
+            };
+
+            return (
+              <React.Fragment key={section.key}>
+                {sidebarOpen ? (
+                  collapsible ? (
+                    // 折りたたみ可能セクション: subheader をクリック可能なボタンに
+                    <ListItemButton
+                      onClick={() => toggleSection(section.key)}
+                      sx={{
+                        py: 0,
+                        px: 2,
+                        mt: sectionIndex === 0 ? 0 : 1.25,
+                        bgcolor: "transparent",
                         "&:hover": { bgcolor: "#1e293b" },
                       }}
                     >
-                      <ListItemIcon
-                        sx={{
-                          color: "inherit",
-                          minWidth: sidebarOpen ? 36 : "auto",
-                          justifyContent: "center",
+                      <ListItemText
+                        primary={section.label}
+                        primaryTypographyProps={{
+                          color: "#64748b",
+                          fontSize: "0.6875rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          lineHeight: 1.6,
                         }}
-                      >
-                        {React.cloneElement(item.icon, { fontSize: "small" })}
-                      </ListItemIcon>
-                      {sidebarOpen && (
-                        <ListItemText
-                          primary={item.label}
-                          primaryTypographyProps={{
-                            fontSize: "0.8125rem",
-                            noWrap: true,
-                          }}
-                        />
-                      )}
+                      />
+                      {collapsed
+                        ? <ExpandMoreIcon sx={{ color: "#64748b", fontSize: 18 }} />
+                        : <ExpandLessIcon sx={{ color: "#64748b", fontSize: 18 }} />}
                     </ListItemButton>
-                  </Tooltip>
-                );
-              })}
-            </React.Fragment>
-          ))}
+                  ) : (
+                    <ListSubheader
+                      component="div"
+                      disableSticky
+                      sx={{
+                        bgcolor: "transparent",
+                        color: "#64748b",
+                        fontSize: "0.6875rem",
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        lineHeight: 1.6,
+                        px: 2,
+                        mt: sectionIndex === 0 ? 0 : 1.25,
+                      }}
+                    >
+                      {section.label}
+                    </ListSubheader>
+                  )
+                ) : (
+                  sectionIndex > 0 && (
+                    <Divider
+                      sx={{ borderColor: "#1e293b", my: 0.75, mx: 1 }}
+                    />
+                  )
+                )}
+                {collapsible && sidebarOpen ? (
+                  <Collapse in={!collapsed} timeout="auto" unmountOnExit>
+                    {section.items.map(renderItem)}
+                  </Collapse>
+                ) : (
+                  // 折りたたみ時は子アイテムを表示しない(サイドバー閉じている時は常に表示)
+                  (!collapsible || !sidebarOpen) && section.items.map(renderItem)
+                )}
+              </React.Fragment>
+            );
+          })}
         </List>
+        {/* コピーライト */}
+        <Box
+          sx={{
+            px: sidebarOpen ? 2 : 1,
+            py: 1,
+            borderTop: "1px solid #1e293b",
+            textAlign: "center",
+          }}
+        >
+          <Typography
+            sx={{
+              color: "#64748b",
+              fontSize: sidebarOpen ? "0.625rem" : "0.55rem",
+              letterSpacing: "0.02em",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {sidebarOpen ? "© 2026 AMTC, Inc." : "© AMTC"}
+          </Typography>
+        </Box>
       </Drawer>
 
       {/* Main Area */}
@@ -421,7 +496,76 @@ const MainLayout: React.FC = () => {
             <Typography variant="h6" color="text.primary">
               {currentNav?.label || "電子カルテ"}
             </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              {/* シリーズ製品ランチャー(Raku シリーズ共通ヘッダー) */}
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                {[
+                  {
+                    key: "works",
+                    short: "W",
+                    label: "RakuWorks",
+                    desc: "勤怠管理",
+                    bg: "#1f2937",
+                    bgHover: "#111827",
+                  },
+                  {
+                    key: "yoyaku",
+                    short: "Y",
+                    label: "RakuYOYAKU",
+                    desc: "外来予約",
+                    bg: "#2563eb",
+                    bgHover: "#1d4ed8",
+                  },
+                  {
+                    key: "wallet",
+                    short: "$",
+                    label: "RakuWallet",
+                    desc: "預り金管理",
+                    bg: "#b45309",
+                    bgHover: "#92400e",
+                  },
+                ].map((app) => (
+                  <Tooltip
+                    key={app.key}
+                    title={
+                      <Box sx={{ textAlign: "center" }}>
+                        <Box sx={{ fontWeight: 700 }}>{app.label}</Box>
+                        <Box sx={{ fontSize: "0.7rem", opacity: 0.85 }}>{app.desc}</Box>
+                      </Box>
+                    }
+                    arrow
+                  >
+                    <Box
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        // モック: シリーズ製品起動 - 実運用では別アプリへ遷移
+                        // eslint-disable-next-line no-alert
+                        alert(`${app.label} を起動(モック)`);
+                      }}
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: app.bg,
+                        color: "#fff",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        cursor: "pointer",
+                        transition: "background-color 0.15s",
+                        userSelect: "none",
+                        "&:hover": { bgcolor: app.bgHover },
+                      }}
+                    >
+                      {app.short}
+                    </Box>
+                  </Tooltip>
+                ))}
+              </Stack>
+              <Divider orientation="vertical" flexItem />
               <Typography variant="caption" color="text.secondary">
                 {currentTime.toLocaleDateString("ja-JP")}{" "}
                 {currentTime.toLocaleTimeString("ja-JP", {
@@ -429,18 +573,6 @@ const MainLayout: React.FC = () => {
                   minute: "2-digit",
                 })}
               </Typography>
-              <Divider orientation="vertical" flexItem />
-              <Avatar
-                sx={{
-                  width: 30,
-                  height: 30,
-                  bgcolor: "primary.light",
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                }}
-              >
-                看
-              </Avatar>
             </Box>
           </Toolbar>
         </AppBar>
@@ -465,7 +597,7 @@ const MainLayout: React.FC = () => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={hideSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={hideSnackbar}

@@ -41,15 +41,31 @@ const CONNECTION_OPTIONS: { value: ConnectionTarget; label: string }[] = [
 
 const REPORT_ROLES: ReportRoleCode[] = ['作', '確', '両'];
 
-interface DraftBodyFocus { focus: string; data: string; action: string; response: string; }
-interface DraftBodySoap { s: string; o: string; a: string; p: string; }
-interface DraftBodyFree { free: string; }
+// テンプレート(本文の雛形)。タブ切替時に空欄なら自動挿入、本文ありなら確認して上書き
+const BODY_TEMPLATE: Record<RecordFormType, string> = {
+  focus: 'F：\n\nD：\n\nA：\n\nR：\n',
+  soap: 'S：\n\nO：\n\nA：\n\nP：\n',
+  free: '',
+};
 
-const emptyBodyFor = (form: RecordFormType): NursingRecordBody => {
+// 既存レコード(構造化)を 1 本のテキストに復元
+const composeBodyText = (rec: NursingRecord): string => {
+  const b = rec.body;
+  if (b.formType === 'focus') {
+    return `F：${b.body.focus}\nD：${b.body.data}\nA：${b.body.action}\nR：${b.body.response}`;
+  }
+  if (b.formType === 'soap') {
+    return `S：${b.body.s}\nO：${b.body.o}\nA：${b.body.a}\nP：${b.body.p}`;
+  }
+  return b.body.free;
+};
+
+// 保存時にテキスト → 構造化 body を作る(主フィールドに全文を入れる簡易マッピング)
+const buildBodyForSave = (form: RecordFormType, text: string): NursingRecordBody => {
   switch (form) {
-    case 'focus': return { formType: 'focus', body: { focus: '', data: '', action: '', response: '' } };
-    case 'soap': return { formType: 'soap', body: { s: '', o: '', a: '', p: '' } };
-    case 'free': return { formType: 'free', body: { free: '' } };
+    case 'focus': return { formType: 'focus', body: { focus: text, data: '', action: '', response: '' } };
+    case 'soap': return { formType: 'soap', body: { s: text, o: '', a: '', p: '' } };
+    case 'free': return { formType: 'free', body: { free: text } };
   }
 };
 
@@ -77,9 +93,7 @@ const NursingRecordDialog: React.FC<Props> = ({
   const [title, setTitle] = useState('');
   const [recordedAt, setRecordedAt] = useState<ISODateTime>('');
   const [form, setForm] = useState<RecordFormType>(property.defaultRecordForm);
-  const [bodyFocus, setBodyFocus] = useState<DraftBodyFocus>({ focus: '', data: '', action: '', response: '' });
-  const [bodySoap, setBodySoap] = useState<DraftBodySoap>({ s: '', o: '', a: '', p: '' });
-  const [bodyFree, setBodyFree] = useState<DraftBodyFree>({ free: '' });
+  const [bodyText, setBodyText] = useState<string>('');
   const [connections, setConnections] = useState<ConnectionTarget[]>(['flowsheet']);
   const [reports, setReports] = useState<{ staffId: string; role: ReportRoleCode }[]>([]);
   const [tags, setTags] = useState<string[]>([]);
@@ -89,6 +103,8 @@ const NursingRecordDialog: React.FC<Props> = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmFutureMsg, setConfirmFutureMsg] = useState<string | null>(null);
   const [tplAnchor, setTplAnchor] = useState<HTMLElement | null>(null);
+  // タブ切替で本文を破棄する確認(既存本文がある場合のみ表示)
+  const [pendingFormSwitch, setPendingFormSwitch] = useState<RecordFormType | null>(null);
 
   // ダイアログ open 時に既存レコードを読み込む
   useEffect(() => {
@@ -101,20 +117,7 @@ const NursingRecordDialog: React.FC<Props> = ({
       setTitle(existing.title);
       setRecordedAt(existing.recordedAt);
       setForm(existing.formType);
-      const b = existing.body.body as DraftBodyFocus | DraftBodySoap | DraftBodyFree;
-      if (existing.formType === 'focus') {
-        setBodyFocus(b as DraftBodyFocus);
-        setBodySoap({ s: '', o: '', a: '', p: '' });
-        setBodyFree({ free: '' });
-      } else if (existing.formType === 'soap') {
-        setBodySoap(b as DraftBodySoap);
-        setBodyFocus({ focus: '', data: '', action: '', response: '' });
-        setBodyFree({ free: '' });
-      } else {
-        setBodyFree(b as DraftBodyFree);
-        setBodyFocus({ focus: '', data: '', action: '', response: '' });
-        setBodySoap({ s: '', o: '', a: '', p: '' });
-      }
+      setBodyText(composeBodyText(existing));
       setConnections(existing.connections);
       setReports(existing.reportTargets.map((rt) => ({ staffId: rt.staffId, role: rt.role })));
       setTags(existing.tags);
@@ -125,24 +128,43 @@ const NursingRecordDialog: React.FC<Props> = ({
       setTitle('');
       setRecordedAt(`${baseDate}T${nowHHmm}:00`);
       setForm(property.defaultRecordForm);
-      setBodyFocus({ focus: '', data: '', action: '', response: '' });
-      setBodySoap({ s: '', o: '', a: '', p: '' });
-      setBodyFree({ free: '' });
+      setBodyText(BODY_TEMPLATE[property.defaultRecordForm]); // 新規作成は既定タブのテンプレを最初から挿入
       setConnections(['flowsheet']);
       setReports([]);
       setTags([]);
       setIsPublished(true);
     }
+    setPendingFormSwitch(null);
   }, [open, existing, initialMode, defaultDate, property.defaultRecordForm]);
 
   const isViewMode = mode === 'view';
 
-  // FOCUS のフォーカス値はタイトルと連動
-  useEffect(() => {
-    if (form === 'focus' && !isViewMode) {
-      setTitle(bodyFocus.focus.slice(0, 20));
+  // タブ(form)切替ハンドラ: 本文が空ならテンプレ挿入、ありなら確認
+  const requestFormSwitch = (next: RecordFormType) => {
+    if (isViewMode || next === form) return;
+    const hasContent = bodyText.trim().length > 0;
+    if (!hasContent) {
+      setForm(next);
+      setBodyText(BODY_TEMPLATE[next]);
+      return;
     }
-  }, [form, bodyFocus.focus, isViewMode]);
+    // 現テンプレと完全一致なら未編集とみなして無確認で切替
+    if (bodyText === BODY_TEMPLATE[form]) {
+      setForm(next);
+      setBodyText(BODY_TEMPLATE[next]);
+      return;
+    }
+    setPendingFormSwitch(next);
+  };
+
+  const applyPendingFormSwitch = () => {
+    if (!pendingFormSwitch) return;
+    setForm(pendingFormSwitch);
+    setBodyText(BODY_TEMPLATE[pendingFormSwitch]);
+    setPendingFormSwitch(null);
+  };
+
+  const cancelPendingFormSwitch = () => setPendingFormSwitch(null);
 
   const handleSubmit = (afterConfirm = false) => {
     const errs: string[] = [];
@@ -168,10 +190,7 @@ const NursingRecordDialog: React.FC<Props> = ({
     setErrors([]);
     setConfirmFutureMsg(null);
 
-    const body: NursingRecordBody =
-      form === 'focus' ? { formType: 'focus', body: bodyFocus }
-      : form === 'soap' ? { formType: 'soap', body: bodySoap }
-      : { formType: 'free', body: bodyFree };
+    const body: NursingRecordBody = buildBodyForSave(form, bodyText);
 
     const shift: ShiftType = resolveShift(recordedAt.slice(11, 16), property.shiftStartTimes);
 
@@ -203,43 +222,35 @@ const NursingRecordDialog: React.FC<Props> = ({
     setTplAnchor(null);
     if (!tpl) return;
     setForm(tpl.formType);
-    if (tpl.body.formType === 'focus') setBodyFocus(tpl.body.body);
-    if (tpl.body.formType === 'soap') setBodySoap(tpl.body.body);
-    if (tpl.body.formType === 'free') setBodyFree(tpl.body.body);
+    // テンプレの構造化本文を 1 本のテキストに展開して挿入
+    const b = tpl.body;
+    let text = '';
+    if (b.formType === 'focus') {
+      text = `F：${b.body.focus}\nD：${b.body.data}\nA：${b.body.action}\nR：${b.body.response}`;
+    } else if (b.formType === 'soap') {
+      text = `S：${b.body.s}\nO：${b.body.o}\nA：${b.body.a}\nP：${b.body.p}`;
+    } else {
+      text = b.body.free;
+    }
+    setBodyText(text);
   };
 
   const renderBody = () => {
-    const ro = isViewMode;
-    const tf = (label: string, value: string, on: (s: string) => void, rows = 3) => (
+    const helper = form === 'focus'
+      ? '※ FOCUS テンプレート(F/D/A/R)の見出しに沿って記入'
+      : form === 'soap'
+        ? '※ SOAP テンプレート(S/O/A/P)の見出しに沿って記入'
+        : '※ 自由記述';
+    return (
       <TextField
-        label={label} multiline rows={rows} fullWidth size="small"
-        value={value}
-        onChange={(e) => on(sanitize(e.target.value, property.forbiddenChars))}
-        InputProps={{ readOnly: ro }}
+        label="本文"
+        helperText={helper}
+        multiline minRows={10} fullWidth size="small"
+        value={bodyText}
+        onChange={(e) => setBodyText(sanitize(e.target.value, property.forbiddenChars))}
+        InputProps={{ readOnly: isViewMode, sx: { fontFamily: 'monospace', fontSize: '0.875rem' } }}
       />
     );
-    switch (form) {
-      case 'focus':
-        return (
-          <Stack spacing={1}>
-            {tf('F（フォーカス）— タイトルに連動', bodyFocus.focus, (s) => setBodyFocus({ ...bodyFocus, focus: s }), 1)}
-            {tf('D（データ）', bodyFocus.data, (s) => setBodyFocus({ ...bodyFocus, data: s }))}
-            {tf('A（アクション）', bodyFocus.action, (s) => setBodyFocus({ ...bodyFocus, action: s }))}
-            {tf('R（レスポンス）', bodyFocus.response, (s) => setBodyFocus({ ...bodyFocus, response: s }))}
-          </Stack>
-        );
-      case 'soap':
-        return (
-          <Stack spacing={1}>
-            {tf('S（主観）', bodySoap.s, (s) => setBodySoap({ ...bodySoap, s }))}
-            {tf('O（客観）', bodySoap.o, (s) => setBodySoap({ ...bodySoap, o: s }))}
-            {tf('A（アセスメント）', bodySoap.a, (s) => setBodySoap({ ...bodySoap, a: s }))}
-            {tf('P（プラン）', bodySoap.p, (s) => setBodySoap({ ...bodySoap, p: s }))}
-          </Stack>
-        );
-      case 'free':
-        return tf('本文', bodyFree.free, (s) => setBodyFree({ free: s }), 8);
-    }
   };
 
   const titleText = useMemo(() => {
@@ -288,15 +299,15 @@ const NursingRecordDialog: React.FC<Props> = ({
         )}
 
         <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="flex-start">
             <TextField
               label="タイトル"
               size="small"
               value={title}
               onChange={(e) => setTitle(sanitize(e.target.value, property.forbiddenChars).slice(0, 20))}
-              inputProps={{ maxLength: 20, readOnly: isViewMode || form === 'focus' }}
+              inputProps={{ maxLength: 20, readOnly: isViewMode }}
               sx={{ flex: 1 }}
-              helperText={form === 'focus' ? '※ FOCUS のフォーカスと連動' : `${title.length}/20`}
+              helperText={`${title.length}/20`}
             />
             <TextField
               label="記載日時" size="small" type="datetime-local"
@@ -309,13 +320,32 @@ const NursingRecordDialog: React.FC<Props> = ({
 
           <Tabs
             value={form}
-            onChange={(_, v: RecordFormType) => !isViewMode && setForm(v)}
+            onChange={(_, v: RecordFormType) => requestFormSwitch(v)}
             sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32 } }}
           >
             <Tab value="focus" label="FOCUS" disabled={isViewMode && form !== 'focus'} />
             <Tab value="soap" label="SOAP" disabled={isViewMode && form !== 'soap'} />
             <Tab value="free" label="フリー" disabled={isViewMode && form !== 'free'} />
           </Tabs>
+
+          {/* 本文が編集済みの状態でタブ切替するときの上書き確認 */}
+          {pendingFormSwitch && (
+            <Alert
+              severity="warning"
+              action={
+                <Stack direction="row" spacing={1}>
+                  <Button color="inherit" size="small" onClick={cancelPendingFormSwitch}>
+                    キャンセル
+                  </Button>
+                  <Button color="warning" size="small" variant="contained" onClick={applyPendingFormSwitch}>
+                    上書きして {FORM_LABELS[pendingFormSwitch]} に切替
+                  </Button>
+                </Stack>
+              }
+            >
+              本文に内容があります。{FORM_LABELS[pendingFormSwitch]} テンプレートで上書きしますか?(現在の内容は失われます)
+            </Alert>
+          )}
 
           {!isViewMode && (
             <Stack direction="row" spacing={1}>

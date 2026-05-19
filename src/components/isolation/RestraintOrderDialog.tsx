@@ -10,6 +10,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Stack, TextField, MenuItem, Typography, Box, Chip,
   FormControlLabel, Checkbox, IconButton, Divider, Alert,
+  FormControl, InputLabel, Select,
 } from '@mui/material';
 import {
   Add as AddIcon, Delete as DeleteIcon, Print as PrintIcon,
@@ -374,15 +375,37 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
                     </Button>
                   )}
                   {showReleaseTimes && (
-                    <TextField
-                      select size="small" label="テンプレート読込" sx={{ minWidth: 160 }}
-                      value=""
-                      onChange={(e) => loadTemplate(e.target.value)}
-                    >
-                      {MASTER_RELEASE_TIME_TEMPLATES.map((t) => (
-                        <MenuItem key={t.name} value={t.name}>{t.name}</MenuItem>
-                      ))}
-                    </TextField>
+                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                      <InputLabel shrink>テンプレート読込</InputLabel>
+                      <Select
+                        label="テンプレート読込"
+                        value=""
+                        displayEmpty
+                        notched
+                        onChange={(e) => loadTemplate(e.target.value as string)}
+                        MenuProps={{
+                          PaperProps: {
+                            sx: {
+                              mt: 0.5,
+                              bgcolor: 'background.paper',
+                              boxShadow: 3,
+                              '& .MuiMenuItem-root': {
+                                color: 'text.primary',
+                              },
+                            },
+                          },
+                          // Dialog 上で確実に最前面に出すため明示
+                          sx: { zIndex: (theme) => theme.zIndex.modal + 1 },
+                        }}
+                      >
+                        <MenuItem value="" disabled>
+                          <em>テンプレートを選択</em>
+                        </MenuItem>
+                        {MASTER_RELEASE_TIME_TEMPLATES.map((t) => (
+                          <MenuItem key={t.name} value={t.name}>{t.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   )}
                 </Stack>
                 {showReleaseTimes && (

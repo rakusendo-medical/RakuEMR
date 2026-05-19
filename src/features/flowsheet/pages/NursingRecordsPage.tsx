@@ -172,7 +172,7 @@ const NursingRecordsPage: React.FC = () => {
             新規作成
           </Button>
           <Box sx={{ flex: 1 }} />
-          <MuiLink component={RouterLink} to={`/flowsheet/${patientId}`}>
+          <MuiLink component={RouterLink} to={`/karte/${patientId}#flowsheet`}>
             フローシートへ
           </MuiLink>
         </Stack>

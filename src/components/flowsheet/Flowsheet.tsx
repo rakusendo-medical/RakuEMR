@@ -1,276 +1,352 @@
 import React from 'react';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Button, Stack, Card, CardContent, IconButton,
-  Tooltip as MuiTooltip,
+  TableRow, Button, Stack, Link as MuiLink,
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { generateVitalSigns, generateFlowsheetDaily } from '../../data/mockData';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine,
+} from 'recharts';
 
 interface Props {
   patientId?: string;
 }
 
-// ── Table helper components ──
+// 7日分の固定モック(2026-05-13〜2026-05-19、当日=5/19)
+type OrderKind = '薬' | '注' | '検' | '処' | '画' | '心' | 'E';
+type MealStatus = '通常指示' | '臨時変更' | '欠食' | '外出・外泊' | '絶食';
 
-const groupHeaderSx = {
-  bgcolor: '#e3edf7',
-  fontWeight: 700,
-  fontSize: '0.75rem',
-  color: '#1e3a5f',
-  py: 0.3,
-  px: 1,
-  borderBottom: '1px solid #c5d5e8',
+interface DailyRow {
+  date: string;
+  weekday: string;
+  admitDay: number;
+  isToday: boolean;
+  room: string;
+  orderKinds: OrderKind[];
+  labLinks: string[];
+  meal: { morning: MealStatus; lunch: MealStatus; dinner: MealStatus };
+  height: number;
+  weightBmi: string;
+  stool: number;
+  urine: string;
+  intake: { morning: string; lunch: string; dinner: string };
+  sleep: string;
+  med: { morning: string; lunch: string; dinner: string; night: string };
+  karteLinks: string[];
+  deptLinks: string[];
+  transferLinks: string[];
+  nursingLinks: string[];
+  stoolDetail: string;
+  bath: string;
+  sign: string;
+}
+
+const DAILY: DailyRow[] = [
+  {
+    date: '2026/5/13', weekday: '水', admitDay: 28, isToday: false, room: 'E102号室',
+    orderKinds: ['薬', '検', '処'], labLinks: ['外(CRC)血液'],
+    meal: { morning: '通常指示', lunch: '臨時変更', dinner: '通常指示' },
+    height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '—',
+    intake: { morning: '5', lunch: '8', dinner: '7' },
+    sleep: '浅眠',
+    med: { morning: '—', lunch: '—', dinner: '—', night: '—' },
+    karteLinks: ['隔離開始(タイトル)', '生理(指示)'],
+    deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: [],
+    stoolDetail: '—', bath: '入浴', sign: '鈴木',
+  },
+  {
+    date: '2026/5/14', weekday: '木', admitDay: 29, isToday: false, room: 'E102号室',
+    orderKinds: ['注', '検', '処'], labLinks: ['院内血液', '外(CRC)血液', '院内血液'],
+    meal: { morning: '通常指示', lunch: '欠食', dinner: '通常指示' },
+    height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '○',
+    intake: { morning: '2', lunch: '0', dinner: '5' },
+    sleep: '良眠',
+    med: { morning: '✓(高橋)', lunch: '✓(高橋)', dinner: '✓(高橋)', night: '—' },
+    karteLinks: ['精神療法(xx開始)', '生理(指示)'],
+    deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: ['看護記録(熱発)'],
+    stoolDetail: '硬便', bath: '入浴', sign: '高橋',
+  },
+  {
+    date: '2026/5/15', weekday: '金', admitDay: 30, isToday: false, room: 'E102号室',
+    orderKinds: ['薬', '注', '検', '処'], labLinks: [],
+    meal: { morning: '通常指示', lunch: '通常指示', dinner: '通常指示' },
+    height: 167.8, weightBmi: '55.8(19.8)', stool: 2, urine: '—',
+    intake: { morning: '5', lunch: '5', dinner: '10' },
+    sleep: '普通',
+    med: { morning: '✓(山本)', lunch: '—', dinner: '✓(山本)', night: '✓(山本)' },
+    karteLinks: ['隔離開始(タイトル)', '精神療法(xx開始)', '生理(指示)'],
+    deptLinks: [], transferLinks: [], nursingLinks: [],
+    stoolDetail: '普通便', bath: 'シャワー浴', sign: '山本',
+  },
+  {
+    date: '2026/5/16', weekday: '土', admitDay: 31, isToday: false, room: 'E102号室',
+    orderKinds: ['薬', '注', '検', '処', '画', '心', 'E'], labLinks: ['院内血液'],
+    meal: { morning: '外出・外泊', lunch: '通常指示', dinner: '欠食' },
+    height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '○',
+    intake: { morning: '2', lunch: '8', dinner: '0' },
+    sleep: '浅眠',
+    med: { morning: '✓(佐々木)', lunch: '✓(佐々木)', dinner: '—', night: '✓(佐々木)' },
+    karteLinks: [],
+    deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: ['看護記録(熱発)'],
+    stoolDetail: '硬便', bath: '清拭', sign: '佐々木',
+  },
+  {
+    date: '2026/5/17', weekday: '日', admitDay: 32, isToday: false, room: 'E102号室',
+    orderKinds: ['薬', '画'], labLinks: ['外(CRC)血液'],
+    meal: { morning: '通常指示', lunch: '通常指示', dinner: '外出・外泊' },
+    height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '—',
+    intake: { morning: '5', lunch: '0', dinner: '2' },
+    sleep: '良眠',
+    med: { morning: '✓(中田)', lunch: '—', dinner: '✓(中田)', night: '✓(中田)' },
+    karteLinks: ['隔離開始(タイトル)', '精神療法(xx開始)'],
+    deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: [],
+    stoolDetail: '—', bath: '入浴', sign: '中田',
+  },
+  {
+    date: '2026/5/18', weekday: '月', admitDay: 33, isToday: false, room: 'E102号室',
+    orderKinds: ['注', '画'], labLinks: ['院内血液', '外(CRC)血液'],
+    meal: { morning: '通常指示', lunch: '通常指示', dinner: '臨時変更' },
+    height: 167.8, weightBmi: '57(20.2)', stool: 2, urine: '○',
+    intake: { morning: '2', lunch: '5', dinner: '8' },
+    sleep: '普通',
+    med: { morning: '✓(鈴木)', lunch: '✓(鈴木)', dinner: '✓(鈴木)', night: '—' },
+    karteLinks: ['精神療法(xx開始)', '生理(指示)'],
+    deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: ['看護記録(熱発)'],
+    stoolDetail: '普通便', bath: 'シャワー浴', sign: '鈴木',
+  },
+  {
+    date: '2026/5/19', weekday: '火', admitDay: 34, isToday: true, room: 'E102号室',
+    orderKinds: ['薬', '注', '画'], labLinks: ['外(CRC)血液'],
+    meal: { morning: '通常指示', lunch: '臨時変更', dinner: '絶食' },
+    height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '—',
+    intake: { morning: '5', lunch: '8', dinner: '7' },
+    sleep: '良眠',
+    med: { morning: '✓(高橋)', lunch: '—', dinner: '✓(高橋)', night: '—' },
+    karteLinks: ['隔離開始(タイトル)', '精神療法(xx開始)'],
+    deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: [],
+    stoolDetail: '—', bath: '—', sign: '高橋',
+  },
+];
+
+// 隔離拘束帯: dateIdx range [from, to]
+interface RestraintBar {
+  from: number;
+  to: number;
+  startLabel?: string;  // 開始セルに表示するテキスト("10:00〜")
+  endLabel?: string;    // 終了セルに表示するテキスト("〜16:00")
+  singleLabel?: string; // 単日の場合のテキスト
+  bg: string;
+}
+
+const RESTRAINTS = {
+  isolation: { from: 1, to: 5, startLabel: '10:00〜', endLabel: '〜16:00', bg: '#fff1d6' } as RestraintBar,
+  restraint: { from: 2, to: 5, startLabel: '08:00〜', endLabel: '〜20:00', bg: '#fde0e0' } as RestraintBar,
+  behavior:  { from: 3, to: 6, startLabel: '09:00〜', endLabel: '〜08:00', bg: '#fff8c5' } as RestraintBar,
+  outing:    { from: 4, to: 4, singleLabel: '10:00〜18:00', bg: '#dbeafe' } as RestraintBar,
 };
 
-function GroupHeaderRow({ label, actionLabel, colSpan }: { label: string; actionLabel?: string; colSpan: number }) {
+// チャート用データ(7日分)
+const CHART_DATA = DAILY.map((d) => {
+  // モック値:画像のグラフ形状にざっくり合わせる
+  const i = d.admitDay - 28;
+  const tempPattern = [36.4, 37.2, 36.8, 37.4, 36.5, 37.2, 36.6];
+  const bpHighPattern = [115, 122, 128, 135, 110, 118, 125];
+  const bpLowPattern = [70, 75, 78, 82, 68, 72, 76];
+  const pulsePattern = [88, 102, 80, 95, 70, 105, 82];
+  const spo2Pattern = [98, 97, 98, 97, 98, 98, 97];
+  const respPattern = [16, 18, 17, 19, 16, 18, 17];
+  return {
+    date: d.date.slice(5),
+    体温: tempPattern[i],
+    'BP(上)': bpHighPattern[i],
+    'BP(下)': bpLowPattern[i],
+    脈拍: pulsePattern[i],
+    SpO2: spo2Pattern[i],
+    呼吸: respPattern[i],
+  };
+});
+
+const ORDER_COLOR: Record<OrderKind, { fg: string; bg: string }> = {
+  薬: { fg: '#dc2626', bg: 'transparent' },
+  注: { fg: '#2563eb', bg: 'transparent' },
+  検: { fg: '#475569', bg: 'transparent' },
+  処: { fg: '#475569', bg: 'transparent' },
+  画: { fg: '#475569', bg: 'transparent' },
+  心: { fg: '#475569', bg: 'transparent' },
+  E: { fg: '#475569', bg: 'transparent' },
+};
+
+const MEAL_STYLE: Record<MealStatus, { bg: string; fg: string }> = {
+  通常指示: { bg: '#16a34a', fg: '#fff' },
+  臨時変更: { bg: '#ea580c', fg: '#fff' },
+  欠食:     { bg: '#dc2626', fg: '#fff' },
+  '外出・外泊': { bg: '#2563eb', fg: '#fff' },
+  絶食:     { bg: '#991b1b', fg: '#fff' },
+};
+
+// 共通スタイル
+const LABEL_COL_WIDTH = 130;
+const SUB_COL_WIDTH = 40;
+const DAY_COL_WIDTH = 110;
+
+const stickyLabelCell = {
+  position: 'sticky' as const,
+  left: 0,
+  zIndex: 1,
+  bgcolor: '#f8fafc',
+  fontWeight: 600,
+  fontSize: '0.75rem',
+  minWidth: LABEL_COL_WIDTH,
+  width: LABEL_COL_WIDTH,
+};
+const stickySubCell = {
+  position: 'sticky' as const,
+  left: LABEL_COL_WIDTH,
+  zIndex: 1,
+  bgcolor: '#f8fafc',
+  fontWeight: 500,
+  fontSize: '0.75rem',
+  minWidth: SUB_COL_WIDTH,
+  width: SUB_COL_WIDTH,
+  pl: 1,
+};
+const dayCellBase = {
+  fontSize: '0.75rem',
+  minWidth: DAY_COL_WIDTH,
+  width: DAY_COL_WIDTH,
+  textAlign: 'center' as const,
+  py: 0.5,
+};
+const sectionHeaderRow = {
+  bgcolor: '#e3edf7',
+  '& td': {
+    color: '#1e3a5f',
+    fontWeight: 700,
+    fontSize: '0.75rem',
+    py: 0.5,
+    borderBottom: '1px solid #c5d5e8',
+  },
+};
+
+function dayCellSx(isToday: boolean): any {
+  return {
+    ...dayCellBase,
+    bgcolor: isToday ? '#fff8e1' : undefined,
+  };
+}
+
+function todayHeaderCellSx(isToday: boolean): any {
+  return {
+    ...dayCellBase,
+    fontWeight: 700,
+    bgcolor: isToday ? '#fff3c4' : '#e3edf7',
+    color: '#1e3a5f',
+  };
+}
+
+// 行動制限・隔離・外出など、特定の日付範囲だけセルに色帯+ラベルを置く
+function RestraintRow({ label, bar }: { label: string; bar: RestraintBar }) {
   return (
     <TableRow>
-      <TableCell colSpan={2} sx={{ ...groupHeaderSx, position: 'sticky' as const, left: 0, zIndex: 2, minWidth: 120 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.3 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e3a5f' }}>{label}</Typography>
-          {actionLabel && (
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => {}}
-              sx={{
-                fontSize: '0.6rem',
-                minWidth: 0,
-                px: 1,
-                py: 0,
-                lineHeight: 1.6,
-                color: '#1e40af',
-                borderColor: '#1e40af',
-                '&:hover': { bgcolor: '#e8eaf6', borderColor: '#1e40af' },
-              }}
-            >
-              {actionLabel}
-            </Button>
-          )}
-        </Box>
-      </TableCell>
-      {Array.from({ length: colSpan - 2 }).map((_, i) => (
-        <TableCell key={i} sx={{ ...groupHeaderSx, py: 0.3 }} />
-      ))}
+      <TableCell colSpan={2} sx={stickyLabelCell}>{label}</TableCell>
+      {DAILY.map((d, i) => {
+        const inRange = i >= bar.from && i <= bar.to;
+        const isStart = i === bar.from;
+        const isEnd = i === bar.to;
+        const single = bar.from === bar.to;
+        const text = single
+          ? (isStart ? bar.singleLabel : '')
+          : isStart
+            ? bar.startLabel
+            : isEnd
+              ? bar.endLabel
+              : '';
+        return (
+          <TableCell
+            key={i}
+            sx={{
+              ...dayCellSx(d.isToday),
+              bgcolor: inRange ? bar.bg : (d.isToday ? '#fff8e1' : undefined),
+              fontWeight: text ? 600 : undefined,
+            }}
+          >
+            {text || ''}
+          </TableCell>
+        );
+      })}
     </TableRow>
   );
 }
 
-const stickyCellBase = { position: 'sticky' as const, left: 0, zIndex: 1, bgcolor: '#f8fafc', fontWeight: 600, fontSize: '0.75rem' };
-
-function DataRow({ label, sub, data, dataKey, stickyCell, render }: {
-  label: string; sub: string; data: any[]; dataKey: string; stickyCell: any; render?: (v: any) => string;
-}) {
-  return (
-    <TableRow>
-      <TableCell colSpan={2} sx={stickyCell}>{label}{sub && ` ${sub}`}</TableCell>
-      {data.map((d: any, i: number) => (
-        <TableCell key={i} align="center" sx={{ fontSize: '0.75rem' }}>
-          {render ? render(d[dataKey]) : d[dataKey]}
-        </TableCell>
-      ))}
-    </TableRow>
-  );
-}
-
-function SubGroupRow({ label, sub, data, dataKey, stickyCell, rowSpan }: {
-  label: string; sub: string; data: any[]; dataKey: string; stickyCell: any; rowSpan: number;
-}) {
-  return (
-    <TableRow>
-      <TableCell rowSpan={rowSpan} sx={{ ...stickyCell, verticalAlign: 'top', borderRight: '1px solid #e0e0e0' }}>{label}</TableCell>
-      <TableCell sx={{ ...stickyCell, left: 60, pl: 0.5 }}>{sub}</TableCell>
-      {data.map((d: any, i: number) => (
-        <TableCell key={i} align="center" sx={{ fontSize: '0.75rem' }}>{d[dataKey]}</TableCell>
-      ))}
-    </TableRow>
-  );
-}
-
-function SubRow({ sub, data, dataKey, stickyCell }: {
-  sub: string; data: any[]; dataKey: string; stickyCell: any;
-}) {
-  return (
-    <TableRow>
-      <TableCell sx={{ ...stickyCell, left: 60, pl: 0.5 }}>{sub}</TableCell>
-      {data.map((d: any, i: number) => (
-        <TableCell key={i} align="center" sx={{ fontSize: '0.75rem' }}>{d[dataKey]}</TableCell>
-      ))}
-    </TableRow>
-  );
-}
-
-const FlowsheetView: React.FC<Props> = ({ patientId = 'P001' }) => {
-  const vitals = generateVitalSigns(patientId, 7);
-  const flowData = generateFlowsheetDaily(patientId, 7);
-
-  // Aggregate vitals per date (use 9時 slot)
-  const dates = [...new Set(vitals.map((v) => v.date))];
-  const chartData = dates.map((date) => {
-    const morning = vitals.find((v) => v.date === date && v.timeSlot === '9時');
-    return {
-      date: `${new Date(date).getMonth() + 1}/${new Date(date).getDate()}`,
-      'BP(上)': morning?.bpSystolic || null,
-      'BP(下)': morning?.bpDiastolic || null,
-      '脈拍': morning?.pulse || null,
-      '体温': morning?.temperature || null,
-      'SpO2': morning?.spo2 || null,
-      '呼吸': morning?.respiration || null,
-    };
-  });
-
-  // Daily summary (one row per date)
-  const baseAdmitDays = 28; // 1日目の在院日数
-  const dailySummary = dates.map((date, dateIndex) => {
-    const morningVital = vitals.find((v) => v.date === date && v.timeSlot === '9時');
-    const flow = flowData.find((f) => f.date === date);
-    const d = new Date(date);
-    const weight = morningVital?.weight ?? 72;
-    const height = 167.8;
-    const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
-    // Mock extra data per date
-    const seed = d.getDate();
-    const nurses = ['山本', '佐々木', '中田', '鈴木', '高橋'];
-    const nurse = nurses[seed % nurses.length];
-    const sleepTypes = ['良眠', '普通', '浅眠', '良眠', '普通', '良眠', '浅眠'];
-    const bathTypes = ['入浴', 'シャワー浴', '清拭', '入浴', 'シャワー浴', '—', '入浴'];
-    return {
-      dateLabel: `${d.getMonth() + 1}/${d.getDate()}`,
-      // 予定オーダ
-      orderCount: (seed % 3) + 1,
-      // 検査結果
-      labResult: seed % 2 === 0 ? '異常なし' : '—',
-      // 食事
-      mealType: '常食',
-      // 身長
-      height: height,
-      // 体重(BMI)
-      weightBmi: `${weight}(${bmi})`,
-      // 便（回数）
-      stool: seed % 3 === 0 ? 2 : seed % 2 === 0 ? 1 : 0,
-      // 尿
-      urine: seed % 2 === 0 ? '○' : '—',
-      // 食事: 朝昼夕
-      breakfast: flow?.mealBreakfast ?? '—',
-      lunch: flow?.mealLunch ?? '—',
-      dinner: flow?.mealDinner ?? '—',
-      // 睡眠
-      sleep: sleepTypes[seed % sleepTypes.length],
-      // 服薬: 朝昼夕寝（チェック+ナース名）
-      medAm: flow?.medMorning ? `✓(${nurse})` : '—',
-      medNoon: flow?.medNoon ? `✓(${nurse})` : '—',
-      medPm: flow?.medEvening ? `✓(${nurse})` : '—',
-      medNight: flow?.medNight ? `✓(${nurse})` : '—',
-      // 診療録
-      karteNote: seed % 4 === 0 ? '回診記録' : seed % 3 === 0 ? '処方変更' : '—',
-      // 部門診療録
-      deptNote: seed % 5 === 0 ? 'PSW面談' : '—',
-      // 移行記事
-      transferNote: '—',
-      // 看護記録
-      nursingNote: seed % 2 === 0 ? '記録あり' : '—',
-      // 便(性状)
-      stoolDetail: seed % 3 === 0 ? '普通便' : seed % 2 === 0 ? '硬便' : '—',
-      // 入浴（種類を記載）
-      bath: bathTypes[seed % bathTypes.length],
-      // サイン（記録入力者）
-      sign: nurse,
-      // ヘッダー情報
-      fullDate: `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}(${['日','月','火','水','木','金','土'][d.getDay()]})`,
-      admitDays: baseAdmitDays + dateIndex,
-      hasNote: seed % 2 === 0,
-      room: 'E102号室',
-      isolation: seed === 11 ? '10:30～16:20' : '—',
-      restraint: '—',
-      behaviorLimit: '—',
-      outing: seed === 12 ? '08:00～11:00' : '—',
-    };
-  });
-
-  const stickyCell = { position: 'sticky' as const, left: 0, zIndex: 1, bgcolor: '#f8fafc', fontWeight: 600, fontSize: '0.75rem' };
-
+const FlowsheetView: React.FC<Props> = () => {
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        表示期間: {dates[0]} ～ {dates[dates.length - 1]}（7日間）
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        表示期間: {DAILY[0].date.replace(/\//g, '-')} 〜 {DAILY[DAILY.length - 1].date.replace(/\//g, '-')}({DAILY.length}日間)
       </Typography>
 
-      {/* Header info table (date nav, admit days, buttons) */}
+      {/* === 上部ヘッダー === */}
       <TableContainer component={Paper} variant="outlined" sx={{ mb: 0 }}>
         <Table size="small">
           <TableBody>
-            {/* Date navigation row */}
+            {/* 日付ナビ行 */}
             <TableRow>
-              <TableCell sx={{ ...stickyCell, minWidth: 120, zIndex: 2, bgcolor: '#e3edf7' }}>
+              <TableCell colSpan={2} sx={{ ...stickyLabelCell, zIndex: 2, bgcolor: '#e3edf7' }}>
                 <Stack direction="row" spacing={0.5} alignItems="center">
-                  <Typography sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer', fontWeight: 700 }}>≪</Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer', fontWeight: 700 }}>＜</Typography>
-                  <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e3a5f' }}>当日</Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer', fontWeight: 700 }}>＞</Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer', fontWeight: 700 }}>≫</Typography>
+                  {['≪', '＜', '当日', '＞', '≫'].map((s, i) => (
+                    <Typography
+                      key={i}
+                      sx={{
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        color: s === '当日' ? '#1e3a5f' : '#1e40af',
+                      }}
+                    >
+                      {s}
+                    </Typography>
+                  ))}
                 </Stack>
               </TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{
-                  fontSize: '0.7rem', fontWeight: 700,
-                  bgcolor: i === 0 ? '#fff3cd' : '#e3edf7',
-                  color: '#1e3a5f',
-                  minWidth: 85,
-                }}>
-                  {d.fullDate}
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={todayHeaderCellSx(d.isToday)}>
+                  {d.date}({d.weekday})
                 </TableCell>
               ))}
             </TableRow>
             {/* 在院日数 */}
             <TableRow>
-              <TableCell sx={{ ...stickyCell, fontSize: '0.7rem' }}>在院日数</TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem' }}>{d.admitDays}日目</TableCell>
+              <TableCell colSpan={2} sx={stickyLabelCell}>在院日数</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.admitDay}日目</TableCell>
               ))}
             </TableRow>
-            {/* 看護記録・バイタル入力ボタン */}
+            {/* 看護記録・バイタル ボタン行 */}
             <TableRow>
-              <TableCell sx={{ ...stickyCell, fontSize: '0.65rem', color: 'text.secondary' }}></TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ py: 0.3 }}>
+              <TableCell colSpan={2} sx={stickyLabelCell} />
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), py: 0.3 }}>
                   <Stack direction="row" spacing={0.3} justifyContent="center">
                     <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<EditNoteIcon sx={{ fontSize: '0.8rem !important' }} />}
-                      onClick={() => {}}
+                      size="small" variant="outlined"
+                      startIcon={<EditNoteIcon sx={{ fontSize: '0.85rem !important' }} />}
                       sx={{
-                        fontSize: '0.65rem',
-                        minWidth: 0,
-                        px: 0.5,
-                        py: 0,
-                        lineHeight: 1.5,
-                        color: '#1e3a5f',
-                        borderColor: '#c5d5e8',
+                        fontSize: '0.65rem', minWidth: 0, px: 0.5, py: 0,
+                        lineHeight: 1.5, color: '#1e3a5f', borderColor: '#c5d5e8',
                         whiteSpace: 'nowrap',
-                        '&:hover': { bgcolor: '#e3edf7', borderColor: '#1e3a5f' },
                       }}
                     >
                       看護記録
                     </Button>
                     <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<ThermostatIcon sx={{ fontSize: '0.8rem !important' }} />}
-                      onClick={() => {}}
+                      size="small" variant="outlined"
+                      startIcon={<ThermostatIcon sx={{ fontSize: '0.85rem !important' }} />}
                       sx={{
-                        fontSize: '0.65rem',
-                        minWidth: 0,
-                        px: 0.5,
-                        py: 0,
-                        lineHeight: 1.5,
-                        color: '#e53935',
-                        borderColor: '#ffcdd2',
+                        fontSize: '0.65rem', minWidth: 0, px: 0.5, py: 0,
+                        lineHeight: 1.5, color: '#e53935', borderColor: '#ffcdd2',
                         whiteSpace: 'nowrap',
-                        '&:hover': { bgcolor: '#ffebee', borderColor: '#e53935' },
                       }}
                     >
                       バイタル
@@ -283,65 +359,44 @@ const FlowsheetView: React.FC<Props> = ({ patientId = 'P001' }) => {
         </Table>
       </TableContainer>
 
-      {/* ── セクション: 隔離拘束・外出外泊 ── */}
+      {/* === 隔離拘束・外出外泊 === */}
       <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>隔離拘束・外出外泊</Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
+          隔離拘束・外出外泊
+        </Typography>
       </Box>
       <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
         <Table size="small">
           <TableBody>
             {/* 病室 */}
             <TableRow>
-              <TableCell sx={{ ...stickyCell, minWidth: 120, fontSize: '0.7rem' }}>病室</TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem', minWidth: 85 }}>{d.room}</TableCell>
+              <TableCell colSpan={2} sx={stickyLabelCell}>病室</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.room}</TableCell>
               ))}
             </TableRow>
-            {/* 隔離 */}
-            <TableRow>
-              <TableCell sx={{ ...stickyCell, fontSize: '0.7rem' }}>隔離</TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem', color: d.isolation !== '—' ? '#e53935' : 'text.disabled' }}>
-                  {d.isolation}
-                </TableCell>
-              ))}
-            </TableRow>
-            {/* 拘束 */}
-            <TableRow>
-              <TableCell sx={{ ...stickyCell, fontSize: '0.7rem' }}>拘束</TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>{d.restraint}</TableCell>
-              ))}
-            </TableRow>
-            {/* 行動制限(その他) */}
-            <TableRow>
-              <TableCell sx={{ ...stickyCell, fontSize: '0.7rem' }}>行動制限(その他)</TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>{d.behaviorLimit}</TableCell>
-              ))}
-            </TableRow>
-            {/* 外出・外泊 */}
-            <TableRow>
-              <TableCell sx={{ ...stickyCell, fontSize: '0.7rem' }}>外出・外泊</TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.7rem', color: d.outing !== '—' ? '#1e40af' : 'text.disabled' }}>
-                  {d.outing}
-                </TableCell>
-              ))}
-            </TableRow>
+            <RestraintRow label="隔離" bar={RESTRAINTS.isolation} />
+            <RestraintRow label="拘束" bar={RESTRAINTS.restraint} />
+            <RestraintRow label="行動制限(その他)" bar={RESTRAINTS.behavior} />
+            <RestraintRow label="外出・外泊" bar={RESTRAINTS.outing} />
           </TableBody>
         </Table>
       </TableContainer>
 
-      {/* ── セクション: バイタル・サイングラフ ── */}
+      {/* === バイタル・サイングラフ === */}
       <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>バイタル・サイングラフ</Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
+          バイタル・サイングラフ
+        </Typography>
       </Box>
-      <Paper variant="outlined" sx={{ mb: 2, borderTop: 'none', borderRadius: 0 }}>
+      <Paper variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
         <Box sx={{ display: 'flex' }}>
-          {/* Left label column to align with tables */}
-          <Box sx={{ minWidth: 120, maxWidth: 120, bgcolor: '#f8fafc', borderRight: '1px solid #e0e0e0', p: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{
+            minWidth: LABEL_COL_WIDTH + SUB_COL_WIDTH, maxWidth: LABEL_COL_WIDTH + SUB_COL_WIDTH,
+            bgcolor: '#f8fafc', borderRight: '1px solid #e0e0e0', p: 1,
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          }}>
+            <Stack spacing={0.5}>
               {[
                 { label: '体温', color: '#e53935', unit: '℃' },
                 { label: 'BP', color: '#1e40af', unit: 'mmHg' },
@@ -351,48 +406,32 @@ const FlowsheetView: React.FC<Props> = ({ patientId = 'P001' }) => {
               ].map((item) => (
                 <Stack key={item.label} direction="row" spacing={0.5} alignItems="center">
                   <Box sx={{ width: 12, height: 3, bgcolor: item.color, borderRadius: 1 }} />
-                  <Typography sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>{item.label}({item.unit})</Typography>
+                  <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
+                    {item.label}({item.unit})
+                  </Typography>
                 </Stack>
               ))}
-            </Box>
+            </Stack>
           </Box>
-          {/* Chart area */}
           <Box sx={{ flex: 1, py: 1, pr: 1 }}>
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+              <LineChart data={CHART_DATA} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                 <XAxis dataKey="date" fontSize={11} tick={{ fill: '#666' }} />
-                <YAxis
-                  yAxisId="vitals"
-                  domain={[0, 300]}
+                <YAxis yAxisId="vitals" domain={[0, 300]}
                   ticks={[0, 50, 100, 150, 200, 250, 300]}
-                  fontSize={10}
-                  tick={{ fill: '#666' }}
-                  width={35}
-                />
-                <YAxis
-                  yAxisId="temp"
-                  orientation="right"
-                  domain={[35, 40]}
+                  fontSize={10} tick={{ fill: '#666' }} width={35} />
+                <YAxis yAxisId="temp" orientation="right" domain={[35, 40]}
                   ticks={[35, 36, 37, 38, 39, 40]}
-                  fontSize={10}
-                  tick={{ fill: '#e53935' }}
-                  width={35}
-                />
+                  fontSize={10} tick={{ fill: '#e53935' }} width={35} />
                 <Tooltip contentStyle={{ fontSize: 12 }} />
                 <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3" />
                 <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3" />
-                {/* BP上 - blue solid */}
                 <Line yAxisId="vitals" type="monotone" dataKey="BP(上)" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} connectNulls />
-                {/* BP下 - blue dashed */}
                 <Line yAxisId="vitals" type="monotone" dataKey="BP(下)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: '#1e40af' }} connectNulls />
-                {/* 脈拍 - red */}
                 <Line yAxisId="vitals" type="monotone" dataKey="脈拍" stroke="#d32f2f" strokeWidth={2} dot={{ r: 4, fill: '#d32f2f' }} connectNulls />
-                {/* SpO2 - green */}
-                <Line yAxisId="vitals" type="monotone" dataKey="SpO2" stroke="#2e7d32" strokeWidth={2} dot={{ r: 3, fill: '#2e7d32', stroke: '#2e7d32' }} connectNulls />
-                {/* 呼吸 - purple */}
+                <Line yAxisId="vitals" type="monotone" dataKey="SpO2" stroke="#2e7d32" strokeWidth={2} dot={{ r: 3, fill: '#2e7d32' }} connectNulls />
                 <Line yAxisId="vitals" type="monotone" dataKey="呼吸" stroke="#9c27b0" strokeWidth={1.5} dot={{ r: 3, fill: '#9c27b0' }} connectNulls />
-                {/* 体温 - red (right axis) */}
                 <Line yAxisId="temp" type="monotone" dataKey="体温" stroke="#e53935" strokeWidth={2} dot={{ r: 4, fill: '#ff9800', stroke: '#e53935', strokeWidth: 2 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
@@ -400,69 +439,299 @@ const FlowsheetView: React.FC<Props> = ({ patientId = 'P001' }) => {
         </Box>
       </Paper>
 
-      {/* Data Table */}
-      <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600 }}>
-        <Table size="small" stickyHeader>
-          <TableHead>
+      {/* === 指示・実施管理 === */}
+      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
+          指示・実施管理
+        </Typography>
+      </Box>
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
+        <Table size="small">
+          <TableBody>
+            {/* 予定オーダ */}
             <TableRow>
-              <TableCell colSpan={2} sx={{ ...stickyCell, minWidth: 120, zIndex: 3 }}>項目</TableCell>
-              {dailySummary.map((d) => (
-                <TableCell key={d.dateLabel} align="center" sx={{ minWidth: 85, fontWeight: 700 }}>{d.dateLabel}</TableCell>
+              <TableCell colSpan={2} sx={stickyLabelCell}>
+                <Stack direction="column" alignItems="flex-start" spacing={0.3}>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>予定オーダ</Typography>
+                  <Button
+                    size="small" variant="outlined"
+                    sx={{ fontSize: '0.6rem', minWidth: 0, px: 1, py: 0, lineHeight: 1.5, color: '#1e40af', borderColor: '#1e40af' }}
+                  >
+                    一覧
+                  </Button>
+                </Stack>
+              </TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>
+                  <Stack direction="row" spacing={0} justifyContent="center" sx={{ flexWrap: 'wrap' }}>
+                    {d.orderKinds.map((k, idx) => (
+                      <React.Fragment key={`${k}-${idx}`}>
+                        <Typography
+                          component="span"
+                          sx={{ fontSize: '0.75rem', fontWeight: 700, color: ORDER_COLOR[k].fg }}
+                        >
+                          {k}
+                        </Typography>
+                        {idx < d.orderKinds.length - 1 && (
+                          <Typography component="span" sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>／</Typography>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </Stack>
+                </TableCell>
               ))}
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* ── 予定オーダ ── */}
-            <GroupHeaderRow label="予定オーダ" actionLabel="一覧" colSpan={dailySummary.length + 2} />
-            <DataRow label="" sub="" data={dailySummary} dataKey="orderCount" stickyCell={stickyCell} render={(v) => v > 0 ? `${v}件` : '—'} />
-
-            {/* ── 検査結果 ── */}
-            <GroupHeaderRow label="検査結果" actionLabel="設定" colSpan={dailySummary.length + 2} />
-            <DataRow label="" sub="" data={dailySummary} dataKey="labResult" stickyCell={stickyCell} />
-
-            {/* ── 食事 ── */}
-            <GroupHeaderRow label="食事" actionLabel="凡例" colSpan={dailySummary.length + 2} />
-            <DataRow label="" sub="" data={dailySummary} dataKey="mealType" stickyCell={stickyCell} />
-
-            {/* ── 身体測定 ── */}
-            <DataRow label="身長" sub="" data={dailySummary} dataKey="height" stickyCell={stickyCell} />
-            <DataRow label="体重(BMI)" sub="" data={dailySummary} dataKey="weightBmi" stickyCell={stickyCell} />
-
-            {/* ── 排泄 ── */}
-            <DataRow label="便" sub="" data={dailySummary} dataKey="stool" stickyCell={stickyCell} />
-            <DataRow label="尿" sub="" data={dailySummary} dataKey="urine" stickyCell={stickyCell} />
-
-            {/* ── 食事(摂取) ── */}
-            <SubGroupRow label="食事" sub="朝" data={dailySummary} dataKey="breakfast" stickyCell={stickyCell} rowSpan={3} />
-            <SubRow sub="昼" data={dailySummary} dataKey="lunch" stickyCell={stickyCell} />
-            <SubRow sub="夕" data={dailySummary} dataKey="dinner" stickyCell={stickyCell} />
-
-            {/* ── 睡眠 ── */}
-            <DataRow label="睡眠" sub="" data={dailySummary} dataKey="sleep" stickyCell={stickyCell} />
-
-            {/* ── 服薬 ── */}
-            <SubGroupRow label="服薬" sub="朝" data={dailySummary} dataKey="medAm" stickyCell={stickyCell} rowSpan={4} />
-            <SubRow sub="昼" data={dailySummary} dataKey="medNoon" stickyCell={stickyCell} />
-            <SubRow sub="夕" data={dailySummary} dataKey="medPm" stickyCell={stickyCell} />
-            <SubRow sub="寝" data={dailySummary} dataKey="medNight" stickyCell={stickyCell} />
-
-            {/* ── 記録系 ── */}
-            <DataRow label="診療録" sub="" data={dailySummary} dataKey="karteNote" stickyCell={stickyCell} />
-            <DataRow label="部門診療録" sub="" data={dailySummary} dataKey="deptNote" stickyCell={stickyCell} />
-            <DataRow label="移行記事" sub="" data={dailySummary} dataKey="transferNote" stickyCell={stickyCell} />
-            <DataRow label="看護記録" sub="" data={dailySummary} dataKey="nursingNote" stickyCell={stickyCell} />
-
-            {/* ── その他 ── */}
-            <DataRow label="便(性状)" sub="" data={dailySummary} dataKey="stoolDetail" stickyCell={stickyCell} />
-            <DataRow label="入浴" sub="" data={dailySummary} dataKey="bath" stickyCell={stickyCell} />
-
-            {/* ── サイン ── */}
+            {/* 検査結果 */}
             <TableRow>
-              <TableCell colSpan={2} sx={{ ...stickyCell, bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700, borderTop: '2px solid #c5d5e8' }}>
+              <TableCell colSpan={2} sx={stickyLabelCell}>
+                <Stack direction="column" alignItems="flex-start" spacing={0.3}>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>検査結果</Typography>
+                  <Button
+                    size="small" variant="outlined"
+                    sx={{ fontSize: '0.6rem', minWidth: 0, px: 1, py: 0, lineHeight: 1.5, color: '#1e40af', borderColor: '#1e40af' }}
+                  >
+                    設定
+                  </Button>
+                </Stack>
+              </TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
+                  {d.labLinks.length === 0 ? '—' : (
+                    <Stack spacing={0.2} alignItems="center">
+                      {d.labLinks.map((l, idx) => (
+                        <MuiLink
+                          key={idx}
+                          underline="always"
+                          sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer' }}
+                        >
+                          {l}
+                        </MuiLink>
+                      ))}
+                    </Stack>
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+            {/* 食事 - 朝/昼/夕 */}
+            {(['morning', 'lunch', 'dinner'] as const).map((mealKey, mealIdx) => {
+              const subLabel = mealKey === 'morning' ? '朝' : mealKey === 'lunch' ? '昼' : '夕';
+              return (
+                <TableRow key={mealKey}>
+                  {mealIdx === 0 && (
+                    <TableCell rowSpan={3} sx={{ ...stickyLabelCell, verticalAlign: 'top' }}>食事</TableCell>
+                  )}
+                  <TableCell sx={stickySubCell}>{subLabel}</TableCell>
+                  {DAILY.map((d, i) => {
+                    const status = d.meal[mealKey];
+                    const style = MEAL_STYLE[status];
+                    return (
+                      <TableCell key={i} sx={dayCellSx(d.isToday)}>
+                        <Box
+                          sx={{
+                            display: 'inline-block',
+                            px: 1, py: 0.2,
+                            bgcolor: style.bg, color: style.fg,
+                            fontSize: '0.7rem', fontWeight: 700,
+                            borderRadius: 0.5,
+                          }}
+                        >
+                          {status}
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* === 基本観察項目 === */}
+      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
+          基本観察項目
+        </Typography>
+      </Box>
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
+        <Table size="small">
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>身長</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.height}</TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>体重(BMI)</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.weightBmi}</TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>便</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stool}</TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>尿</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.urine}</TableCell>
+              ))}
+            </TableRow>
+            {/* 食事(摂取量) 朝/昼/夕 */}
+            {(['morning', 'lunch', 'dinner'] as const).map((k, idx) => {
+              const sub = k === 'morning' ? '朝' : k === 'lunch' ? '昼' : '夕';
+              return (
+                <TableRow key={`intake-${k}`}>
+                  {idx === 0 && (
+                    <TableCell rowSpan={3} sx={{ ...stickyLabelCell, verticalAlign: 'top' }}>食事</TableCell>
+                  )}
+                  <TableCell sx={stickySubCell}>{sub}</TableCell>
+                  {DAILY.map((d, i) => (
+                    <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.intake[k]}</TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>睡眠</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.sleep}</TableCell>
+              ))}
+            </TableRow>
+            {/* 服薬 朝/昼/夕/寝 */}
+            {(['morning', 'lunch', 'dinner', 'night'] as const).map((k, idx) => {
+              const sub = k === 'morning' ? '朝' : k === 'lunch' ? '昼' : k === 'dinner' ? '夕' : '寝';
+              return (
+                <TableRow key={`med-${k}`}>
+                  {idx === 0 && (
+                    <TableCell rowSpan={4} sx={{ ...stickyLabelCell, verticalAlign: 'top' }}>服薬</TableCell>
+                  )}
+                  <TableCell sx={stickySubCell}>{sub}</TableCell>
+                  {DAILY.map((d, i) => (
+                    <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.med[k]}</TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* === 記事連携項目 === */}
+      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
+          記事連携項目
+        </Typography>
+      </Box>
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
+        <Table size="small">
+          <TableBody>
+            {/* 診療録 */}
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>診療録</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
+                  {d.karteLinks.length === 0 ? '—' : (
+                    <Stack spacing={0.2} alignItems="center">
+                      {d.karteLinks.map((l, idx) => (
+                        <MuiLink key={idx} underline="always" sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer' }}>
+                          {l}
+                        </MuiLink>
+                      ))}
+                    </Stack>
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+            {/* 部門診療録 */}
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>部門診療録</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
+                  {d.deptLinks.length === 0 ? '—' : (
+                    <Stack spacing={0.2} alignItems="center">
+                      {d.deptLinks.map((l, idx) => (
+                        <MuiLink key={idx} underline="always" sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer' }}>
+                          {l}
+                        </MuiLink>
+                      ))}
+                    </Stack>
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+            {/* 移行記事 */}
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>移行記事</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>
+                  {d.transferLinks.length === 0 ? '—' : d.transferLinks.join(', ')}
+                </TableCell>
+              ))}
+            </TableRow>
+            {/* 看護記録 */}
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>看護記録</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
+                  <Stack spacing={0.3} alignItems="center">
+                    {d.nursingLinks.map((l, idx) => (
+                      <MuiLink key={idx} underline="always" sx={{ fontSize: '0.7rem', color: '#1e40af', cursor: 'pointer' }}>
+                        {l}
+                      </MuiLink>
+                    ))}
+                    <Button
+                      size="small" variant="outlined"
+                      sx={{ fontSize: '0.6rem', minWidth: 0, px: 1, py: 0, lineHeight: 1.5, color: '#475569', borderColor: '#cbd5e1' }}
+                    >
+                      新規作成
+                    </Button>
+                  </Stack>
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* === 個別ケア・観察項目 === */}
+      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
+          個別ケア・観察項目
+        </Typography>
+      </Box>
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
+        <Table size="small">
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>便(性状)</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stoolDetail}</TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell colSpan={2} sx={stickyLabelCell}>入浴</TableCell>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.bath}</TableCell>
+              ))}
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* === サイン === */}
+      <TableContainer component={Paper} variant="outlined" sx={{ mt: 0, borderTop: '2px solid #c5d5e8' }}>
+        <Table size="small">
+          <TableBody>
+            <TableRow sx={sectionHeaderRow}>
+              <TableCell colSpan={2} sx={{ ...stickyLabelCell, bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
                 サイン
               </TableCell>
-              {dailySummary.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ fontSize: '0.75rem', bgcolor: '#e3edf7', borderTop: '2px solid #c5d5e8', fontWeight: 600, color: '#1e3a5f' }}>
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
                   {d.sign}
                 </TableCell>
               ))}

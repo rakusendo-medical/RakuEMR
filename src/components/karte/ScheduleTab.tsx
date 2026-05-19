@@ -275,7 +275,7 @@ export default function ScheduleTab({ patient, mode }: ScheduleTabProps) {
         open={snackbar.open}
         autoHideDuration={3500}
         onClose={() => setSnackbar({ open: false, message: '' })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert severity="info" variant="filled" onClose={() => setSnackbar({ open: false, message: '' })}>
           {snackbar.message}

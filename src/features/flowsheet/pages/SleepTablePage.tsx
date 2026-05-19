@@ -188,7 +188,7 @@ const SleepTablePage: React.FC = () => {
               {shown.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell sx={{ position: 'sticky', left: 0, bgcolor: '#fff', zIndex: 1 }}>
-                    <MuiLink component={RouterLink} to={`/flowsheet/${p.id}`} sx={{ fontSize: 12 }}>
+                    <MuiLink component={RouterLink} to={`/karte/${p.id}#flowsheet`} sx={{ fontSize: 12 }}>
                       {p.id}
                     </MuiLink>
                     <br />

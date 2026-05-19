@@ -241,7 +241,7 @@ const BulkNursingRecordsPage: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <MuiLink component={RouterLink} to={`/flowsheet/${p.id}`}>{p.id}</MuiLink>
+                      <MuiLink component={RouterLink} to={`/karte/${p.id}#flowsheet`}>{p.id}</MuiLink>
                     </TableCell>
                     <TableCell>{p.name}</TableCell>
                     <TableCell>{shift ? SHIFT_LABEL[shift] : '—'}</TableCell>
