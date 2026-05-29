@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   Box, Paper, Stack, Typography, Chip, TextField, Button, IconButton,
   Tooltip, MenuItem, Select, FormControl, InputLabel, Snackbar, Alert,
@@ -201,15 +201,14 @@ export default function MedicalRecordTab({
   // ----- ダイアログ群 -----
   const [newRecordOpen, setNewRecordOpen] = useState(false);
 
-  // 親からのトリガーで新規記載ダイアログを開く
-  const lastTriggerRef = useRef<number | undefined>(undefined);
-  if (newRecordTrigger !== undefined && newRecordTrigger !== lastTriggerRef.current) {
-    lastTriggerRef.current = newRecordTrigger;
-    if (newRecordTrigger > 0 && !newRecordOpen) {
-      // setState は次レンダーで反映: 同期的に呼んで OK
+  // 親(KartePage)からのトリガーで新規記載ダイアログを開く。
+  // setState を render 内で呼ぶ ref パターンは React 18 / StrictMode で
+  // 二重実行で値が一致してしまうケースがあり不安定だったので useEffect 化。
+  useEffect(() => {
+    if (newRecordTrigger !== undefined && newRecordTrigger > 0) {
       setNewRecordOpen(true);
     }
-  }
+  }, [newRecordTrigger]);
 
   // ----- スナックバー -----
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' }>({
