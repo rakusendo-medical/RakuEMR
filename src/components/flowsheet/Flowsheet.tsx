@@ -249,6 +249,12 @@ function todayHeaderCellSx(isToday: boolean): any {
   };
 }
 
+// 縦スクロール時のヘッダ 3 行スティッキー化。
+// MUI の stickyHeader 自動 CSS だけでは day cell 側で position: sticky が
+// 安定して効かないケースがあったため、各行に明示で付与する。
+// top 値の初期値はヘッダ 3 行の cumulative 高さの目安。
+const HEADER_ROW_TOP = { row1: 0, row2: 30, row3: 58 };
+
 // 行動制限・隔離・外出など、特定の日付範囲だけセルに色帯+ラベルを置く
 function RestraintRow({ label, bar }: { label: string; bar: RestraintBar }) {
   return (
@@ -309,8 +315,9 @@ const FlowsheetView: React.FC<Props> = () => {
             コンテナ幅に対する比例拡大を防いで各 col が指定通りの幅を保つ。 */}
         {/*
           stickyHeader: 先頭 3 行（日付ナビ・在院日数・ボタン）を <TableHead> に閉じ込め、
-          MUI が自動で position: sticky を付与する。スクロールコンテキストは KartePage 側の
-          `<Box overflow:auto>` なので、カルテタブの直下に貼り付く動作になる。
+          各セルに明示で position: 'sticky' + top を付与する。
+          スクロールコンテキストは KartePage 側の `<Box overflow:auto>` なので、
+          カルテタブの直下に貼り付く動作になる。
         */}
         <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: 'auto' }}>
           {/* 9 列の幅を colgroup で共有: label(130) / sub(40) / day(110)×7 */}
@@ -324,7 +331,7 @@ const FlowsheetView: React.FC<Props> = () => {
           <TableHead>
             {/* 日付ナビ行（top: 0 で貼り付く） */}
             <TableRow>
-              <TableCell sx={{ ...stickyLabelCell, top: 0, zIndex: 4, bgcolor: '#e3edf7' }}>
+              <TableCell sx={{ ...stickyLabelCell, position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 5, bgcolor: '#e3edf7' }}>
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   {['≪', '＜', '当日', '＞', '≫'].map((s, i) => (
                     <Typography
@@ -341,27 +348,27 @@ const FlowsheetView: React.FC<Props> = () => {
                   ))}
                 </Stack>
               </TableCell>
-              <TableCell sx={{ ...stickySubCell, top: 0, zIndex: 4, bgcolor: '#e3edf7' }} />
+              <TableCell sx={{ ...stickySubCell, position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 5, bgcolor: '#e3edf7' }} />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={{ ...todayHeaderCellSx(d.isToday), top: 0 }}>
+                <TableCell key={i} sx={{ ...todayHeaderCellSx(d.isToday), position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 3 }}>
                   {d.date}({d.weekday})
                 </TableCell>
               ))}
             </TableRow>
-            {/* 在院日数（top: 36px ≒ 日付ナビ行の高さ ぶん下にずらす） */}
+            {/* 在院日数（row1 の cumulative 高さ ぶん下にずらす） */}
             <TableRow>
-              <TableCell sx={{ ...stickyLabelCell, top: 36, zIndex: 4 }}>在院日数</TableCell>
-              <TableCell sx={{ ...stickySubCell, top: 36, zIndex: 4 }} />
+              <TableCell sx={{ ...stickyLabelCell, position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 5 }}>在院日数</TableCell>
+              <TableCell sx={{ ...stickySubCell, position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 5 }} />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), top: 36, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>{d.admitDay}日目</TableCell>
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 3, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>{d.admitDay}日目</TableCell>
               ))}
             </TableRow>
-            {/* 看護記録・バイタル ボタン行（top: 65px ≒ 日付ナビ + 在院日数 行の高さ） */}
+            {/* 看護記録・バイタル ボタン行（row1 + row2 の cumulative 高さ ぶん下にずらす） */}
             <TableRow>
-              <TableCell sx={{ ...stickyLabelCell, top: 65, zIndex: 4 }} />
-              <TableCell sx={{ ...stickySubCell, top: 65, zIndex: 4 }} />
+              <TableCell sx={{ ...stickyLabelCell, position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 5 }} />
+              <TableCell sx={{ ...stickySubCell, position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 5 }} />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), py: 0.3, top: 65, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), py: 0.3, position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 3, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>
                   <Stack direction="row" spacing={0.3} justifyContent="center">
                     <Button
                       size="small" variant="outlined"
