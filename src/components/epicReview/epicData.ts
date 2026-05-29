@@ -153,7 +153,7 @@ export const EPICS: EpicMeta[] = [
     ],
     mainScreens: [
       { label: '入院患者一覧', path: '/patients' },
-      { label: '患者詳細', path: '/patients/P001' },
+      { label: '患者詳細', path: '/karte/P001#patient-info' },
     ],
     description: '入院患者の一覧と個別ページ。担当者・診察医フィルタ等を提供。',
   },

@@ -524,6 +524,15 @@ const MainLayout: React.FC = () => {
                     bg: "#b45309",
                     bgHover: "#92400e",
                   },
+                  {
+                    key: "emr",
+                    short: "E",
+                    label: "RakuEMR",
+                    desc: "電子カルテ（利用中）",
+                    bg: "#1e3a5f",
+                    bgHover: "#1e3a5f",
+                    current: true,
+                  },
                 ].map((app) => (
                   <Tooltip
                     key={app.key}
@@ -537,12 +546,16 @@ const MainLayout: React.FC = () => {
                   >
                     <Box
                       role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        // モック: シリーズ製品起動 - 実運用では別アプリへ遷移
-                        // eslint-disable-next-line no-alert
-                        alert(`${app.label} を起動(モック)`);
-                      }}
+                      tabIndex={app.current ? -1 : 0}
+                      onClick={
+                        app.current
+                          ? undefined
+                          : () => {
+                              // モック: シリーズ製品起動 - 実運用では別アプリへ遷移
+                              // eslint-disable-next-line no-alert
+                              alert(`${app.label} を起動(モック)`);
+                            }
+                      }
                       sx={{
                         width: 28,
                         height: 28,
@@ -554,10 +567,11 @@ const MainLayout: React.FC = () => {
                         color: "#fff",
                         fontWeight: 800,
                         fontSize: "0.8rem",
-                        cursor: "pointer",
+                        cursor: app.current ? "default" : "pointer",
                         transition: "background-color 0.15s",
                         userSelect: "none",
-                        "&:hover": { bgcolor: app.bgHover },
+                        opacity: app.current ? 0.45 : 1,
+                        "&:hover": app.current ? {} : { bgcolor: app.bgHover },
                       }}
                     >
                       {app.short}

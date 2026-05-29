@@ -7,6 +7,8 @@ import {
 import { Search } from '@mui/icons-material';
 import { PATIENTS, OUTPATIENT_VISITS, STATUS_CONFIG } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
+import type { KartePageLocationState } from '../karte/KartePage';
+import type { OutpatientVisit } from '../../types';
 
 type VisitType = 'all' | 'inpatient' | 'outpatient';
 
@@ -50,8 +52,34 @@ const PatientSearch: React.FC = () => {
     const patient = PATIENTS.find((p) => p.id === patientId);
     if (patient) {
       setSelectedPatient(patient);
-      navigate(`/patients/${patientId}`);
+      navigate(`/karte/${patientId}`, {
+        state: { from: 'patient-search' } satisfies KartePageLocationState,
+      });
     }
+  };
+
+  /**
+   * 外来クリック: OutpatientList と同様、OUTPATIENT_VISITS から合成 Patient を
+   * setSelectedPatient してカルテ画面（外来 mode）へ遷移する。
+   */
+  const handleOutpatientClick = (visit: OutpatientVisit) => {
+    setSelectedPatient({
+      id: visit.patientId,
+      name: visit.patientName,
+      age: visit.age,
+      gender: visit.gender,
+      wardId: 'ward1' as any,
+      roomNumber: '',
+      bedLabel: '',
+      status: 'stable' as any,
+      admitDate: '',
+      doctorName: visit.doctorName,
+      diagnosis: '',
+      admissionState: 'outpatient',
+    } as any);
+    navigate(`/karte/${visit.patientId}`, {
+      state: { from: 'patient-search' } satisfies KartePageLocationState,
+    });
   };
 
   return (
@@ -161,7 +189,12 @@ const PatientSearch: React.FC = () => {
               </TableHead>
               <TableBody>
                 {outpatientResults.map((v) => (
-                  <TableRow key={v.id} hover>
+                  <TableRow
+                    key={v.id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => handleOutpatientClick(v)}
+                  >
                     <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{v.id}</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{v.patientName}</TableCell>
                     <TableCell>{v.age}歳</TableCell>

@@ -113,11 +113,13 @@ const FlowsheetGrid: React.FC<Props> = ({
 
   // 体温表（7 日 × 時間軸の格子状グラフ）— spec us-17 L45-48
   // BP・R・P・T・S の 5 系統を 1 つのグラフに重ねる。日境目は ReferenceLine で明示。
+  // 他行と同じグリッド（label + 7日列）に揃え、チャートを 7 列にまたがらせることで
+  // ヘッダ日付列とチャート内の日境界を一致させる。
   const renderVitalRow = () => (
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: `${labelCol} 1fr`,
+        gridTemplateColumns: `${labelCol} repeat(7, ${dayCol})`,
         borderTop: '1px solid',
         borderColor: 'divider',
         bgcolor: '#fffbeb',
@@ -141,7 +143,7 @@ const FlowsheetGrid: React.FC<Props> = ({
           BP / R / P / T / S
         </Typography>
       </Box>
-      <Box sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ gridColumn: '2 / span 7', borderLeft: '1px solid', borderColor: 'divider' }}>
         <VitalChart patientId={patientId} dates={dates} vitals={vitals} height={200} />
       </Box>
     </Box>

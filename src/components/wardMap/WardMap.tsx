@@ -430,7 +430,7 @@ const WardMap: React.FC = () => {
                 { label: '移動', onClick: () => handleMove(selectedBedPatient), icon: <MoveDownIcon sx={{ fontSize: 14 }} /> },
                 { label: '隔離歴', onClick: () => setIsolationHistoryPatientId(selectedBedPatient.id), icon: <LockIcon sx={{ fontSize: 14 }} /> },
                 { label: 'フローシート', onClick: () => navigate(`/karte/${selectedBedPatient.id}#flowsheet`) },
-                { label: '患者情報', onClick: () => navigate(`/patients/${selectedBedPatient.id}`) },
+                { label: '患者情報', onClick: () => navigate(`/karte/${selectedBedPatient.id}#patient-info`) },
                 { label: '食事', onClick: () => showSnackbar('食事画面は未実装(モック)', 'info') },
                 { label: '外出外泊', onClick: () => navigate('/outing') },
                 { label: '行動制限', onClick: () => navigate('/behavior') },

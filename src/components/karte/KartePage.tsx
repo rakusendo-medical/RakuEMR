@@ -50,7 +50,7 @@ import NursingRecordDialog from '../../features/flowsheet/components/NursingReco
 
 export type KarteMode = 'outpatient' | 'inpatient';
 
-export type KarteNavigationFrom = 'outpatient-list' | 'ward-map' | 'patient-list';
+export type KarteNavigationFrom = 'outpatient-list' | 'ward-map' | 'patient-list' | 'patient-search';
 
 export interface KartePageLocationState {
   from?: KarteNavigationFrom;
@@ -132,6 +132,8 @@ function determineBackPath(args: {
       return '/';
     case 'patient-list':
       return '/patients';
+    case 'patient-search':
+      return '/patient-search';
     default:
       return args.mode === 'outpatient' ? '/outpatient' : '/';
   }

@@ -129,7 +129,7 @@ export default function VitalChart({ patientId, dates, vitals, height = 180 }: V
         </Typography>
       </Stack>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={points} margin={{ top: 24, right: 8, bottom: 4, left: 8 }}>
+        <LineChart data={points} margin={{ top: 24, right: 0, bottom: 4, left: 0 }}>
           <CartesianGrid stroke="#fde68a" strokeDasharray="2 4" vertical={false} />
           {/* 日境目を縦線で明示 */}
           {dayTicks.slice(1).map((t) => (
@@ -139,6 +139,22 @@ export default function VitalChart({ patientId, dates, vitals, height = 180 }: V
               stroke="#fbbf24"
               strokeDasharray="3 3"
               yAxisId="left"
+            />
+          ))}
+          {/* Y軸の主要値を ReferenceLine で明示（Y軸自体は非表示で日付列と整列） */}
+          {[60, 90, 120, 150, 180].map((y) => (
+            <ReferenceLine
+              key={`y-${y}`}
+              y={y}
+              yAxisId="left"
+              stroke="#fde68a"
+              strokeDasharray="1 3"
+              label={{
+                value: String(y),
+                position: 'insideLeft',
+                fill: '#7c2d12',
+                fontSize: 9,
+              }}
             />
           ))}
           <XAxis
@@ -151,13 +167,12 @@ export default function VitalChart({ patientId, dates, vitals, height = 180 }: V
             tick={{ fontSize: 10, fill: '#7c2d12' }}
             stroke="#fbbf24"
           />
+          {/* Y軸は非表示・幅0 にして、チャートのプロット領域とセル幅を一致させる */}
           <YAxis
             yAxisId="left"
             domain={[30, 200]}
-            ticks={[30, 60, 90, 120, 150, 180]}
-            tick={{ fontSize: 10, fill: '#7c2d12' }}
-            width={28}
-            stroke="#fbbf24"
+            hide
+            width={0}
           />
           {/* 体温・SpO2 用の Y 軸は表示しない（軸混雑回避）。値は Tooltip で確認 */}
           <YAxis yAxisId="rightT" orientation="right" domain={[34, 42]} hide />
