@@ -258,7 +258,8 @@ function todayHeaderCellSx(isToday: boolean): any {
 function RestraintRow({ label, bar }: { label: string; bar: RestraintBar }) {
   return (
     <TableRow>
-      <TableCell colSpan={2} sx={stickyLabelCell}>{label}</TableCell>
+      <TableCell sx={stickyLabelCell}>{label}</TableCell>
+      <TableCell sx={stickySubCell} />
       {DAILY.map((d, i) => {
         const inRange = i >= bar.from && i <= bar.to;
         const isStart = i === bar.from;
@@ -308,7 +309,10 @@ const FlowsheetView: React.FC<Props> = () => {
 
       {/* === 単一 Table（B 案・全 7 セクション統合）=== */}
       <TableContainer component={Paper} variant="outlined">
-        <Table size="small" sx={{ tableLayout: 'fixed' }}>
+        {/* テーブル幅を colgroup 合計（130 + 40 + 110×7 = 940）で固定。
+            sx の width: 'auto' を明示することで MUI Table のデフォルト width: '100%' を override し、
+            コンテナ幅に対する比例拡大を防いで各 col が指定通りの幅を保つ。 */}
+        <Table size="small" sx={{ tableLayout: 'fixed', width: 'auto' }}>
           {/* 9 列の幅を colgroup で共有: label(130) / sub(40) / day(110)×7 */}
           <colgroup>
             <col style={{ width: LABEL_COL_WIDTH }} />
@@ -321,7 +325,7 @@ const FlowsheetView: React.FC<Props> = () => {
             {/* ===== 上部ヘッダー ===== */}
             {/* 日付ナビ行 */}
             <TableRow>
-              <TableCell colSpan={2} sx={{ ...stickyLabelCell, zIndex: 2, bgcolor: '#e3edf7' }}>
+              <TableCell sx={{ ...stickyLabelCell, zIndex: 2, bgcolor: '#e3edf7' }}>
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   {['≪', '＜', '当日', '＞', '≫'].map((s, i) => (
                     <Typography
@@ -338,6 +342,7 @@ const FlowsheetView: React.FC<Props> = () => {
                   ))}
                 </Stack>
               </TableCell>
+              <TableCell sx={{ ...stickySubCell, bgcolor: '#e3edf7' }} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={todayHeaderCellSx(d.isToday)}>
                   {d.date}({d.weekday})
@@ -346,14 +351,16 @@ const FlowsheetView: React.FC<Props> = () => {
             </TableRow>
             {/* 在院日数 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>在院日数</TableCell>
+              <TableCell sx={stickyLabelCell}>在院日数</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.admitDay}日目</TableCell>
               ))}
             </TableRow>
             {/* 看護記録・バイタル ボタン行 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell} />
+              <TableCell sx={stickyLabelCell} />
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), py: 0.3 }}>
                   <Stack direction="row" spacing={0.3} justifyContent="center">
@@ -388,7 +395,8 @@ const FlowsheetView: React.FC<Props> = () => {
             <SectionHeaderRow title="隔離拘束・外出外泊" />
             {/* 病室 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>病室</TableCell>
+              <TableCell sx={stickyLabelCell}>病室</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.room}</TableCell>
               ))}
@@ -469,7 +477,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <SectionHeaderRow title="指示・実施管理" />
             {/* 予定オーダ */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>
+              <TableCell sx={stickyLabelCell}>
                 <Stack direction="column" alignItems="flex-start" spacing={0.3}>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>予定オーダ</Typography>
                   <Button
@@ -480,6 +488,7 @@ const FlowsheetView: React.FC<Props> = () => {
                   </Button>
                 </Stack>
               </TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>
                   <Stack direction="row" spacing={0} justifyContent="center" sx={{ flexWrap: 'wrap' }}>
@@ -502,7 +511,7 @@ const FlowsheetView: React.FC<Props> = () => {
             </TableRow>
             {/* 検査結果 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>
+              <TableCell sx={stickyLabelCell}>
                 <Stack direction="column" alignItems="flex-start" spacing={0.3}>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>検査結果</Typography>
                   <Button
@@ -513,6 +522,7 @@ const FlowsheetView: React.FC<Props> = () => {
                   </Button>
                 </Stack>
               </TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   {d.labLinks.length === 0 ? '—' : (
@@ -566,25 +576,29 @@ const FlowsheetView: React.FC<Props> = () => {
             {/* ===== 基本観察項目 ===== */}
             <SectionHeaderRow title="基本観察項目" />
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>身長</TableCell>
+              <TableCell sx={stickyLabelCell}>身長</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.height}</TableCell>
               ))}
             </TableRow>
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>体重(BMI)</TableCell>
+              <TableCell sx={stickyLabelCell}>体重(BMI)</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.weightBmi}</TableCell>
               ))}
             </TableRow>
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>便</TableCell>
+              <TableCell sx={stickyLabelCell}>便</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stool}</TableCell>
               ))}
             </TableRow>
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>尿</TableCell>
+              <TableCell sx={stickyLabelCell}>尿</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.urine}</TableCell>
               ))}
@@ -605,7 +619,8 @@ const FlowsheetView: React.FC<Props> = () => {
               );
             })}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>睡眠</TableCell>
+              <TableCell sx={stickyLabelCell}>睡眠</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.sleep}</TableCell>
               ))}
@@ -630,7 +645,8 @@ const FlowsheetView: React.FC<Props> = () => {
             <SectionHeaderRow title="記事連携項目" />
             {/* 診療録 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>診療録</TableCell>
+              <TableCell sx={stickyLabelCell}>診療録</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   {d.karteLinks.length === 0 ? '—' : (
@@ -647,7 +663,8 @@ const FlowsheetView: React.FC<Props> = () => {
             </TableRow>
             {/* 部門診療録 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>部門診療録</TableCell>
+              <TableCell sx={stickyLabelCell}>部門診療録</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   {d.deptLinks.length === 0 ? '—' : (
@@ -664,7 +681,8 @@ const FlowsheetView: React.FC<Props> = () => {
             </TableRow>
             {/* 移行記事 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>移行記事</TableCell>
+              <TableCell sx={stickyLabelCell}>移行記事</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>
                   {d.transferLinks.length === 0 ? '—' : d.transferLinks.join(', ')}
@@ -673,7 +691,8 @@ const FlowsheetView: React.FC<Props> = () => {
             </TableRow>
             {/* 看護記録 */}
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>看護記録</TableCell>
+              <TableCell sx={stickyLabelCell}>看護記録</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   <Stack spacing={0.3} alignItems="center">
@@ -696,13 +715,15 @@ const FlowsheetView: React.FC<Props> = () => {
             {/* ===== 個別ケア・観察項目 ===== */}
             <SectionHeaderRow title="個別ケア・観察項目" />
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>便(性状)</TableCell>
+              <TableCell sx={stickyLabelCell}>便(性状)</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stoolDetail}</TableCell>
               ))}
             </TableRow>
             <TableRow>
-              <TableCell colSpan={2} sx={stickyLabelCell}>入浴</TableCell>
+              <TableCell sx={stickyLabelCell}>入浴</TableCell>
+              <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.bath}</TableCell>
               ))}
@@ -710,9 +731,10 @@ const FlowsheetView: React.FC<Props> = () => {
 
             {/* ===== サイン ===== */}
             <TableRow>
-              <TableCell colSpan={2} sx={{ ...stickyLabelCell, bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
+              <TableCell sx={{ ...stickyLabelCell, bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
                 サイン
               </TableCell>
+              <TableCell sx={{ ...stickySubCell, bgcolor: '#e3edf7' }} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
                   {d.sign}
