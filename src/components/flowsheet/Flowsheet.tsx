@@ -435,6 +435,18 @@ const FlowsheetView: React.FC<Props> = () => {
                         <Tooltip contentStyle={{ fontSize: 12 }} />
                         <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3" />
                         <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3" />
+                        {/* ===== 検証用・後で削除予定（PM 2026-05-29 依頼） =====
+                            日境界の縦線。ヘッダ日付列とチャート内 X 軸の整列状況を目視確認するため一時挿入。 */}
+                        {CHART_DATA.map((d, i) => (
+                          <ReferenceLine
+                            key={`day-boundary-${i}`}
+                            yAxisId="vitals"
+                            x={d.date}
+                            stroke="#dc2626"
+                            strokeDasharray="3 3"
+                          />
+                        ))}
+                        {/* ===== 検証用ここまで ===== */}
                         <Line yAxisId="vitals" type="monotone" dataKey="BP(上)" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} connectNulls />
                         <Line yAxisId="vitals" type="monotone" dataKey="BP(下)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: '#1e40af' }} connectNulls />
                         <Line yAxisId="vitals" type="monotone" dataKey="脈拍" stroke="#d32f2f" strokeWidth={2} dot={{ r: 4, fill: '#d32f2f' }} connectNulls />
