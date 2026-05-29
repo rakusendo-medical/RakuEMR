@@ -494,23 +494,60 @@ export default function MedicalRecordTab({
   );
 }
 
-// ===== 新規記載ダイアログ =====
+// ===== 新規記載ダイアログ（フリーテキスト形式）=====
 
-const SOAP_TEMPLATES = [
-  { id: 'init',       label: '初診 SOAP', s: '主訴：\n現病歴：\n', o: '身体所見：\nバイタル：\n', a: '診断：\n', p: '治療方針：\n処方：\n' },
-  { id: 'revisit',    label: '再診 SOAP', s: '前回からの変化：\n', o: '所見：\n', a: '評価：\n', p: '計画：\n' },
-  { id: 'observation',label: '経過観察',   s: '症状経過：\n',         o: '客観的所見：\n', a: '経過評価：\n', p: '継続観察項目：\n' },
-  { id: 'conference', label: 'カンファ記録',s: '参加職種：\n議題：\n', o: '検討内容：\n', a: '結論：\n', p: '次回までのアクション：\n' },
-];
+// 患者状態の 5 段階色（部門記録簿の患者状態色と整合）
+const STATUS_COLORS = [
+  { id: 'good',      label: '良好', color: '#10b981' },
+  { id: 'stable',    label: '安定', color: '#3b82f6' },
+  { id: 'attention', label: '注意', color: '#f59e0b' },
+  { id: 'alert',     label: '警戒', color: '#f97316' },
+  { id: 'critical',  label: '重要', color: '#dc2626' },
+] as const;
+type StatusId = typeof STATUS_COLORS[number]['id'] | '';
 
-interface SoapForm {
-  s: string;
-  o: string;
-  a: string;
-  p: string;
+// 記載テンプレート
+const RECORD_TEMPLATES = [
+  {
+    id: 'soap',
+    label: 'SOAP',
+    body: 'S（主観的所見）：\n\nO（客観的所見）：\n\nA（評価・診断）：\n\nP（計画・処置）：\n',
+  },
+  {
+    id: 'hds-r',
+    label: '長谷川式（HDS-R）',
+    body:
+      '長谷川式簡易知能評価スケール（HDS-R）\n\n' +
+      '1. お年はおいくつですか？ （±2 年まで正解）：\n' +
+      '2. 今日は何年何月何日何曜日ですか？（年/月/日/曜日 各 1 点）：\n' +
+      '3. 私たちが今いる場所はどこですか？（5 秒後 ヒント無し 2 点 / ヒント有り 1 点）：\n' +
+      '4. これから言う 3 つの言葉を言ってみてください（桜・猫・電車 / 梅・犬・自動車）：\n' +
+      '5. 100 から 7 を順番に引いてください（93・86 各 1 点、誤答時打ち切り）：\n' +
+      '6. これから言う数字を逆から言ってください（6-8-2 / 3-5-2-9）：\n' +
+      '7. 先ほど覚えた言葉をもう 1 度言ってみてください（自発正解 2 点 / ヒント正解 1 点）：\n' +
+      '8. これから 5 つの品物を見せ、隠した後 何があったか言ってください：\n' +
+      '9. 知っている野菜の名前をできるだけ多く言ってください（10 個まで）：\n' +
+      '\n合計点：____ / 30 点\n（20 点以下：認知症の疑い）\n',
+  },
+] as const;
+
+// 面接フォーム選択肢
+const INTERVIEW_FORMS = [
+  { id: 'admission',    label: '入院面接' },
+  { id: 'outpatient',   label: '外来診療' },
+  { id: 'interview-1',  label: '外来面接 1' },
+  { id: 'interview-2',  label: '外来面接 2' },
+  { id: 'interview-3',  label: '外来面接 3' },
+  { id: 'conference',   label: 'カンファレンス' },
+  { id: 'family',       label: '家族面接' },
+] as const;
+
+// 当日 / 直近日時の datetime-local 既定値（ローカルタイム）
+function nowAsLocalInput(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
-const EMPTY_SOAP: SoapForm = { s: '', o: '', a: '', p: '' };
 
 function NewRecordDialog({
   open,
@@ -523,33 +560,61 @@ function NewRecordDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const [soap, setSoap] = useState<SoapForm>(EMPTY_SOAP);
+  const [recordedAt, setRecordedAt] = useState<string>(nowAsLocalInput());
+  const [title, setTitle] = useState<string>('');
+  const [status, setStatus] = useState<StatusId>('');
   const [templateId, setTemplateId] = useState<string>('');
-  const [drawingDialog, setDrawingDialog] = useState<{ open: boolean; kind: '家系図' | 'シェーマ' | null }>({ open: false, kind: null });
+  const [interviewForm, setInterviewForm] = useState<string>('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState<string>('');
+  const [body, setBody] = useState<string>('');
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [innerSnackbar, setInnerSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
-  const isDirty = soap.s !== '' || soap.o !== '' || soap.a !== '' || soap.p !== '';
-
-  const updateSoap = useCallback((key: keyof SoapForm, value: string) => {
-    setSoap((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const isDirty =
+    title !== '' || status !== '' || templateId !== '' || interviewForm !== '' ||
+    tags.length > 0 || body !== '';
 
   const insertTemplate = useCallback(() => {
     if (!templateId) return;
-    const tpl = SOAP_TEMPLATES.find((t) => t.id === templateId);
+    const tpl = RECORD_TEMPLATES.find((t) => t.id === templateId);
     if (!tpl) return;
-    setSoap((prev) => ({
-      s: prev.s + tpl.s,
-      o: prev.o + tpl.o,
-      a: prev.a + tpl.a,
-      p: prev.p + tpl.p,
-    }));
+    setBody((prev) => (prev ? prev + '\n' : '') + tpl.body);
   }, [templateId]);
 
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (!t) return;
+    if (tags.includes(t)) {
+      setTagInput('');
+      return;
+    }
+    setTags((prev) => [...prev, t]);
+    setTagInput('');
+  };
+
+  const removeTag = (t: string) => {
+    setTags((prev) => prev.filter((x) => x !== t));
+  };
+
+  const importPrevious = () => {
+    // モック: 前回カルテの本文を取り込む（実データ連携は別ストーリー）
+    setBody((prev) => {
+      const stub = '【前回カルテ取り込み（mock）】\n前回記載日: 2026/05/22\n本文：状態安定、内服継続。\n\n';
+      return stub + prev;
+    });
+    setInnerSnackbar({ open: true, message: '前回カルテを取り込みました（mock）' });
+  };
+
   const reset = () => {
-    setSoap(EMPTY_SOAP);
+    setRecordedAt(nowAsLocalInput());
+    setTitle('');
+    setStatus('');
     setTemplateId('');
+    setInterviewForm('');
+    setTags([]);
+    setTagInput('');
+    setBody('');
   };
 
   const handleSave = () => {
@@ -592,7 +657,7 @@ function NewRecordDialog({
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <NoteAdd fontSize="small" />
-            <span>新規記載（SOAP）</span>
+            <span>新規記載</span>
             <Chip
               size="small"
               label={mode === 'outpatient' ? '外来診療録' : '入院診療録'}
@@ -609,8 +674,54 @@ function NewRecordDialog({
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <Stack spacing={1.25}>
-            <Stack direction="row" spacing={1} alignItems="center">
+          <Stack spacing={1.5}>
+            {/* ===== 記載日 + タイトル + 状態 ===== */}
+            <Stack direction="row" spacing={1.5} alignItems="flex-end" flexWrap="wrap">
+              <TextField
+                size="small"
+                type="datetime-local"
+                label="記載日時"
+                value={recordedAt}
+                onChange={(e) => setRecordedAt(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 200 }}
+              />
+              <TextField
+                size="small"
+                label="タイトル"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                sx={{ flex: 1, minWidth: 240 }}
+              />
+              <Box>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.25, color: 'text.secondary' }}>
+                  状態
+                </Typography>
+                <Stack direction="row" spacing={0.5}>
+                  {STATUS_COLORS.map((s) => {
+                    const selected = status === s.id;
+                    return (
+                      <Tooltip key={s.id} title={s.label}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setStatus(selected ? '' : s.id)}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            bgcolor: s.color,
+                            border: selected ? '2px solid #1e3a5f' : '2px solid transparent',
+                            '&:hover': { bgcolor: s.color, opacity: 0.85 },
+                          }}
+                        />
+                      </Tooltip>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            </Stack>
+
+            {/* ===== テンプレート + 面接フォーム ===== */}
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <FormControl size="small" sx={{ minWidth: 200 }}>
                 <InputLabel id="tpl-label">テンプレート</InputLabel>
                 <Select
@@ -620,7 +731,7 @@ function NewRecordDialog({
                   onChange={(e) => setTemplateId(e.target.value)}
                 >
                   <MenuItem value=""><em>選択してください</em></MenuItem>
-                  {SOAP_TEMPLATES.map((t) => (
+                  {RECORD_TEMPLATES.map((t) => (
                     <MenuItem key={t.id} value={t.id}>{t.label}</MenuItem>
                   ))}
                 </Select>
@@ -628,43 +739,92 @@ function NewRecordDialog({
               <Button size="small" variant="outlined" disabled={!templateId} onClick={insertTemplate}>
                 テンプレート挿入
               </Button>
+              <Box sx={{ width: 8 }} />
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel id="interview-label">面接フォーム</InputLabel>
+                <Select
+                  labelId="interview-label"
+                  label="面接フォーム"
+                  value={interviewForm}
+                  onChange={(e) => setInterviewForm(e.target.value)}
+                >
+                  <MenuItem value=""><em>選択してください</em></MenuItem>
+                  {INTERVIEW_FORMS.map((f) => (
+                    <MenuItem key={f.id} value={f.id}>{f.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Stack>
 
-            <SoapField label="S（主観的所見）"  helper="主訴・症状・既往の聴取内容など"   value={soap.s} onChange={(v) => updateSoap('s', v)} />
-            <SoapField label="O（客観的所見）"  helper="身体所見・バイタル・検査結果など" value={soap.o} onChange={(v) => updateSoap('o', v)} />
-            <SoapField label="A（評価・診断）"  helper="所見の評価・診断・鑑別"          value={soap.a} onChange={(v) => updateSoap('a', v)} />
-            <SoapField label="P（計画・処置）"  helper="治療方針・処方・指示・次回計画"  value={soap.p} onChange={(v) => updateSoap('p', v)} />
+            {/* ===== タグ ===== */}
+            <Box>
+              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary', fontWeight: 600 }}>
+                タグ
+              </Typography>
+              <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
+                {tags.map((t) => (
+                  <Chip key={t} label={t} size="small" onDelete={() => removeTag(t)} />
+                ))}
+                <TextField
+                  size="small"
+                  variant="outlined"
+                  placeholder="タグを入力して Enter"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  sx={{ minWidth: 180 }}
+                />
+              </Stack>
+            </Box>
 
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              <Paper variant="outlined" sx={{ p: 1, flex: 1, minWidth: 240 }}>
-                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
-                  <AttachFile sx={{ fontSize: 16 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700 }}>添付ファイル</Typography>
-                  <Box sx={{ flex: 1 }} />
-                  <Button size="small" variant="outlined" startIcon={<CloudUpload sx={{ fontSize: 14 }} />} sx={{ fontSize: '0.65rem' }} onClick={() => setInnerSnackbar({ open: true, message: 'ファイルアップロード（mock・別ストーリーで実装予定）' })}>
-                    アップロード
-                  </Button>
-                </Stack>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                  対応形式: PDF / JPG / PNG（mock・gairai spec §8 整合）
+            {/* ===== フリーテキスト本文 + 前回カルテ取り込み ===== */}
+            <Box>
+              <Stack direction="row" alignItems="center" sx={{ mb: 0.5 }}>
+                <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary', fontWeight: 600 }}>
+                  本文
                 </Typography>
-              </Paper>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<HistoryIcon sx={{ fontSize: 14 }} />}
+                  onClick={importPrevious}
+                  sx={{ fontSize: '0.7rem' }}
+                >
+                  前回カルテ取り込み
+                </Button>
+              </Stack>
+              <TextField
+                fullWidth
+                multiline
+                minRows={10}
+                maxRows={20}
+                size="small"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="フリーテキストで記載してください"
+              />
+            </Box>
 
-              <Paper variant="outlined" sx={{ p: 1, flex: 1, minWidth: 240 }}>
-                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
-                  <Brush sx={{ fontSize: 16 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700 }}>描画ツール</Typography>
-                </Stack>
-                <Stack direction="row" spacing={0.5}>
-                  <Button size="small" variant="outlined" startIcon={<AccountTree sx={{ fontSize: 14 }} />} sx={{ fontSize: '0.65rem' }} onClick={() => setDrawingDialog({ open: true, kind: '家系図' })}>
-                    家系図
+            {/* ===== シェーマボタン（起動未実装） ===== */}
+            <Box>
+              <Tooltip title="シェーマ描画は別ストーリーで実装予定">
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Brush sx={{ fontSize: 16 }} />}
+                    disabled
+                    sx={{ fontSize: '0.75rem' }}
+                  >
+                    シェーマ起動（未実装）
                   </Button>
-                  <Button size="small" variant="outlined" startIcon={<Brush sx={{ fontSize: 14 }} />} sx={{ fontSize: '0.65rem' }} onClick={() => setDrawingDialog({ open: true, kind: 'シェーマ' })}>
-                    シェーマ
-                  </Button>
-                </Stack>
-              </Paper>
-            </Stack>
+                </span>
+              </Tooltip>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 2, py: 1 }}>
@@ -695,22 +855,6 @@ function NewRecordDialog({
         </DialogActions>
       </Dialog>
 
-      {/* 描画プレースホルダ */}
-      <Dialog open={drawingDialog.open} onClose={() => setDrawingDialog({ open: false, kind: null })} maxWidth="sm" fullWidth>
-        <DialogTitle>{drawingDialog.kind} 描画</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Fabric.js キャンバスによる{drawingDialog.kind}描画は別ストーリーで実装予定です（gairai spec §9 参照）。
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            描画データは JSON でシリアライズ保存、編集時は SchemaDrawer / 読み取り表示は CanvasRenderer を想定。
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDrawingDialog({ open: false, kind: null })}>閉じる</Button>
-        </DialogActions>
-      </Dialog>
-
       {/* ダイアログ内 snackbar */}
       <Snackbar
         open={innerSnackbar.open}
@@ -723,23 +867,5 @@ function NewRecordDialog({
         </Alert>
       </Snackbar>
     </>
-  );
-}
-
-// ===== SOAP セクション TextField =====
-
-function SoapField({ label, helper, value, onChange }: { label: string; helper: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <TextField
-      fullWidth
-      multiline
-      minRows={3}
-      maxRows={10}
-      size="small"
-      label={label}
-      helperText={helper}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
   );
 }
