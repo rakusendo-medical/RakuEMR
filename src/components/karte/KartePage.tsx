@@ -453,7 +453,21 @@ export default function KartePage({ modeOverride }: KartePageProps) {
         )}
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', bgcolor: 'background.default', p: 2 }}>
+      {/*
+        フローシートタブはスティッキーヘッダがあり padding-top が「タブ直下の隙間」として
+        見えてしまうため、当タブのみ pt: 0 にしてヘッダがタブ直下にぴたりと貼り付くようにする。
+        他タブは padding を維持して読みやすさを保つ。
+      */}
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          bgcolor: 'background.default',
+          p: 2,
+          ...(currentTab === 'flowsheet' && { pt: 0 }),
+        }}
+      >
         <KarteTabContent
           tabId={currentTab}
           mode={mode}
