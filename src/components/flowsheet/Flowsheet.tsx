@@ -336,7 +336,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell
                 sx={{ ...stickyLabelCell, bgcolor: '#e3edf7' }}
-                style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: 0, zIndex: 100, transform: 'translateZ(0)' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: 0, zIndex: 100 }}
               >
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   {['≪', '＜', '当日', '＞', '≫'].map((s, i) => (
@@ -356,13 +356,13 @@ const FlowsheetView: React.FC<Props> = () => {
               </TableCell>
               <TableCell
                 sx={{ ...stickySubCell, bgcolor: '#e3edf7' }}
-                style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: LABEL_COL_WIDTH, zIndex: 100, transform: 'translateZ(0)' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: LABEL_COL_WIDTH, zIndex: 100 }}
               />
               {DAILY.map((d, i) => (
                 <TableCell
                   key={i}
                   sx={todayHeaderCellSx(d.isToday)}
-                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 100, transform: 'translateZ(0)' }}
+                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 100 }}
                 >
                   {d.date}({d.weekday})
                 </TableCell>
@@ -372,17 +372,17 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell
                 sx={stickyLabelCell}
-                style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, left: 0, zIndex: 100, transform: 'translateZ(0)' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, left: 0, zIndex: 100 }}
               >在院日数</TableCell>
               <TableCell
                 sx={stickySubCell}
-                style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, left: LABEL_COL_WIDTH, zIndex: 100, transform: 'translateZ(0)' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, left: LABEL_COL_WIDTH, zIndex: 100 }}
               />
               {DAILY.map((d, i) => (
                 <TableCell
                   key={i}
                   sx={{ ...dayCellSx(d.isToday), bgcolor: d.isToday ? '#fff8e1' : '#fff' }}
-                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 100, transform: 'translateZ(0)' }}
+                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 100 }}
                 >{d.admitDay}日目</TableCell>
               ))}
             </TableRow>
@@ -390,17 +390,17 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell
                 sx={{ ...stickyLabelCell, borderBottom: '2px solid #1e3a5f' }}
-                style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, left: 0, zIndex: 100, transform: 'translateZ(0)', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, left: 0, zIndex: 100, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
               />
               <TableCell
                 sx={{ ...stickySubCell, borderBottom: '2px solid #1e3a5f' }}
-                style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, left: LABEL_COL_WIDTH, zIndex: 100, transform: 'translateZ(0)', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, left: LABEL_COL_WIDTH, zIndex: 100, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
               />
               {DAILY.map((d, i) => (
                 <TableCell
                   key={i}
                   sx={{ ...dayCellSx(d.isToday), py: 0.3, bgcolor: d.isToday ? '#fff8e1' : '#fff', borderBottom: '2px solid #1e3a5f' }}
-                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 100, transform: 'translateZ(0)', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
+                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 100, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
                 >
                   <Stack direction="row" spacing={0.3} justifyContent="center">
                     <Button
