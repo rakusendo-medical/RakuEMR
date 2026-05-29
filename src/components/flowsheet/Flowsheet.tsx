@@ -187,6 +187,9 @@ const MEAL_STYLE: Record<MealStatus, { bg: string; fg: string }> = {
 };
 
 // 共通スタイル
+// 単一 Table 化（B 案・S2 2026-05-29）: 7 つの独立した Table を 1 つの
+// `<Table sx={{ tableLayout: 'fixed' }}>` + `<colgroup>` に統合し、9 列の幅を colgroup で共有する。
+// これにより日付列の縦位置が全行で完全に一致する。
 const LABEL_COL_WIDTH = 130;
 const SUB_COL_WIDTH = 40;
 const DAY_COL_WIDTH = 110;
@@ -219,15 +222,15 @@ const dayCellBase = {
   textAlign: 'center' as const,
   py: 0.5,
 };
-const sectionHeaderRow = {
+// セクション見出し行（旧: 独立 `<Box>` ヘッダー → 単一 Table 化により `<TableRow>` + `<TableCell colSpan={9}>` で表現）
+const sectionHeaderCellSx = {
   bgcolor: '#e3edf7',
-  '& td': {
-    color: '#1e3a5f',
-    fontWeight: 700,
-    fontSize: '0.75rem',
-    py: 0.5,
-    borderBottom: '1px solid #c5d5e8',
-  },
+  color: '#1e3a5f',
+  fontWeight: 700,
+  fontSize: '0.75rem',
+  py: 0.5,
+  px: 1.5,
+  borderBottom: '1px solid #c5d5e8',
 };
 
 function dayCellSx(isToday: boolean): any {
@@ -280,6 +283,17 @@ function RestraintRow({ label, bar }: { label: string; bar: RestraintBar }) {
   );
 }
 
+// セクション見出し行（colSpan={9} の汎用化）
+function SectionHeaderRow({ title }: { title: string }) {
+  return (
+    <TableRow>
+      <TableCell colSpan={9} sx={sectionHeaderCellSx}>
+        {title}
+      </TableCell>
+    </TableRow>
+  );
+}
+
 const FlowsheetView: React.FC<Props> = () => {
   return (
     <Box>
@@ -287,10 +301,19 @@ const FlowsheetView: React.FC<Props> = () => {
         表示期間: {DAILY[0].date.replace(/\//g, '-')} 〜 {DAILY[DAILY.length - 1].date.replace(/\//g, '-')}({DAILY.length}日間)
       </Typography>
 
-      {/* === 上部ヘッダー === */}
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0 }}>
-        <Table size="small">
+      {/* === 単一 Table（B 案・全 7 セクション統合）=== */}
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small" sx={{ tableLayout: 'fixed' }}>
+          {/* 9 列の幅を colgroup で共有: label(130) / sub(40) / day(110)×7 */}
+          <colgroup>
+            <col style={{ width: LABEL_COL_WIDTH }} />
+            <col style={{ width: SUB_COL_WIDTH }} />
+            {DAILY.map((_, i) => (
+              <col key={i} style={{ width: DAY_COL_WIDTH }} />
+            ))}
+          </colgroup>
           <TableBody>
+            {/* ===== 上部ヘッダー ===== */}
             {/* 日付ナビ行 */}
             <TableRow>
               <TableCell colSpan={2} sx={{ ...stickyLabelCell, zIndex: 2, bgcolor: '#e3edf7' }}>
@@ -355,19 +378,9 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableCell>
               ))}
             </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* === 隔離拘束・外出外泊 === */}
-      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
-          隔離拘束・外出外泊
-        </Typography>
-      </Box>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
-        <Table size="small">
-          <TableBody>
+            {/* ===== 隔離拘束・外出外泊 ===== */}
+            <SectionHeaderRow title="隔離拘束・外出外泊" />
             {/* 病室 */}
             <TableRow>
               <TableCell colSpan={2} sx={stickyLabelCell}>病室</TableCell>
@@ -379,75 +392,64 @@ const FlowsheetView: React.FC<Props> = () => {
             <RestraintRow label="拘束" bar={RESTRAINTS.restraint} />
             <RestraintRow label="行動制限(その他)" bar={RESTRAINTS.behavior} />
             <RestraintRow label="外出・外泊" bar={RESTRAINTS.outing} />
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* === バイタル・サイングラフ === */}
-      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
-          バイタル・サイングラフ
-        </Typography>
-      </Box>
-      <Paper variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
-        <Box sx={{ display: 'flex' }}>
-          <Box sx={{
-            minWidth: LABEL_COL_WIDTH + SUB_COL_WIDTH, maxWidth: LABEL_COL_WIDTH + SUB_COL_WIDTH,
-            bgcolor: '#f8fafc', borderRight: '1px solid #e0e0e0', p: 1,
-            display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          }}>
-            <Stack spacing={0.5}>
-              {[
-                { label: '体温', color: '#e53935', unit: '℃' },
-                { label: 'BP', color: '#1e40af', unit: 'mmHg' },
-                { label: '脈拍', color: '#d32f2f', unit: '回/分' },
-                { label: 'SpO2', color: '#2e7d32', unit: '%' },
-                { label: '呼吸', color: '#9c27b0', unit: '回/分' },
-              ].map((item) => (
-                <Stack key={item.label} direction="row" spacing={0.5} alignItems="center">
-                  <Box sx={{ width: 12, height: 3, bgcolor: item.color, borderRadius: 1 }} />
-                  <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
-                    {item.label}({item.unit})
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
-          </Box>
-          <Box sx={{ flex: 1, py: 1, pr: 1 }}>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={CHART_DATA} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="date" fontSize={11} tick={{ fill: '#666' }} />
-                <YAxis yAxisId="vitals" domain={[0, 300]}
-                  ticks={[0, 50, 100, 150, 200, 250, 300]}
-                  fontSize={10} tick={{ fill: '#666' }} width={35} />
-                <YAxis yAxisId="temp" orientation="right" domain={[35, 40]}
-                  ticks={[35, 36, 37, 38, 39, 40]}
-                  fontSize={10} tick={{ fill: '#e53935' }} width={35} />
-                <Tooltip contentStyle={{ fontSize: 12 }} />
-                <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3" />
-                <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3" />
-                <Line yAxisId="vitals" type="monotone" dataKey="BP(上)" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} connectNulls />
-                <Line yAxisId="vitals" type="monotone" dataKey="BP(下)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: '#1e40af' }} connectNulls />
-                <Line yAxisId="vitals" type="monotone" dataKey="脈拍" stroke="#d32f2f" strokeWidth={2} dot={{ r: 4, fill: '#d32f2f' }} connectNulls />
-                <Line yAxisId="vitals" type="monotone" dataKey="SpO2" stroke="#2e7d32" strokeWidth={2} dot={{ r: 3, fill: '#2e7d32' }} connectNulls />
-                <Line yAxisId="vitals" type="monotone" dataKey="呼吸" stroke="#9c27b0" strokeWidth={1.5} dot={{ r: 3, fill: '#9c27b0' }} connectNulls />
-                <Line yAxisId="temp" type="monotone" dataKey="体温" stroke="#e53935" strokeWidth={2} dot={{ r: 4, fill: '#ff9800', stroke: '#e53935', strokeWidth: 2 }} connectNulls />
-              </LineChart>
-            </ResponsiveContainer>
-          </Box>
-        </Box>
-      </Paper>
+            {/* ===== バイタル・サイングラフ ===== */}
+            <SectionHeaderRow title="バイタル・サイングラフ" />
+            <TableRow>
+              <TableCell colSpan={9} sx={{ p: 0, borderBottom: '1px solid #e0e0e0' }}>
+                <Box sx={{ display: 'flex' }}>
+                  <Box sx={{
+                    minWidth: LABEL_COL_WIDTH + SUB_COL_WIDTH, maxWidth: LABEL_COL_WIDTH + SUB_COL_WIDTH,
+                    bgcolor: '#f8fafc', borderRight: '1px solid #e0e0e0', p: 1,
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  }}>
+                    <Stack spacing={0.5}>
+                      {[
+                        { label: '体温', color: '#e53935', unit: '℃' },
+                        { label: 'BP', color: '#1e40af', unit: 'mmHg' },
+                        { label: '脈拍', color: '#d32f2f', unit: '回/分' },
+                        { label: 'SpO2', color: '#2e7d32', unit: '%' },
+                        { label: '呼吸', color: '#9c27b0', unit: '回/分' },
+                      ].map((item) => (
+                        <Stack key={item.label} direction="row" spacing={0.5} alignItems="center">
+                          <Box sx={{ width: 12, height: 3, bgcolor: item.color, borderRadius: 1 }} />
+                          <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
+                            {item.label}({item.unit})
+                          </Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </Box>
+                  {/* チャート本体（PM 指示「見た目変えない」のため LineChart の設定は元のまま維持） */}
+                  <Box sx={{ flex: 1, py: 1, pr: 1 }}>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart data={CHART_DATA} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                        <XAxis dataKey="date" fontSize={11} tick={{ fill: '#666' }} />
+                        <YAxis yAxisId="vitals" domain={[0, 300]}
+                          ticks={[0, 50, 100, 150, 200, 250, 300]}
+                          fontSize={10} tick={{ fill: '#666' }} width={35} />
+                        <YAxis yAxisId="temp" orientation="right" domain={[35, 40]}
+                          ticks={[35, 36, 37, 38, 39, 40]}
+                          fontSize={10} tick={{ fill: '#e53935' }} width={35} />
+                        <Tooltip contentStyle={{ fontSize: 12 }} />
+                        <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3" />
+                        <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3" />
+                        <Line yAxisId="vitals" type="monotone" dataKey="BP(上)" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} connectNulls />
+                        <Line yAxisId="vitals" type="monotone" dataKey="BP(下)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: '#1e40af' }} connectNulls />
+                        <Line yAxisId="vitals" type="monotone" dataKey="脈拍" stroke="#d32f2f" strokeWidth={2} dot={{ r: 4, fill: '#d32f2f' }} connectNulls />
+                        <Line yAxisId="vitals" type="monotone" dataKey="SpO2" stroke="#2e7d32" strokeWidth={2} dot={{ r: 3, fill: '#2e7d32' }} connectNulls />
+                        <Line yAxisId="vitals" type="monotone" dataKey="呼吸" stroke="#9c27b0" strokeWidth={1.5} dot={{ r: 3, fill: '#9c27b0' }} connectNulls />
+                        <Line yAxisId="temp" type="monotone" dataKey="体温" stroke="#e53935" strokeWidth={2} dot={{ r: 4, fill: '#ff9800', stroke: '#e53935', strokeWidth: 2 }} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Box>
+              </TableCell>
+            </TableRow>
 
-      {/* === 指示・実施管理 === */}
-      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
-          指示・実施管理
-        </Typography>
-      </Box>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
-        <Table size="small">
-          <TableBody>
+            {/* ===== 指示・実施管理 ===== */}
+            <SectionHeaderRow title="指示・実施管理" />
             {/* 予定オーダ */}
             <TableRow>
               <TableCell colSpan={2} sx={stickyLabelCell}>
@@ -543,19 +545,9 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableRow>
               );
             })}
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* === 基本観察項目 === */}
-      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
-          基本観察項目
-        </Typography>
-      </Box>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
-        <Table size="small">
-          <TableBody>
+            {/* ===== 基本観察項目 ===== */}
+            <SectionHeaderRow title="基本観察項目" />
             <TableRow>
               <TableCell colSpan={2} sx={stickyLabelCell}>身長</TableCell>
               {DAILY.map((d, i) => (
@@ -616,19 +608,9 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableRow>
               );
             })}
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* === 記事連携項目 === */}
-      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
-          記事連携項目
-        </Typography>
-      </Box>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
-        <Table size="small">
-          <TableBody>
+            {/* ===== 記事連携項目 ===== */}
+            <SectionHeaderRow title="記事連携項目" />
             {/* 診療録 */}
             <TableRow>
               <TableCell colSpan={2} sx={stickyLabelCell}>診療録</TableCell>
@@ -693,19 +675,9 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableCell>
               ))}
             </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* === 個別ケア・観察項目 === */}
-      <Box sx={{ bgcolor: '#e3edf7', px: 1.5, py: 0.5, borderLeft: '1px solid #c5d5e8', borderRight: '1px solid #c5d5e8' }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a5f' }}>
-          個別ケア・観察項目
-        </Typography>
-      </Box>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 0, borderTop: 'none', borderRadius: 0 }}>
-        <Table size="small">
-          <TableBody>
+            {/* ===== 個別ケア・観察項目 ===== */}
+            <SectionHeaderRow title="個別ケア・観察項目" />
             <TableRow>
               <TableCell colSpan={2} sx={stickyLabelCell}>便(性状)</TableCell>
               {DAILY.map((d, i) => (
@@ -718,15 +690,9 @@ const FlowsheetView: React.FC<Props> = () => {
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.bath}</TableCell>
               ))}
             </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* === サイン === */}
-      <TableContainer component={Paper} variant="outlined" sx={{ mt: 0, borderTop: '2px solid #c5d5e8' }}>
-        <Table size="small">
-          <TableBody>
-            <TableRow sx={sectionHeaderRow}>
+            {/* ===== サイン ===== */}
+            <TableRow>
               <TableCell colSpan={2} sx={{ ...stickyLabelCell, bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
                 サイン
               </TableCell>
