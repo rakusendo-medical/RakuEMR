@@ -434,16 +434,17 @@ const WardMap: React.FC = () => {
                 { label: '食事', onClick: () => showSnackbar('食事画面は未実装(モック)', 'info') },
                 { label: '外出外泊', onClick: () => navigate('/outing') },
                 { label: '行動制限', onClick: () => navigate('/behavior') },
-                { label: '予定表', onClick: () => navigate('/schedule') },
+                { label: '予定表', onClick: () => navigate('/schedule'), disabled: true },
                 { label: '診療録', onClick: () => navigateToKarte(selectedBedPatient.id) },
                 { label: '文書', onClick: () => navigate('/documents') },
                 { label: '看護ケア', onClick: () => navigate('/nursing-care') },
-                { label: '定期評価', onClick: () => navigate(`/care-plan/patients/${selectedBedPatient.id}/evaluate`) },
+                { label: '看護過程', onClick: () => navigate(`/care-plan/patients/${selectedBedPatient.id}`) },
               ] as const).map((btn) => (
                 <Button
                   key={btn.label}
                   variant="text"
                   onClick={btn.onClick}
+                  disabled={'disabled' in btn ? btn.disabled : false}
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 600,
@@ -453,6 +454,7 @@ const WardMap: React.FC = () => {
                     color: 'text.primary',
                     whiteSpace: 'nowrap',
                     '&:hover': { bgcolor: '#f1f5f9' },
+                    '&.Mui-disabled': { color: 'text.disabled' },
                   }}
                 >
                   [{btn.label}]
