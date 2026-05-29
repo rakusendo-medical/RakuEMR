@@ -436,6 +436,7 @@ const WardMap: React.FC = () => {
                 { label: '行動制限', onClick: () => navigate('/behavior') },
                 { label: '予定表', onClick: () => navigate('/schedule'), disabled: true },
                 { label: '診療録', onClick: () => navigateToKarte(selectedBedPatient.id) },
+                { label: '部門記録簿', onClick: () => navigate('/nursing/records') },
                 { label: '文書', onClick: () => navigate('/documents') },
                 { label: '看護ケア', onClick: () => navigate('/nursing-care'), disabled: true },
                 { label: '看護過程', onClick: () => navigate(`/care-plan/patients/${selectedBedPatient.id}`) },

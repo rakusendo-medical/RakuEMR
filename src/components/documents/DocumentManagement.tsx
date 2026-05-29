@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Alert, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Chip, Typography, Button, Stack,
 } from '@mui/material';
 import { Add, Visibility, Print } from '@mui/icons-material';
@@ -12,6 +12,9 @@ const DOC_TYPE_COLORS: Record<string, string> = {
 
 const DocumentManagement: React.FC = () => (
   <Box>
+    <Alert severity="info" sx={{ mb: 2 }}>
+      この画面は調整中です。表示・操作内容は仮実装です。
+    </Alert>
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
       <Typography variant="body2" color="text.secondary">入院に必要な書類の作成・登録・表示</Typography>
       <Button variant="contained" startIcon={<Add />}>新規作成</Button>
