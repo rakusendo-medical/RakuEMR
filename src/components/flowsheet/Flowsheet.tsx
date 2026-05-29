@@ -303,12 +303,7 @@ function SectionHeaderRow({ title }: { title: string }) {
 
 const FlowsheetView: React.FC<Props> = () => {
   return (
-    /*
-      Flowsheet 全体を KartePage スクロール Box の padding-top（p:2 = 16px）の
-      内側に押し込むため、outer Box に mt: -2 を付与し sticky ヘッダがタブ直下に
-      貼り付くようにする。表示期間 Typography は dates 行と情報重複のため削除。
-    */
-    <Box sx={{ mt: -2 }}>
+    <Box>
       {/* === 単一 Table（B 案・全 7 セクション統合）=== */}
       {/*
         TableContainer のデフォルト `overflow-x: auto` は sticky の参照スクロールコンテナを
