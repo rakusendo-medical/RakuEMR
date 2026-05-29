@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
+  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Button, Stack, Link as MuiLink,
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -307,7 +307,12 @@ const FlowsheetView: React.FC<Props> = () => {
         {/* テーブル幅を colgroup 合計（130 + 40 + 110×7 = 940）で固定。
             sx の width: 'auto' を明示することで MUI Table のデフォルト width: '100%' を override し、
             コンテナ幅に対する比例拡大を防いで各 col が指定通りの幅を保つ。 */}
-        <Table size="small" sx={{ tableLayout: 'fixed', width: 'auto' }}>
+        {/*
+          stickyHeader: 先頭 3 行（日付ナビ・在院日数・ボタン）を <TableHead> に閉じ込め、
+          MUI が自動で position: sticky を付与する。スクロールコンテキストは KartePage 側の
+          `<Box overflow:auto>` なので、カルテタブの直下に貼り付く動作になる。
+        */}
+        <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: 'auto' }}>
           {/* 9 列の幅を colgroup で共有: label(130) / sub(40) / day(110)×7 */}
           <colgroup>
             <col style={{ width: LABEL_COL_WIDTH }} />
@@ -316,11 +321,10 @@ const FlowsheetView: React.FC<Props> = () => {
               <col key={i} style={{ width: DAY_COL_WIDTH }} />
             ))}
           </colgroup>
-          <TableBody>
-            {/* ===== 上部ヘッダー ===== */}
-            {/* 日付ナビ行 */}
+          <TableHead>
+            {/* 日付ナビ行（top: 0 で貼り付く） */}
             <TableRow>
-              <TableCell sx={{ ...stickyLabelCell, zIndex: 2, bgcolor: '#e3edf7' }}>
+              <TableCell sx={{ ...stickyLabelCell, top: 0, zIndex: 4, bgcolor: '#e3edf7' }}>
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   {['≪', '＜', '当日', '＞', '≫'].map((s, i) => (
                     <Typography
@@ -337,27 +341,27 @@ const FlowsheetView: React.FC<Props> = () => {
                   ))}
                 </Stack>
               </TableCell>
-              <TableCell sx={{ ...stickySubCell, bgcolor: '#e3edf7' }} />
+              <TableCell sx={{ ...stickySubCell, top: 0, zIndex: 4, bgcolor: '#e3edf7' }} />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={todayHeaderCellSx(d.isToday)}>
+                <TableCell key={i} sx={{ ...todayHeaderCellSx(d.isToday), top: 0 }}>
                   {d.date}({d.weekday})
                 </TableCell>
               ))}
             </TableRow>
-            {/* 在院日数 */}
+            {/* 在院日数（top: 36px ≒ 日付ナビ行の高さ ぶん下にずらす） */}
             <TableRow>
-              <TableCell sx={stickyLabelCell}>在院日数</TableCell>
-              <TableCell sx={stickySubCell} />
+              <TableCell sx={{ ...stickyLabelCell, top: 36, zIndex: 4 }}>在院日数</TableCell>
+              <TableCell sx={{ ...stickySubCell, top: 36, zIndex: 4 }} />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.admitDay}日目</TableCell>
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), top: 36, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>{d.admitDay}日目</TableCell>
               ))}
             </TableRow>
-            {/* 看護記録・バイタル ボタン行 */}
+            {/* 看護記録・バイタル ボタン行（top: 65px ≒ 日付ナビ + 在院日数 行の高さ） */}
             <TableRow>
-              <TableCell sx={stickyLabelCell} />
-              <TableCell sx={stickySubCell} />
+              <TableCell sx={{ ...stickyLabelCell, top: 65, zIndex: 4 }} />
+              <TableCell sx={{ ...stickySubCell, top: 65, zIndex: 4 }} />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), py: 0.3 }}>
+                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), py: 0.3, top: 65, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>
                   <Stack direction="row" spacing={0.3} justifyContent="center">
                     <Button
                       size="small" variant="outlined"
@@ -385,6 +389,8 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableCell>
               ))}
             </TableRow>
+          </TableHead>
+          <TableBody>
 
             {/* ===== 隔離拘束・外出外泊 ===== */}
             <SectionHeaderRow title="隔離拘束・外出外泊" />
