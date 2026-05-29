@@ -221,6 +221,11 @@ const dayCellBase = {
   width: DAY_COL_WIDTH,
   textAlign: 'center' as const,
   py: 0.5,
+  // ===== 検証用・後で削除予定（PM 2026-05-29 依頼） =====
+  // 全 day cell の左端に縦線を入れ、テーブル列境界の整列状況をバイタルチャート内
+  // ReferenceLine（X 軸縦線）と比較できるようにする。
+  borderLeft: '1px dashed #dc2626',
+  // ===== 検証用ここまで =====
 };
 // セクション見出し行（旧: 独立 `<Box>` ヘッダー → 単一 Table 化により `<TableRow>` + `<TableCell colSpan={9}>` で表現）
 const sectionHeaderCellSx = {
