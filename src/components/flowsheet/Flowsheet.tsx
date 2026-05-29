@@ -438,7 +438,16 @@ const FlowsheetView: React.FC<Props> = () => {
                     <ResponsiveContainer width="100%" height={280}>
                       <LineChart data={CHART_DATA} margin={{ top: 10, right: 0, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                        <XAxis dataKey="date" fontSize={11} tick={{ fill: '#666' }} />
+                        {/*
+                          列幅 110px の中央にデータ点を配置するため、左右に半列分（55px）の
+                          padding を入れる。これで categorical の 7 点が各日付列の中央に揃う。
+                        */}
+                        <XAxis
+                          dataKey="date"
+                          fontSize={11}
+                          tick={{ fill: '#666' }}
+                          padding={{ left: DAY_COL_WIDTH / 2, right: DAY_COL_WIDTH / 2 }}
+                        />
                         <YAxis yAxisId="vitals" domain={[0, 300]} hide width={0} />
                         <YAxis yAxisId="temp" orientation="right" domain={[35, 40]} hide width={0} />
                         <Tooltip contentStyle={{ fontSize: 12 }} />
