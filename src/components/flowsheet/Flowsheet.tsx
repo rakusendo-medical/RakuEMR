@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead,
+  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
   TableRow, Button, Stack, Link as MuiLink,
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -314,12 +314,12 @@ const FlowsheetView: React.FC<Props> = () => {
             sx の width: 'auto' を明示することで MUI Table のデフォルト width: '100%' を override し、
             コンテナ幅に対する比例拡大を防いで各 col が指定通りの幅を保つ。 */}
         {/*
-          stickyHeader: 先頭 3 行（日付ナビ・在院日数・ボタン）を <TableHead> に閉じ込め、
-          各セルに明示で position: 'sticky' + top を付与する。
-          スクロールコンテキストは KartePage 側の `<Box overflow:auto>` なので、
-          カルテタブの直下に貼り付く動作になる。
+          スティッキーヘッダ: 各セルに style 属性（インライン）で
+          position: sticky と top を強制適用する。sx 経由だと MUI の
+          stickyHeader と CSS 特異度競合で top が上書きされる事象があったため
+          style 属性で確実に効かせる。
         */}
-        <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: 'auto' }}>
+        <Table size="small" sx={{ tableLayout: 'fixed', width: 'auto' }}>
           {/* 9 列の幅を colgroup で共有: label(130) / sub(40) / day(110)×7 */}
           <colgroup>
             <col style={{ width: LABEL_COL_WIDTH }} />
@@ -328,10 +328,14 @@ const FlowsheetView: React.FC<Props> = () => {
               <col key={i} style={{ width: DAY_COL_WIDTH }} />
             ))}
           </colgroup>
-          <TableHead>
-            {/* 日付ナビ行（top: 0 で貼り付く） */}
+          <TableBody>
+            {/* ===== 上部ヘッダー（スティッキー化）===== */}
+            {/* 日付ナビ行（top: 0） */}
             <TableRow>
-              <TableCell sx={{ ...stickyLabelCell, position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 5, bgcolor: '#e3edf7' }}>
+              <TableCell
+                sx={{ ...stickyLabelCell, bgcolor: '#e3edf7' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: 0, zIndex: 5 }}
+              >
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   {['≪', '＜', '当日', '＞', '≫'].map((s, i) => (
                     <Typography
@@ -348,27 +352,54 @@ const FlowsheetView: React.FC<Props> = () => {
                   ))}
                 </Stack>
               </TableCell>
-              <TableCell sx={{ ...stickySubCell, position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 5, bgcolor: '#e3edf7' }} />
+              <TableCell
+                sx={{ ...stickySubCell, bgcolor: '#e3edf7' }}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: LABEL_COL_WIDTH, zIndex: 5 }}
+              />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={{ ...todayHeaderCellSx(d.isToday), position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 3 }}>
+                <TableCell
+                  key={i}
+                  sx={todayHeaderCellSx(d.isToday)}
+                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 3 }}
+                >
                   {d.date}({d.weekday})
                 </TableCell>
               ))}
             </TableRow>
-            {/* 在院日数（row1 の cumulative 高さ ぶん下にずらす） */}
+            {/* 在院日数（top: 30） */}
             <TableRow>
-              <TableCell sx={{ ...stickyLabelCell, position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 5 }}>在院日数</TableCell>
-              <TableCell sx={{ ...stickySubCell, position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 5 }} />
+              <TableCell
+                sx={stickyLabelCell}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, left: 0, zIndex: 5 }}
+              >在院日数</TableCell>
+              <TableCell
+                sx={stickySubCell}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, left: LABEL_COL_WIDTH, zIndex: 5 }}
+              />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 3, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>{d.admitDay}日目</TableCell>
+                <TableCell
+                  key={i}
+                  sx={{ ...dayCellSx(d.isToday), bgcolor: d.isToday ? '#fff8e1' : '#fff' }}
+                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, zIndex: 3 }}
+                >{d.admitDay}日目</TableCell>
               ))}
             </TableRow>
-            {/* 看護記録・バイタル ボタン行（row1 + row2 の cumulative 高さ ぶん下にずらす） */}
+            {/* 看護記録・バイタル ボタン行（top: 58） */}
             <TableRow>
-              <TableCell sx={{ ...stickyLabelCell, position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 5 }} />
-              <TableCell sx={{ ...stickySubCell, position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 5 }} />
+              <TableCell
+                sx={stickyLabelCell}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, left: 0, zIndex: 5 }}
+              />
+              <TableCell
+                sx={stickySubCell}
+                style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, left: LABEL_COL_WIDTH, zIndex: 5 }}
+              />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={{ ...dayCellSx(d.isToday), py: 0.3, position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 3, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}>
+                <TableCell
+                  key={i}
+                  sx={{ ...dayCellSx(d.isToday), py: 0.3, bgcolor: d.isToday ? '#fff8e1' : '#fff' }}
+                  style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 3 }}
+                >
                   <Stack direction="row" spacing={0.3} justifyContent="center">
                     <Button
                       size="small" variant="outlined"
@@ -396,8 +427,6 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableCell>
               ))}
             </TableRow>
-          </TableHead>
-          <TableBody>
 
             {/* ===== 隔離拘束・外出外泊 ===== */}
             <SectionHeaderRow title="隔離拘束・外出外泊" />
