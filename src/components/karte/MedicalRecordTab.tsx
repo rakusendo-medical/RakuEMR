@@ -7,7 +7,7 @@ import {
 import {
   Save, Print, AttachFile, AccountTree, Brush,
   ExitToApp, History as HistoryIcon, NoteAdd, Close as CloseIcon,
-  CloudUpload, Assignment,
+  CloudUpload, Assignment, Search as SearchIcon, ContentCopy,
   ThumbUpAltOutlined, ChatBubbleOutline,
 } from '@mui/icons-material';
 import type { Patient, Order } from '../../types';
@@ -474,6 +474,7 @@ export default function MedicalRecordTab({
       <NewRecordDialog
         open={newRecordOpen}
         mode={mode}
+        patientId={patient.id}
         onClose={() => setNewRecordOpen(false)}
         onSaved={(message) => showSnackbar(message, 'success')}
       />
@@ -549,14 +550,70 @@ function nowAsLocalInput(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// ===== 左パネル: DO引用検索（部門診療録 / 過去カルテ / オーダー）=====
+
+interface DoItemEntry {
+  id: string;
+  date: string;     // 2026/05/27
+  title: string;    // 看護記録 / 診療録 / 注射オーダ ...
+  summary: string;  // 1行プレビュー
+  body: string;     // [DO] 押下で本文末尾に追記される本文
+}
+
+// モック: 部門診療録（看護・リハ・栄養 etc.）
+const MOCK_DEPT_RECORDS: DoItemEntry[] = [
+  { id: 'd-1', date: '2026/05/27', title: '看護記録', summary: '日勤 鈴木 / バイタル安定、内服確認OK',
+    body: '【部門診療録 引用】2026/05/27 看護記録（鈴木）\nバイタル安定。内服確認 OK。日中傾眠傾向あり夜間睡眠時間と要対比。\n' },
+  { id: 'd-2', date: '2026/05/26', title: '看護記録', summary: '準夜 高橋 / 入眠困難、頓服使用',
+    body: '【部門診療録 引用】2026/05/26 看護記録（高橋）\n22:30 入眠困難の訴え。指示通り頓服使用。23:40 入眠確認。\n' },
+  { id: 'd-3', date: '2026/05/25', title: 'リハ記録', summary: 'PT 山田 / ROM 改善、歩行訓練継続',
+    body: '【部門診療録 引用】2026/05/25 リハ記録（PT 山田）\n肩関節 ROM 前回比 +10°。歩行訓練 50m × 3 セット。疲労なし。\n' },
+  { id: 'd-4', date: '2026/05/23', title: '栄養記録', summary: 'NST 田中 / 食事摂取 7-8 割で経過',
+    body: '【部門診療録 引用】2026/05/23 栄養記録（NST 田中）\n食事摂取 7-8 割で安定。BMI 19.8 → 20.2。経腸栄養剤追加不要と判断。\n' },
+];
+
+// モック: 過去カルテ（医師記載）
+const MOCK_PAST_CHARTS: DoItemEntry[] = [
+  { id: 'p-1', date: '2026/05/22', title: '診療録（再診）', summary: 'Dr 田村 / 状態安定、薬剤継続',
+    body: '【過去カルテ 引用】2026/05/22 診療録（Dr 田村）\nS: 自覚症状なし、よく眠れている。\nO: バイタル安定、表情穏やか。\nA: 状態安定。\nP: 現行処方継続、2週間後再診。\n' },
+  { id: 'p-2', date: '2026/05/15', title: '診療録（再診）', summary: 'Dr 田村 / 睡眠改善、減薬検討',
+    body: '【過去カルテ 引用】2026/05/15 診療録（Dr 田村）\nS: 入眠改善、中途覚醒減少。\nO: バイタル安定。\nA: 睡眠改善傾向。\nP: 次回より減薬検討。\n' },
+  { id: 'p-3', date: '2026/05/08', title: '診療録（カンファ）', summary: '多職種カンファ / 退院支援検討開始',
+    body: '【過去カルテ 引用】2026/05/08 診療録（カンファレンス）\n参加: 医師・看護・PSW・PT。\n議題: 退院支援。\n結論: 6 月初旬退院を目処に MSW 介入開始。\n' },
+];
+
+// オーダーをモックから filter（ORDERS の型は別ファイルに定義）
+function buildOrderEntries(patientId?: string): DoItemEntry[] {
+  const list = (ORDERS as unknown as Array<{
+    id: string; patientId: string; type: string; name?: string; date?: string;
+    detail?: string; status?: string;
+  }>).filter((o) => (patientId ? o.patientId === patientId : true));
+  return list.slice(0, 30).map((o) => ({
+    id: `o-${o.id}`,
+    date: o.date ?? '—',
+    title: `オーダ:${o.type}`,
+    summary: `${o.name ?? ''} ${o.status ? `(${o.status})` : ''}`.trim(),
+    body: `【オーダ 引用】${o.date ?? '—'} ${o.type} / ${o.name ?? ''}\n${o.detail ?? ''}\n`,
+  }));
+}
+
+const DO_SECTIONS = [
+  { id: 'dept',   label: '部門診療録' },
+  { id: 'past',   label: '過去カルテ' },
+  { id: 'orders', label: 'オーダー' },
+] as const;
+type DoSectionId = typeof DO_SECTIONS[number]['id'];
+
 function NewRecordDialog({
   open,
   mode,
+  patientId,
   onClose,
   onSaved,
 }: {
   open: boolean;
   mode: KarteMode;
+  patientId?: string;
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
@@ -570,6 +627,29 @@ function NewRecordDialog({
   const [body, setBody] = useState<string>('');
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [innerSnackbar, setInnerSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+
+  // ===== DO引用パネル =====
+  const [doSection, setDoSection] = useState<DoSectionId>('dept');
+  const [doSearch, setDoSearch] = useState<string>('');
+
+  const doItems = useMemo<DoItemEntry[]>(() => {
+    const src =
+      doSection === 'dept' ? MOCK_DEPT_RECORDS :
+      doSection === 'past' ? MOCK_PAST_CHARTS :
+      buildOrderEntries(patientId);
+    const q = doSearch.trim().toLowerCase();
+    if (!q) return src;
+    return src.filter((e) =>
+      e.title.toLowerCase().includes(q) ||
+      e.summary.toLowerCase().includes(q) ||
+      e.date.toLowerCase().includes(q)
+    );
+  }, [doSection, doSearch, patientId]);
+
+  const handleDo = (entry: DoItemEntry) => {
+    setBody((prev) => (prev ? prev + '\n' : '') + entry.body);
+    setInnerSnackbar({ open: true, message: `[${entry.title}] を本文に引用しました` });
+  };
 
   const isDirty =
     title !== '' || status !== '' || templateId !== '' || interviewForm !== '' ||
@@ -653,7 +733,7 @@ function NewRecordDialog({
 
   return (
     <>
-      <Dialog open={open} onClose={handleCancel} maxWidth="md" fullWidth>
+      <Dialog open={open} onClose={handleCancel} maxWidth="lg" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <NoteAdd fontSize="small" />
@@ -673,8 +753,80 @@ function NewRecordDialog({
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={1.5}>
+        <DialogContent dividers sx={{ display: 'flex', gap: 1.5, p: 1.5 }}>
+          {/* ===== 左パネル: DO引用検索 ===== */}
+          <Paper variant="outlined" sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', p: 1, gap: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+              DO引用
+            </Typography>
+            {/* セクション切替 */}
+            <Stack direction="row" spacing={0.5}>
+              {DO_SECTIONS.map((s) => (
+                <Button
+                  key={s.id}
+                  size="small"
+                  variant={doSection === s.id ? 'contained' : 'outlined'}
+                  onClick={() => setDoSection(s.id)}
+                  sx={{ flex: 1, fontSize: '0.65rem', px: 0.5, py: 0.25 }}
+                >
+                  {s.label}
+                </Button>
+              ))}
+            </Stack>
+            {/* 検索 */}
+            <TextField
+              size="small"
+              placeholder="タイトル・概要・日付で絞り込み"
+              value={doSearch}
+              onChange={(e) => setDoSearch(e.target.value)}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />,
+              }}
+            />
+            {/* 結果リスト */}
+            <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+              <Stack spacing={0.5}>
+                {doItems.length === 0 ? (
+                  <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', py: 2 }}>
+                    該当データなし
+                  </Typography>
+                ) : (
+                  doItems.map((e) => (
+                    <Paper
+                      key={e.id}
+                      variant="outlined"
+                      sx={{ p: 0.75, '&:hover': { bgcolor: '#f8fafc' } }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontSize: '0.7rem', fontWeight: 700 }} noWrap>
+                            {e.date} {e.title}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary' }} noWrap>
+                            {e.summary}
+                          </Typography>
+                        </Box>
+                        <Tooltip title="本文末尾に引用">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleDo(e)}
+                            sx={{ fontSize: '0.65rem', minWidth: 0, px: 0.75, py: 0 }}
+                            startIcon={<ContentCopy sx={{ fontSize: 12 }} />}
+                          >
+                            DO
+                          </Button>
+                        </Tooltip>
+                      </Stack>
+                    </Paper>
+                  ))
+                )}
+              </Stack>
+            </Box>
+          </Paper>
+
+          {/* ===== 右パネル: フォーム ===== */}
+          <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
             {/* ===== 記載日 + タイトル + 状態 ===== */}
             <Stack direction="row" spacing={1.5} alignItems="flex-end" flexWrap="wrap">
               <TextField
