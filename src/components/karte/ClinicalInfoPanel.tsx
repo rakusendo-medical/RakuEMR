@@ -359,7 +359,7 @@ function FamilyContent() {
         </Stack>
       ))}
       <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, fontStyle: 'italic' }}>
-        ※ 家系図描画は診療録タブ「新規記載」ダイアログ内 Fabric.js キャンバス（別ストーリー）で対応予定
+        ※ 家系図描画は診療録タブ「診療録作成」ダイアログ内 Fabric.js キャンバス（別ストーリー）で対応予定
       </Typography>
     </Stack>
   );

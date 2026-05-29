@@ -20,7 +20,7 @@ interface ActionDef {
 }
 
 const OUTPATIENT_ACTIONS: ActionDef[] = [
-  { id: 'new-record', label: '新規記載', variant: 'contained', color: 'primary' },
+  { id: 'new-record', label: '診療録作成', variant: 'contained', color: 'primary' },
   { id: 'order-input', label: 'オーダー入力' },
   { id: 'patient-booking', label: '患者予約' },
   { id: 'print', label: '印刷', alignEnd: true },
@@ -40,7 +40,7 @@ function buildInpatientActions(admissionState?: AdmissionState): ActionDef[] {
     state === 'outpatient' ? '入院していません' : state === 'discharged' ? '既に退院済です' : undefined;
 
   return [
-    { id: 'new-record', label: '新規記載', variant: 'contained', color: 'primary' },
+    { id: 'new-record', label: '診療録作成', variant: 'contained', color: 'primary' },
     {
       id: 'admission-order',
       label: '入院指示',

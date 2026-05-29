@@ -143,8 +143,8 @@ interface MedicalRecordTabProps {
   /** us-36 サブ B: 隔離拘束指示リンクのクリックハンドラ（mode='inpatient' のみ表示） */
   onRequestRestraintOrder: (title: string, editOrderId?: string) => void;
   /**
-   * 親(KartePage)から「新規記載」ダイアログを開くためのトリガー。
-   * インクリメントされた値が渡されると新規記載ダイアログが開く。
+   * 親(KartePage)から「診療録作成」ダイアログを開くためのトリガー。
+   * インクリメントされた値が渡されると診療録作成ダイアログが開く。
    */
   newRecordTrigger?: number;
 }
@@ -201,7 +201,7 @@ export default function MedicalRecordTab({
   // ----- ダイアログ群 -----
   const [newRecordOpen, setNewRecordOpen] = useState(false);
 
-  // 親(KartePage)からのトリガーで新規記載ダイアログを開く。
+  // 親(KartePage)からのトリガーで診療録作成ダイアログを開く。
   // setState を render 内で呼ぶ ref パターンは React 18 / StrictMode で
   // 二重実行で値が一致してしまうケースがあり不安定だったので useEffect 化。
   useEffect(() => {
@@ -469,7 +469,7 @@ export default function MedicalRecordTab({
               </Box>
             </Box>
 
-      {/* ===== 新規記載ダイアログ(KarteActionBar 等の外部トリガーから起動可能なまま保持) ===== */}
+      {/* ===== 診療録作成ダイアログ(KarteActionBar 等の外部トリガーから起動可能なまま保持) ===== */}
       <NewRecordDialog
         open={newRecordOpen}
         mode={mode}
@@ -494,7 +494,7 @@ export default function MedicalRecordTab({
   );
 }
 
-// ===== 新規記載ダイアログ（フリーテキスト形式）=====
+// ===== 診療録作成ダイアログ（フリーテキスト形式）=====
 
 // 患者状態の 5 段階色（部門記録簿の患者状態色と整合）
 const STATUS_COLORS = [
@@ -736,7 +736,7 @@ function NewRecordDialog({
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <NoteAdd fontSize="small" />
-            <span>新規記載</span>
+            <span>診療録作成</span>
             <Chip
               size="small"
               label={mode === 'outpatient' ? '外来診療録' : '入院診療録'}

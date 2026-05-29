@@ -242,7 +242,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   // 診療録タブの上部パネル配置: 'A' = 縦並び(従来) / 'B' = 横並び(生活歴 2fr : 診療情報 1fr)
   const [recordLayout, setRecordLayout] = useState<'A' | 'B'>('A');
 
-  // 新規記載ダイアログのトリガー(KarteActionBar からインクリメントで MedicalRecordTab に通知)
+  // 診療録作成ダイアログのトリガー(KarteActionBar からインクリメントで MedicalRecordTab に通知)
   const [newRecordTrigger, setNewRecordTrigger] = useState(0);
 
   if (!patient) {
@@ -315,7 +315,7 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       return;
     }
     if (actionId === 'new-record') {
-      // 診療録(SOAP/フリー)の新規記載ダイアログを開く
+      // 診療録(SOAP/フリー)の診療録作成ダイアログを開く
       // 現在のタブが診療録でなければ自動で切替
       if (currentTab !== 'medical-record') {
         attemptTabChange('medical-record');
