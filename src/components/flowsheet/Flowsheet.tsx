@@ -221,11 +221,6 @@ const dayCellBase = {
   width: DAY_COL_WIDTH,
   textAlign: 'center' as const,
   py: 0.5,
-  // ===== 検証用・後で削除予定（PM 2026-05-29 依頼） =====
-  // 全 day cell の左端に縦線を入れ、テーブル列境界の整列状況をバイタルチャート内
-  // ReferenceLine（X 軸縦線）と比較できるようにする。
-  borderLeft: '1px dashed #dc2626',
-  // ===== 検証用ここまで =====
 };
 // セクション見出し行（旧: 独立 `<Box>` ヘッダー → 単一 Table 化により `<TableRow>` + `<TableCell colSpan={9}>` で表現）
 const sectionHeaderCellSx = {
@@ -433,33 +428,26 @@ const FlowsheetView: React.FC<Props> = () => {
                       ))}
                     </Stack>
                   </Box>
-                  {/* チャート本体（PM 指示「見た目変えない」のため LineChart の設定は元のまま維持） */}
-                  <Box sx={{ flex: 1, py: 1, pr: 1 }}>
+                  {/*
+                    チャート本体。テーブル日付列とチャート内データ点の横位置を一致させるため
+                    LineChart の左右マージン・Y 軸幅をゼロ化し、プロット領域 = TableCell 右側
+                    （flex: 1 領域）と完全に一致させる。Y 軸の主要参照値は ReferenceLine の
+                    label で代替表示する。
+                  */}
+                  <Box sx={{ flex: 1, py: 1 }}>
                     <ResponsiveContainer width="100%" height={280}>
-                      <LineChart data={CHART_DATA} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                      <LineChart data={CHART_DATA} margin={{ top: 10, right: 0, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                         <XAxis dataKey="date" fontSize={11} tick={{ fill: '#666' }} />
-                        <YAxis yAxisId="vitals" domain={[0, 300]}
-                          ticks={[0, 50, 100, 150, 200, 250, 300]}
-                          fontSize={10} tick={{ fill: '#666' }} width={35} />
-                        <YAxis yAxisId="temp" orientation="right" domain={[35, 40]}
-                          ticks={[35, 36, 37, 38, 39, 40]}
-                          fontSize={10} tick={{ fill: '#e53935' }} width={35} />
+                        <YAxis yAxisId="vitals" domain={[0, 300]} hide width={0} />
+                        <YAxis yAxisId="temp" orientation="right" domain={[35, 40]} hide width={0} />
                         <Tooltip contentStyle={{ fontSize: 12 }} />
-                        <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3" />
-                        <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3" />
-                        {/* ===== 検証用・後で削除予定（PM 2026-05-29 依頼） =====
-                            日境界の縦線。ヘッダ日付列とチャート内 X 軸の整列状況を目視確認するため一時挿入。 */}
-                        {CHART_DATA.map((d, i) => (
-                          <ReferenceLine
-                            key={`day-boundary-${i}`}
-                            yAxisId="vitals"
-                            x={d.date}
-                            stroke="#dc2626"
-                            strokeDasharray="3 3"
-                          />
-                        ))}
-                        {/* ===== 検証用ここまで ===== */}
+                        <ReferenceLine yAxisId="vitals" y={120} stroke="#ccc" strokeDasharray="3 3"
+                          label={{ value: '120', position: 'insideLeft', fontSize: 9, fill: '#666' }} />
+                        <ReferenceLine yAxisId="vitals" y={80} stroke="#ccc" strokeDasharray="3 3"
+                          label={{ value: '80', position: 'insideLeft', fontSize: 9, fill: '#666' }} />
+                        <ReferenceLine yAxisId="temp" y={37} stroke="#fde0e0" strokeDasharray="3 3"
+                          label={{ value: '37℃', position: 'insideRight', fontSize: 9, fill: '#e53935' }} />
                         <Line yAxisId="vitals" type="monotone" dataKey="BP(上)" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} connectNulls />
                         <Line yAxisId="vitals" type="monotone" dataKey="BP(下)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: '#1e40af' }} connectNulls />
                         <Line yAxisId="vitals" type="monotone" dataKey="脈拍" stroke="#d32f2f" strokeWidth={2} dot={{ r: 4, fill: '#d32f2f' }} connectNulls />
