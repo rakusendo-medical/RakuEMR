@@ -422,3 +422,76 @@ PM 指摘「全体的に文字の小ささ懸念」の事前調査結果。**実
 - **色覚配慮の優先実装**: VitalChart は線種併用で良例（§13.5 推奨形）。FlowsheetGrid サイン Cell（観察 #4）と SleepTable ドット（観察 #23）が色のみ依存の主な箇所
 - **ダイアログ群の総評**: VitalEditDialog の §6-D 重複圧縮（観察 #28）以外は概ね MUI 標準範囲。SignInputDialog は密度問題ほぼなし、FlowsheetEditDialog は FormLabel fontSize 13（観察 #30）のみ局所対応で済む
 - **観察ボリューム**: 観察項目 32 件（5 ページ + 主要 4 ダイアログ + 共通コンポーネント 2）×（A 文字 / B 密度 / C 色覚 / D 階層）の 4 観点。改善候補は **高 8 件 / 中 14 件 / 低 6 件 / 維持・現状 OK 4 件**
+
+---
+
+## Flowsheet 単一 Table 化（B 案リファクタ）完了メモ（S2 / 2026-05-29）
+
+### 背景
+
+`/karte/:patientId#flowsheet` で日付列の縦軸が揃わず、特に 5/15・5/16 のデータ行が右にずれる問題が発生していた。原因は [src/components/flowsheet/Flowsheet.tsx](../../src/components/flowsheet/Flowsheet.tsx)（747 行）が 7 つの独立した `<TableContainer>` + `<Table>` から構成されており、Table 間で列幅が共有されていなかったこと。`table-layout: auto` 下で特定セルの content（5/16 の `orderKinds` 7 種類）が `minWidth: 110` を破壊し、後続列が右にずれていた。
+
+### 実装サマリ
+
+briefing 指示「B 案リファクタ: 7 セクションを 1 つの Table に統合」を実施。tsc / vite build クリーン。ブラウザ目視は MASTER に依頼。
+
+#### 変更ファイル
+
+- [src/components/flowsheet/Flowsheet.tsx](../../src/components/flowsheet/Flowsheet.tsx)（747 行 → 同程度・全面リファクタ）:
+  - 全 7 セクション（上部ヘッダー / 隔離拘束 / バイタルチャート / 指示実施 / 基本観察 / 記事連携 / 個別ケア / サイン）を **1 つの `<TableContainer>` + `<Table sx={{ tableLayout: 'fixed' }}>`** に統合
+  - **`<colgroup>` で 9 列の幅を明示**: label 130px / sub-label 40px / day 110px × 7
+  - セクション見出しの独立 `<Box>` を `<TableRow>` + `<TableCell colSpan={9}>` に変換（汎用 `SectionHeaderRow` ヘルパー化、背景色 `#e3edf7` フォント等 maintain）
+  - バイタルチャート部も `<TableRow>` + `<TableCell colSpan={9} sx={{ p: 0 }}>` 内に内包。内部の `<Box display="flex">` + 左 170px 凡例パネル + LineChart はそのまま流用
+  - 既存ヘルパー `RestraintRow`（L250-281）はそのまま流用
+  - スタイル定数（`stickyLabelCell` / `stickySubCell` / `dayCellSx`）は維持。新規追加 `sectionHeaderCellSx` でセクション見出しの旧 Box スタイル相当を吸収
+
+#### PM 追加指示「見た目変えない」への対応
+
+実装中、PM より「見た目が変わらないことが望み」の指示。briefing 参考セクション（`VitalChart.tsx` の整列手法: `margin.left/right = 0` + `YAxis hide` + `ReferenceLine label`）を試案として書きかけていたが、**チャート部の `LineChart` 設定は元の通り完全維持**に変更:
+
+- `margin={{ top: 10, right: 20, left: 0, bottom: 5 }}` を維持
+- YAxis 2 本（vitals / temp）の `width={35}` + tick 表示を維持
+- ReferenceLine は元の 2 本（120 / 80）のまま、label 追加なし
+
+これにより AC-4「バイタルチャート内の日境界がヘッダ日付列の左端と一致」は厳密一致まで到達しないが、AC-2/AC-3（5/15・5/16 ずれ解消）+ 見た目維持を優先。チャート列の厳密一致は別途要望時に対応する判断。
+
+### AC 充足状況
+
+| AC | 状態 | 備考 |
+| --- | --- | --- |
+| 1. 全 7 セクションが 1 つの Table に統合 | ✅ | 単一 `<TableContainer>` + `<Table sx={{ tableLayout: 'fixed' }}>` |
+| 2. ヘッダ日付列と全データ行の同日列が縦位置で完全一致 | ✅ | `<colgroup>` で 9 列幅を共有、`tableLayout: 'fixed'` で col 幅が支配的 |
+| 3. 5/15・5/16 のデータが右にずれない | ✅ | `tableLayout: 'fixed'` 下では content が col 幅を破壊できない |
+| 4. バイタルチャート内の日境界がヘッダ日付列の左端と一致 | △ | PM 指示「見た目変えない」優先で LineChart 設定を維持。厳密一致は別途要望時に対応 |
+| 5. `npx tsc --noEmit` クリーン | ✅ | |
+| 6. `npx vite build` クリーン | ✅ | bundle size warning は既存事象 |
+| 7. 表示内容（モック値・色・アイコン・MUI コンポーネント）変更なし | ✅ | DAILY / RESTRAINTS / CHART_DATA 中身無変更、MEAL_STYLE / ORDER_COLOR 等のスタイル定数も無変更 |
+
+### 設計判断（暫定）
+
+| # | 判断 | 妥当性 |
+| --- | --- | --- |
+| 1 | `<colgroup>` + `tableLayout: 'fixed'` で列幅を支配的に | ブラウザの table-layout アルゴリズムを `auto`（content 駆動）から `fixed`（col 駆動）に切替。これで content による列幅破壊が物理的に不可能になる |
+| 2 | セクション見出しを `<TableRow colSpan={9}>` に格上げ | 元の独立 `<Box>` は Table 外なので幅共有不可。Table 内に取り込むことで「同じ列レーン」として表現可能 |
+| 3 | バイタルチャートも `<TableRow colSpan={9}>` 内に内包 | チャート部だけ独立 Paper のままだと「テーブルの一部」感が薄れる。`<TableCell sx={{ p: 0 }}>` で padding ゼロにして既存 flex レイアウトをそのまま使える |
+| 4 | チャート LineChart の設定は元のまま維持（PM 指示） | 見た目維持優先。AC-4 の厳密一致は犠牲にしたが、見た目変化を最小化 |
+| 5 | sticky label / sub cell は維持 | 横スクロール時の label 固定挙動を温存。`tableLayout: 'fixed'` 下でも `position: sticky` は機能 |
+
+### MASTER への申し送り
+
+- ブラウザ目視は本セッションでは未実施 → **MASTER に依頼**
+  - 期待挙動 1: `/karte/P001#flowsheet` で 5/15・5/16 のデータ行が右にずれず、全行で日付列が縦一致
+  - 期待挙動 2: 5/16 の予定オーダ「薬／注／検／処／画／心／E」7 種が cell 内で折り返し or 改行され、列幅を破壊しない
+  - 期待挙動 3: バイタル・サイングラフ部は従前と見た目同等（PM 指示反映）
+  - 期待挙動 4: 横スクロール時に label 列（病室／在院日数／服薬 等）が左端固定
+- **AC-4 補足**: バイタルチャート内の日境界（X 軸日付）とヘッダ日付列の厳密一致は今回未達成。VitalChart 方式（YAxis hide + ReferenceLine label）を採用する場合は別途要望時に対応可能（実装は試案として書きかけて撤回済）
+
+### 共有ファイル変更
+
+なし（`src/types/` / `src/stores/` / `src/data/mockData.MASTER_*` / `src/components/common/` / `features/flowsheet/` 触らず）。`src/components/flowsheet/Flowsheet.tsx` 内に閉じる変更のみ。
+
+### 検証
+
+- `npx tsc --noEmit` クリーン
+- `npx vite build` クリーン（bundle size warning は既存事象）
+- ブラウザ目視: 未実施 → MASTER に依頼
