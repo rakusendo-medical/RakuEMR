@@ -309,7 +309,13 @@ const FlowsheetView: React.FC<Props> = () => {
       </Typography>
 
       {/* === 単一 Table（B 案・全 7 セクション統合）=== */}
-      <TableContainer component={Paper} variant="outlined">
+      {/*
+        TableContainer のデフォルト `overflow-x: auto` は sticky の参照スクロールコンテナを
+        奪う（縦は visible なのに横は scroll になり、結果 sticky の縦位置が効かなくなる）。
+        ここでは overflow を visible に明示し、横スクロールは外側（KartePage の overflow:auto）に
+        任せることで sticky の参照を外側スクロール Box に揃える。
+      */}
+      <TableContainer component={Paper} variant="outlined" sx={{ overflow: 'visible' }}>
         {/* テーブル幅を colgroup 合計（130 + 40 + 110×7 = 940）で固定。
             sx の width: 'auto' を明示することで MUI Table のデフォルト width: '100%' を override し、
             コンテナ幅に対する比例拡大を防いで各 col が指定通りの幅を保つ。 */}
