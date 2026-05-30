@@ -9,7 +9,7 @@ import {
   CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import type { AdmissionOrder, WardId } from '../../types';
-import { ROOMS, PENDING_ORDERS_SAMPLES } from '../../data/mockData';
+import { ROOMS, PENDING_ORDERS_SAMPLES, patientNumberOf } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import OrderConfirmDialog from './OrderConfirmDialog';
 import ProxyAuthDialog from './ProxyAuthDialog';
@@ -217,7 +217,7 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
         <DialogTitle sx={{ pb: 1 }}>
           入院手続き
           <Typography variant="caption" color="text.secondary" component="div">
-            {order.patientId} {order.patientName} / 主治医 {order.doctorName}
+            {patientNumberOf(order.patientId)} {order.patientName} / 主治医 {order.doctorName}
           </Typography>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>

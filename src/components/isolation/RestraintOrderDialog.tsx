@@ -306,7 +306,7 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
           隔離拘束指示
           {patient && (
             <Typography variant="body2" color="text.secondary">
-              [{patient.id}] {patient.name}（{patient.gender === 'M' ? '男' : '女'} {patient.age}歳 / 入院形態: {admitForm}）
+              [{patient.patientNumber ?? patient.id}] {patient.name}（{patient.gender === 'M' ? '男' : '女'} {patient.age}歳 / 入院形態: {admitForm}）
             </Typography>
           )}
           {isEdit && <Chip label="編集" size="small" color="info" variant="outlined" sx={{ ml: 'auto' }} />}

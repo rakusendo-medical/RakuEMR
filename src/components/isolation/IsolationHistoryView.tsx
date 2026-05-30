@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import type { IsolationOrder, IsolationSubtype, Patient } from '../../types';
-import { ISOLATION_ORDERS, PATIENTS } from '../../data/mockData';
+import { ISOLATION_ORDERS, PATIENTS, patientNumberOf } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import DeleteReasonDialog from '../admission/DeleteReasonDialog';
 
@@ -236,7 +236,7 @@ const IsolationHistoryView: React.FC<Props> = ({ patientId, density = 'standard'
               <TableRow key={row.order.id} hover>
                 {!patientId && (
                   <TableCell sx={{ fontSize: '0.75rem' }}>
-                    [{row.order.patientId}] {row.order.patientName}
+                    [{patientNumberOf(row.order.patientId)}] {row.order.patientName}
                   </TableCell>
                 )}
                 <TableCell sx={{ fontSize: '0.75rem' }}>{row.order.startDatetime || '—'}</TableCell>

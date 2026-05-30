@@ -146,7 +146,7 @@ const NursingRecordsPage: React.FC = () => {
             >
               {PATIENTS.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
-                  {p.id} {p.name}（{p.roomNumber}-{p.bedLabel}）
+                  {p.patientNumber ?? p.id} {p.name}（{p.roomNumber}-{p.bedLabel}）
                 </MenuItem>
               ))}
             </Select>

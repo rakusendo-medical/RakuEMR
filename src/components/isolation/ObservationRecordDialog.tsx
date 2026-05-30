@@ -17,7 +17,7 @@ import type {
 } from '../../types';
 import {
   MASTER_OBSERVATION_STATES, MASTER_OBSERVATION_FREQUENCY,
-  MASTER_OBSERVATION_TEMPLATES, MASTER_OBSERVATION_TAGS,
+  MASTER_OBSERVATION_TEMPLATES, MASTER_OBSERVATION_TAGS, patientNumberOf,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import { useFlowsheetStore } from '../../features/flowsheet/store';
@@ -207,7 +207,7 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
           観察記録
           <Chip label={subtype} size="small" color="warning" variant="outlined" />
           <Typography variant="body2" color="text.secondary">
-            [{patient.id}] {patient.name}（{patient.age}歳） / {date} {String(hour).padStart(2, '0')}:00 〜
+            [{patientNumberOf(patient.id)}] {patient.name}（{patient.age}歳） / {date} {String(hour).padStart(2, '0')}:00 〜
           </Typography>
         </DialogTitle>
         <DialogContent dividers>

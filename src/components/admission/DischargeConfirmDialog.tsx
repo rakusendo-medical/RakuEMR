@@ -5,7 +5,7 @@ import {
   FormControlLabel, Checkbox, Divider, Alert, Chip,
 } from '@mui/material';
 import type { AdmissionOrder } from '../../types';
-import { PENDING_ORDERS_SAMPLES } from '../../data/mockData';
+import { PENDING_ORDERS_SAMPLES, patientNumberOf } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import OrderConfirmDialog from './OrderConfirmDialog';
 import ProxyAuthDialog from './ProxyAuthDialog';
@@ -184,7 +184,7 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
         <DialogTitle sx={{ pb: 1 }}>
           退院手続き
           <Typography variant="caption" color="text.secondary" component="div">
-            {order.patientId} {order.patientName} / 主治医 {order.doctorName} / {order.roomNumber}号室 {order.bedLabel}
+            {patientNumberOf(order.patientId)} {order.patientName} / 主治医 {order.doctorName} / {order.roomNumber}号室 {order.bedLabel}
           </Typography>
         </DialogTitle>
         <DialogContent dividers>

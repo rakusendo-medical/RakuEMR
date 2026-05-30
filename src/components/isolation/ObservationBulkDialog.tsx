@@ -230,7 +230,7 @@ const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, 
                       </TableCell>
                       <TableCell>
                         <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                          [{row.patient.id}] {row.patient.name}（{row.patient.age}）
+                          [{row.patient.patientNumber ?? row.patient.id}] {row.patient.name}（{row.patient.age}）
                         </Typography>
                         {row.releaseHint && (
                           <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 700, ml: 0.5 }}>

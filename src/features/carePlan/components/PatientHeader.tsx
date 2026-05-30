@@ -4,6 +4,7 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import type { Patient } from '../types';
 import { useCarePlanStore, formatJPDate } from '../store';
+import { patientNumberOf } from '../../../data/mockData';
 
 interface Props {
   patient: Patient;
@@ -40,7 +41,7 @@ const PatientHeader: React.FC<Props> = ({ patient, showBack = true, rightSlot, t
             )}
             <Stack direction="row" spacing={1} alignItems="baseline">
               <Typography variant="subtitle1" color="primary.main" sx={{ fontWeight: 700 }}>
-                {patient.id}
+                {patientNumberOf(patient.id)}
               </Typography>
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                 {patient.name}

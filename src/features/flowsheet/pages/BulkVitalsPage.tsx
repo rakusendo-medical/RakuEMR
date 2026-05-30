@@ -58,6 +58,9 @@ const BulkVitalsPage: React.FC = () => {
 
   const kindMaster = MASTER_BULK_VITAL_KINDS.find((k) => k.id === kindId)!;
 
+  // 時刻一括変更用（表示中の全行に適用）
+  const [bulkTime, setBulkTime] = useState<string>(kindMaster.defaultTime);
+
   // 病室一覧（選択中病棟）
   const roomsForWard = useMemo(() => {
     const set = new Set(PATIENTS.filter((p) => p.wardId === wardId).map((p) => p.roomNumber));
@@ -80,12 +83,13 @@ const BulkVitalsPage: React.FC = () => {
     setSavedMsg(null);
   };
 
-  // 種類変更時に時刻だけ追従させる（既存値は保持）
+  // 種類変更時に時刻だけ追従させる（既存値は保持）。一括時刻欄も既定値へ戻す
   useEffect(() => {
     setRows((rs) => rs.map((r) => ({
       ...r,
       time: r.values && Object.keys(r.values).length > 0 ? r.time : kindMaster.defaultTime,
     })));
+    setBulkTime(kindMaster.defaultTime);
   }, [kindMaster.defaultTime]);
 
   const updateValue = (idx: number, field: string, value: string) =>
@@ -100,8 +104,14 @@ const BulkVitalsPage: React.FC = () => {
   const updateTime = (idx: number, time: string) =>
     setRows((rs) => rs.map((r, i) => (i === idx ? { ...r, time } : r)));
 
+  // 表示中の全行の時刻を一括で置き換える
+  const applyBulkTime = () =>
+    setRows((rs) => rs.map((r) => ({ ...r, time: bulkTime })));
+
   const setAllSelected = (sel: boolean) =>
     setRows((rs) => rs.map((r) => ({ ...r, selected: sel })));
+
+  const selectedCount = rows.filter((r) => r.selected).length;
 
   const handleSet = () => {
     const targets = rows.filter((r) => r.selected);
@@ -195,6 +205,20 @@ const BulkVitalsPage: React.FC = () => {
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
           <Button size="small" variant="outlined" onClick={() => setAllSelected(true)}>全て選択</Button>
           <Button size="small" variant="outlined" onClick={() => setAllSelected(false)}>クリア</Button>
+          <TextField
+            size="small" label="時刻一括" placeholder="HH:mm"
+            value={bulkTime}
+            onChange={(e) => setBulkTime(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 104 }}
+          />
+          <Tooltip title="表示中の全行の時刻をこの値に置き換えます">
+            <span>
+              <Button size="small" variant="outlined" onClick={applyBulkTime} disabled={rows.length === 0}>
+                全行に適用
+              </Button>
+            </span>
+          </Tooltip>
           <FormControlLabel
             control={
               <Checkbox
@@ -210,9 +234,6 @@ const BulkVitalsPage: React.FC = () => {
               <IconButton size="small" onClick={handleSearch}><RefreshIcon fontSize="small" /></IconButton>
             </span>
           </Tooltip>
-          <Button variant="contained" onClick={handleSet} disabled={rows.every((r) => !r.selected)}>
-            設定
-          </Button>
         </Stack>
 
         {rows.length === 0 ? (
@@ -276,6 +297,34 @@ const BulkVitalsPage: React.FC = () => {
             </TableBody>
           </Table>
         )}
+      </Paper>
+
+      {/* 画面下部に常時表示する操作バー（スクロールしても張り付く） */}
+      <Paper
+        variant="outlined"
+        sx={{
+          position: 'sticky',
+          bottom: 0,
+          zIndex: (theme) => theme.zIndex.appBar,
+          p: 1,
+          borderRadius: 0,
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.08)',
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Typography variant="body2" color="text.secondary">
+            選択 {selectedCount} 件
+          </Typography>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleSet}
+            disabled={selectedCount === 0}
+          >
+            保存
+          </Button>
+        </Stack>
       </Paper>
     </Box>
   );

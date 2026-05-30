@@ -189,7 +189,7 @@ const SleepTablePage: React.FC = () => {
                 <TableRow key={p.id}>
                   <TableCell sx={{ position: 'sticky', left: 0, bgcolor: '#fff', zIndex: 1 }}>
                     <MuiLink component={RouterLink} to={`/karte/${p.id}#flowsheet`} sx={{ fontSize: 12 }}>
-                      {p.id}
+                      {p.patientNumber ?? p.id}
                     </MuiLink>
                     <br />
                     <Typography variant="caption">{p.name}</Typography>
@@ -312,7 +312,7 @@ const SleepTablePage: React.FC = () => {
                         onChange={(e) => setBulkRows((rs) => rs.map((row, idx) => (idx === i ? { ...row, selected: e.target.checked } : row)))}
                       />
                     </TableCell>
-                    <TableCell>{p.id}</TableCell>
+                    <TableCell>{p.patientNumber ?? p.id}</TableCell>
                     <TableCell>{p.name}</TableCell>
                     <TableCell>
                       <Select

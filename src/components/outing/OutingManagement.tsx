@@ -79,7 +79,7 @@ const OutingManagement: React.FC = () => {
                   <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
                     <Box>
                       <Typography variant="body2" fontWeight={600}>
-                        {o.patientName} <Typography component="span" variant="caption" color="text.secondary">({o.patientId})</Typography>
+                        {o.patientName} <Typography component="span" variant="caption" color="text.secondary">({patientNumberOf(o.patientId)})</Typography>
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {o.type} | {o.startDatetime} ～ {o.endDatetime}

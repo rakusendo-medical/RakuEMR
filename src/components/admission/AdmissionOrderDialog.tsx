@@ -249,7 +249,7 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
         <DialogTitle sx={{ pb: 1 }}>
           入院指示
           <Typography variant="caption" color="text.secondary" component="div">
-            {patient.id} {patient.name} ({patient.age}歳{patient.gender === 'M' ? '男性' : '女性'}) / 主治医 {patient.doctorName}
+            {patient.patientNumber ?? patient.id} {patient.name} ({patient.age}歳{patient.gender === 'M' ? '男性' : '女性'}) / 主治医 {patient.doctorName}
           </Typography>
         </DialogTitle>
         <DialogContent dividers>

@@ -54,7 +54,7 @@ const PatientMain: React.FC = () => {
             <Box>
               <Typography variant="h6">{patient.name}</Typography>
               <Typography variant="body2" color="text.secondary">
-                {patient.id}　|　{patient.age}歳　{patient.gender === 'M' ? '男性' : '女性'}　|　
+                {patient.patientNumber ?? patient.id}　|　{patient.age}歳　{patient.gender === 'M' ? '男性' : '女性'}　|　
                 {patient.wardId === 'ward1' ? '第１病棟' : '第２病棟'}　{patient.roomNumber}号室-{patient.bedLabel}
               </Typography>
               <Typography variant="caption" color="text.secondary">

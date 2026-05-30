@@ -793,7 +793,7 @@ const ObservationListTab: React.FC = () => {
                   {subIdx === 0 && (
                     <TableCell rowSpan={subtypesToShow.length} sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: '#fff', verticalAlign: 'top' }}>
                       <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                        [{row.patient.id}] {row.patient.name}（{row.patient.age}）
+                        [{row.patient.patientNumber ?? row.patient.id}] {row.patient.name}（{row.patient.age}）
                       </Typography>
                     </TableCell>
                   )}

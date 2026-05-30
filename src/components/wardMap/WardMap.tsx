@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, UnassignedPatient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, UNASSIGNED_PATIENTS } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, UNASSIGNED_PATIENTS, patientNumberOf } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
 import { useAppStore } from '../../stores/useAppStore';
@@ -311,7 +311,7 @@ const WardMap: React.FC = () => {
                               )}
                             </Stack>
                             {bed.patientId && (
-                              <Typography variant="caption" color="text.secondary">{bed.patientId}</Typography>
+                              <Typography variant="caption" color="text.secondary">{patientNumberOf(bed.patientId)}</Typography>
                             )}
                           </Box>
                         </Stack>
@@ -423,7 +423,7 @@ const WardMap: React.FC = () => {
               メニュー:
             </Typography>
             <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-              {selectedBedPatient.id} {selectedBedPatient.name} [{selectedBedPatient.roomNumber}号室]-[{selectedBedPatient.bedLabel}]
+              {selectedBedPatient.patientNumber ?? selectedBedPatient.id} {selectedBedPatient.name} [{selectedBedPatient.roomNumber}号室]-[{selectedBedPatient.bedLabel}]
             </Typography>
             <Stack direction="row" spacing={0.75} sx={{ ml: 1, flex: 1, flexWrap: 'nowrap' }}>
               {([

@@ -6,7 +6,7 @@ import {
 import { ChevronLeft, ChevronRight, Today as TodayIcon, InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import type { AdmissionOrder, WardId } from '../../types';
-import { ADMISSION_ORDERS, PATIENTS } from '../../data/mockData';
+import { ADMISSION_ORDERS, PATIENTS, patientNumberOf } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import AdmissionConfirmDialog from './AdmissionConfirmDialog';
 import DischargeConfirmDialog from './DischargeConfirmDialog';
@@ -260,7 +260,7 @@ const AdmissionScheduleCalendar: React.FC = () => {
               }}
             >
               <Typography variant="caption" color="primary.main" sx={{ fontWeight: 700 }}>
-                {o.patientId}
+                {patientNumberOf(o.patientId)}
               </Typography>
               <Typography variant="body2" fontWeight={600}>{o.patientName}</Typography>
               <Typography variant="caption" color="text.secondary">

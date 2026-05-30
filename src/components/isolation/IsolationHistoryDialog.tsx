@@ -31,7 +31,7 @@ const IsolationHistoryDialog: React.FC<Props> = ({ open, onClose, patientId }) =
           <Typography variant="h6">隔離・拘束歴</Typography>
           {patient && (
             <Typography variant="body2" color="text.secondary">
-              [{patient.id}] {patient.name}（{patient.gender === 'M' ? '男' : '女'} {patient.age}歳）
+              [{patient.patientNumber ?? patient.id}] {patient.name}（{patient.gender === 'M' ? '男' : '女'} {patient.age}歳）
             </Typography>
           )}
         </Stack>
