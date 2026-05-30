@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
   TableRow, Button, Stack, Link as MuiLink,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField, MenuItem,
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
@@ -137,6 +139,12 @@ const BRISTOL_LABEL: Record<string, string> = {
   '5': 'やや軟便', '6': '泥状便', '7': '水様便',
 };
 const formatStool = (v: string): string => (BRISTOL_LABEL[v] ? `${v} ${BRISTOL_LABEL[v]}` : v);
+
+// 入力ダイアログの選択肢
+const STOOL_COUNT_OPTIONS = [0, 1, 2, 3, 4];
+const BRISTOL_OPTIONS = ['1', '2', '3', '4', '5', '6', '7'];
+const LAXATIVE_OPTIONS = ['なし', '緩下剤', '坐薬', '浣腸'];
+const BATH_OPTIONS = ['入浴', 'シャワー浴', '清拭', '—'];
 
 // 隔離拘束帯: dateIdx range [from, to]
 interface RestraintBar {
@@ -310,6 +318,26 @@ function SectionHeaderRow({ title }: { title: string }) {
 }
 
 const FlowsheetView: React.FC<Props> = () => {
+  // 表示データを state 化（日列クリックで当日分を編集できるようにする）
+  const [rows, setRows] = useState<DailyRow[]>(DAILY);
+  const [editDay, setEditDay] = useState<number | null>(null);
+  const [draft, setDraft] = useState<DailyRow | null>(null);
+
+  const openEdit = (i: number) => {
+    setEditDay(i);
+    // ネストした参照ごとコピー（保存まで元データを汚さない）
+    setDraft({ ...rows[i], meal: { ...rows[i].meal }, intake: { ...rows[i].intake }, med: { ...rows[i].med } });
+  };
+  const closeEdit = () => { setEditDay(null); setDraft(null); };
+  const saveEdit = () => {
+    if (editDay === null || !draft) return;
+    setRows((rs) => rs.map((r, i) => (i === editDay ? draft : r)));
+    closeEdit();
+  };
+  const patchDraft = (patch: Partial<DailyRow>) => setDraft((d) => (d ? { ...d, ...patch } : d));
+  const patchIntake = (k: 'morning' | 'lunch' | 'dinner', v: string) =>
+    setDraft((d) => (d ? { ...d, intake: { ...d.intake, [k]: v } } : d));
+
   return (
     <Box>
       {/* === 単一 Table（B 案・全 7 セクション統合）=== */}
@@ -366,10 +394,12 @@ const FlowsheetView: React.FC<Props> = () => {
                 sx={{ ...stickySubCell, bgcolor: '#e3edf7' }}
                 style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: LABEL_COL_WIDTH, zIndex: 100 }}
               />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell
                   key={i}
-                  sx={todayHeaderCellSx(d.isToday)}
+                  title="クリックで当日の項目を入力"
+                  onClick={() => openEdit(i)}
+                  sx={{ ...todayHeaderCellSx(d.isToday), cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                   style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, zIndex: 100 }}
                 >
                   {d.date}({d.weekday})
@@ -386,7 +416,7 @@ const FlowsheetView: React.FC<Props> = () => {
                 sx={stickySubCell}
                 style={{ position: 'sticky', top: HEADER_ROW_TOP.row2, left: LABEL_COL_WIDTH, zIndex: 100 }}
               />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell
                   key={i}
                   sx={{ ...dayCellSx(d.isToday), bgcolor: d.isToday ? '#fff8e1' : '#fff' }}
@@ -404,7 +434,7 @@ const FlowsheetView: React.FC<Props> = () => {
                 sx={{ ...stickySubCell, borderBottom: '2px solid #1e3a5f' }}
                 style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, left: LABEL_COL_WIDTH, zIndex: 100, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
               />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell
                   key={i}
                   sx={{ ...dayCellSx(d.isToday), py: 0.3, bgcolor: d.isToday ? '#fff8e1' : '#fff', borderBottom: '2px solid #1e3a5f' }}
@@ -424,6 +454,7 @@ const FlowsheetView: React.FC<Props> = () => {
                     </Button>
                     <Button
                       size="small" variant="outlined"
+                      onClick={() => openEdit(i)}
                       startIcon={<ThermostatIcon sx={{ fontSize: '0.85rem !important' }} />}
                       sx={{
                         fontSize: '0.65rem', minWidth: 0, px: 0.5, py: 0,
@@ -444,7 +475,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell sx={stickyLabelCell}>病室</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.room}</TableCell>
               ))}
             </TableRow>
@@ -538,7 +569,7 @@ const FlowsheetView: React.FC<Props> = () => {
                 </Stack>
               </TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>
                   <Stack direction="row" spacing={0} justifyContent="center" sx={{ flexWrap: 'wrap' }}>
                     {d.orderKinds.map((k, idx) => (
@@ -572,7 +603,7 @@ const FlowsheetView: React.FC<Props> = () => {
                 </Stack>
               </TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   {d.labLinks.length === 0 ? '—' : (
                     <Stack spacing={0.2} alignItems="center">
@@ -627,21 +658,21 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell sx={stickyLabelCell}>身長</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.height}</TableCell>
               ))}
             </TableRow>
             <TableRow>
               <TableCell sx={stickyLabelCell}>体重(BMI)</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.weightBmi}</TableCell>
               ))}
             </TableRow>
             <TableRow>
               <TableCell sx={stickyLabelCell}>便(回数)</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stool}</TableCell>
               ))}
             </TableRow>
@@ -649,21 +680,21 @@ const FlowsheetView: React.FC<Props> = () => {
               {/* 便の性状はブリストルスケールの番号(1〜7)で記入 */}
               <TableCell sx={stickyLabelCell}>便(性状)</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{formatStool(d.stoolDetail)}</TableCell>
               ))}
             </TableRow>
             <TableRow>
               <TableCell sx={stickyLabelCell}>下剤</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.laxative}</TableCell>
               ))}
             </TableRow>
             <TableRow>
               <TableCell sx={stickyLabelCell}>尿量</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.urine}</TableCell>
               ))}
             </TableRow>
@@ -676,7 +707,7 @@ const FlowsheetView: React.FC<Props> = () => {
                     <TableCell rowSpan={3} sx={{ ...stickyLabelCell, verticalAlign: 'top' }}>食事</TableCell>
                   )}
                   <TableCell sx={stickySubCell}>{sub}</TableCell>
-                  {DAILY.map((d, i) => (
+                  {rows.map((d, i) => (
                     <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.intake[k]}</TableCell>
                   ))}
                 </TableRow>
@@ -692,7 +723,7 @@ const FlowsheetView: React.FC<Props> = () => {
                     <TableCell rowSpan={4} sx={{ ...stickyLabelCell, verticalAlign: 'top' }}>服薬</TableCell>
                   )}
                   <TableCell sx={stickySubCell}>{sub}</TableCell>
-                  {DAILY.map((d, i) => (
+                  {rows.map((d, i) => (
                     <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.med[k]}</TableCell>
                   ))}
                 </TableRow>
@@ -705,7 +736,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell sx={stickyLabelCell}>診療録</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   {d.karteLinks.length === 0 ? '—' : (
                     <Stack spacing={0.2} alignItems="center">
@@ -723,7 +754,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell sx={stickyLabelCell}>部門診療録</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   {d.deptLinks.length === 0 ? '—' : (
                     <Stack spacing={0.2} alignItems="center">
@@ -741,7 +772,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell sx={stickyLabelCell}>移行記事</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>
                   {d.transferLinks.length === 0 ? '—' : d.transferLinks.join(', ')}
                 </TableCell>
@@ -751,7 +782,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell sx={stickyLabelCell}>看護記録</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), verticalAlign: 'top' }}>
                   <Stack spacing={0.3} alignItems="center">
                     {d.nursingLinks.map((l, idx) => (
@@ -776,7 +807,7 @@ const FlowsheetView: React.FC<Props> = () => {
             <TableRow>
               <TableCell sx={stickyLabelCell}>入浴</TableCell>
               <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.bath}</TableCell>
               ))}
             </TableRow>
@@ -787,7 +818,7 @@ const FlowsheetView: React.FC<Props> = () => {
                 サイン
               </TableCell>
               <TableCell sx={{ ...stickySubCell, bgcolor: '#e3edf7' }} />
-              {DAILY.map((d, i) => (
+              {rows.map((d, i) => (
                 <TableCell key={i} sx={{ ...dayCellSx(d.isToday), bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
                   {d.sign}
                 </TableCell>
@@ -796,6 +827,79 @@ const FlowsheetView: React.FC<Props> = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* 当日入力ダイアログ（日列クリック / バイタルボタンで起動） */}
+      <Dialog open={editDay !== null} onClose={closeEdit} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          {draft ? `${draft.date}（${draft.weekday}）の入力` : '入力'}
+        </DialogTitle>
+        {draft && (
+          <DialogContent dividers>
+            <Stack spacing={2} sx={{ mt: 0.5 }}>
+              <TextField
+                size="small" label="体重(BMI)" value={draft.weightBmi}
+                onChange={(e) => patchDraft({ weightBmi: e.target.value })}
+              />
+              <TextField
+                select size="small" label="便（回数）" value={String(draft.stool)}
+                onChange={(e) => patchDraft({ stool: Number(e.target.value) })}
+              >
+                {STOOL_COUNT_OPTIONS.map((n) => (
+                  <MenuItem key={n} value={String(n)}>{n}</MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select size="small" label="便（性状・ブリストル）" value={draft.stoolDetail}
+                onChange={(e) => patchDraft({ stoolDetail: e.target.value })}
+              >
+                <MenuItem value="—">—（記載なし）</MenuItem>
+                {BRISTOL_OPTIONS.map((v) => (
+                  <MenuItem key={v} value={v}>{formatStool(v)}</MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select size="small" label="下剤" value={draft.laxative}
+                onChange={(e) => patchDraft({ laxative: e.target.value })}
+              >
+                {LAXATIVE_OPTIONS.map((v) => (
+                  <MenuItem key={v} value={v}>{v}</MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                size="small" label="尿量（mL）" value={draft.urine}
+                onChange={(e) => patchDraft({ urine: e.target.value })}
+                placeholder="例: 1200 / —"
+              />
+              <Box>
+                <Typography variant="caption" color="text.secondary">食事（摂取量）</Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                  {(['morning', 'lunch', 'dinner'] as const).map((k) => (
+                    <TextField
+                      key={k} size="small"
+                      label={k === 'morning' ? '朝' : k === 'lunch' ? '昼' : '夕'}
+                      value={draft.intake[k]}
+                      onChange={(e) => patchIntake(k, e.target.value)}
+                      sx={{ width: 72 }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+              <TextField
+                select size="small" label="入浴" value={draft.bath}
+                onChange={(e) => patchDraft({ bath: e.target.value })}
+              >
+                {BATH_OPTIONS.map((v) => (
+                  <MenuItem key={v} value={v}>{v}</MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+          </DialogContent>
+        )}
+        <DialogActions>
+          <Button onClick={closeEdit}>キャンセル</Button>
+          <Button variant="contained" onClick={saveEdit}>保存</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
