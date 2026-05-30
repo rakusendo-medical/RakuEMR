@@ -66,6 +66,7 @@ const ORDER_TYPE_DESCRIPTION: Record<Order['type'], string> = {
   '注射': '注射',
   '心理検査': '心理検査',
   'ECT': 'ECT',
+  'リハ': 'リハ',
   '入院定時': '入院定時',
   'IF': 'IF',
   '文字': 'テキスト',

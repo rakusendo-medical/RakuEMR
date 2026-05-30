@@ -132,6 +132,7 @@ export type OrderType =
   | "注射"
   | "心理検査"
   | "ECT"
+  | "リハ"
   | "入院定時"
   | "IF"
   | "文字";

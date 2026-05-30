@@ -635,6 +635,12 @@ export const ORDERS: Order[] = [
   { id: 'ORD008', patientId: 'P013', patientName: '松本 拓也',   type: '処方',     content: 'ハロペリドール 5mg',            schedule: '朝・夕',          status: '実施中', startDate: '2026-02-10', days: 14, doctorName: '田村 医師' },
   { id: 'ORD009', patientId: 'P007', patientName: '渡辺 大輔',   type: 'IF',       content: '禁酒指導',                      schedule: '—',               status: '実施中', startDate: '2026-02-10', days: 0,  doctorName: '田村 医師' },
   { id: 'ORD010', patientId: 'P014', patientName: '井上 さくら', type: '文字',     content: '食事量の詳細記録を継続',        schedule: '毎食',            status: '実施中', startDate: '2026-02-14', days: 0,  doctorName: '岸本 医師' },
+
+  // ===== リハオーダー（リハビリ）=====
+  { id: 'ORD401', patientId: 'P001', patientName: '山田 太郎',   type: 'リハ',     content: '作業療法（集団プログラム）',    schedule: '週 3 回',         status: '実施中', startDate: '2026-01-15', days: 0,  doctorName: '田村 医師' },
+  { id: 'ORD402', patientId: 'P005', patientName: '田中 健太',   type: 'リハ',     content: '作業療法（個別プログラム）',    schedule: '週 2 回',         status: '実施中', startDate: '2026-02-01', days: 0,  doctorName: '岸本 医師' },
+  { id: 'ORD403', patientId: 'P011', patientName: '吉田 浩二',   type: 'リハ',     content: 'SST（社会技能訓練）',           schedule: '週 1 回',         status: '実施中', startDate: '2026-02-10', days: 0,  doctorName: '岸本 医師' },
+  { id: 'ORD404', patientId: 'P014', patientName: '井上 さくら', type: 'リハ',     content: '作業療法（調理活動）',          schedule: '週 2 回',         status: '指示済', startDate: '2026-02-18', days: 0,  doctorName: '岸本 医師' },
 ];
 
 // ===== 看護記録 =====
@@ -1378,11 +1384,28 @@ export const NURSING_CARE_SCHEDULES: NursingCareSchedule[] = [
 
 // ===== 書類 =====
 export const DOCUMENTS: Document[] = [
-  { id: 'DOC001', patientId: 'P003', patientName: '鈴木 一郎', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-02-01', createdBy: '森田 医師', status: '登録済' },
-  { id: 'DOC002', patientId: 'P003', patientName: '鈴木 一郎', title: '隔離開始時書類',                 type: '隔離拘束', createdAt: '2026-02-22', createdBy: '岸本 医師', status: '登録済' },
-  { id: 'DOC003', patientId: 'P004', patientName: '高橋 美咲', title: '身体拘束に関する説明書・同意書', type: '隔離拘束', createdAt: '2026-02-23', createdBy: '田村 医師', status: '登録済' },
-  { id: 'DOC004', patientId: 'P019', patientName: '新井 太一', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-02-24', createdBy: '田村 医師', status: '作成中' },
-  { id: 'DOC005', patientId: 'P003', patientName: '鈴木 一郎', title: '退院療養計画書',                 type: '退院時',   createdAt: '2026-02-24', createdBy: '森田 医師', status: '作成中' },
+  { id: 'DOC001', patientId: 'P003', patientName: '鈴木 一郎', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-02-01', createdBy: '森田 医師',     status: '登録済' },
+  { id: 'DOC002', patientId: 'P003', patientName: '鈴木 一郎', title: '隔離開始時書類',                 type: '隔離拘束', createdAt: '2026-02-22', createdBy: '岸本 医師',     status: '登録済' },
+  { id: 'DOC003', patientId: 'P004', patientName: '高橋 美咲', title: '身体拘束に関する説明書・同意書', type: '隔離拘束', createdAt: '2026-02-23', createdBy: '田村 医師',     status: '登録済' },
+  { id: 'DOC004', patientId: 'P019', patientName: '新井 太一', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-02-24', createdBy: '田村 医師',     status: '作成中' },
+  { id: 'DOC005', patientId: 'P003', patientName: '鈴木 一郎', title: '退院療養計画書',                 type: '退院時',   createdAt: '2026-02-24', createdBy: '森田 医師',     status: '作成中' },
+  { id: 'DOC006', patientId: 'P004', patientName: '高橋 美咲', title: '行動制限最小化に係る評価記録',   type: '行動制限', createdAt: '2026-02-25', createdBy: '山田 看護師長', status: '完成'   },
+  { id: 'DOC007', patientId: 'P017', patientName: '清水 翔太', title: '隔離開始時書類',                 type: '隔離拘束', createdAt: '2026-02-12', createdBy: '岸本 医師',     status: '登録済' },
+  { id: 'DOC008', patientId: 'P017', patientName: '清水 翔太', title: '身体拘束に関する説明書・同意書', type: '隔離拘束', createdAt: '2026-02-13', createdBy: '岸本 医師',     status: '完成'   },
+  { id: 'DOC009', patientId: 'P001', patientName: '山田 太郎', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-01-10', createdBy: '田村 医師',     status: '登録済' },
+  { id: 'DOC010', patientId: 'P002', patientName: '佐藤 花子', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-01-15', createdBy: '岸本 医師',     status: '登録済' },
+  { id: 'DOC011', patientId: 'P006', patientName: '伊藤 幸子', title: '退院療養計画書',                 type: '退院時',   createdAt: '2026-05-08', createdBy: '森田 医師',     status: '作成中' },
+  { id: 'DOC012', patientId: 'P008', patientName: '中村 裕子', title: '入院時看護計画書',               type: '入院時',   createdAt: '2026-01-26', createdBy: '鈴木 Ns',       status: '完成'   },
+  { id: 'DOC013', patientId: 'P013', patientName: '松本 拓也', title: '身体拘束に関する説明書・同意書', type: '隔離拘束', createdAt: '2026-02-08', createdBy: '田村 医師',     status: '登録済' },
+  { id: 'DOC014', patientId: 'P050', patientName: '長田 直樹', title: '隔離開始時書類',                 type: '隔離拘束', createdAt: '2026-02-18', createdBy: '森田 医師',     status: '登録済' },
+  { id: 'DOC015', patientId: 'P011', patientName: '吉田 浩二', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-02-03', createdBy: '岸本 医師',     status: '完成'   },
+  { id: 'DOC016', patientId: 'P019', patientName: '新井 太一', title: '退院療養計画書',                 type: '退院時',   createdAt: '2026-05-12', createdBy: '田村 医師',     status: '作成中' },
+  { id: 'DOC017', patientId: 'P022', patientName: '小川 浩',   title: '任意入院同意書',                 type: 'その他',   createdAt: '2026-02-05', createdBy: '高橋 Ns',       status: '登録済' },
+  { id: 'DOC018', patientId: 'P003', patientName: '鈴木 一郎', title: '行動制限最小化に係る評価記録',   type: '行動制限', createdAt: '2026-03-01', createdBy: '森田 医師',     status: '完成'   },
+  { id: 'DOC019', patientId: 'P004', patientName: '高橋 美咲', title: '退院療養計画書',                 type: '退院時',   createdAt: '2026-05-15', createdBy: '田村 医師',     status: '作成中' },
+  { id: 'DOC020', patientId: 'P012', patientName: '山口 真理', title: '入院時看護計画書',               type: '入院時',   createdAt: '2026-01-19', createdBy: '佐藤 主任',     status: '完成'   },
+  { id: 'DOC021', patientId: 'P016', patientName: '林 美穂',   title: '預り金管理票',                   type: 'その他',   createdAt: '2026-02-07', createdBy: '鈴木 Ns',       status: '登録済' },
+  { id: 'DOC022', patientId: 'P005', patientName: '田中 健太', title: '入院診療計画書',                 type: '入院時',   createdAt: '2026-01-20', createdBy: '岸本 医師',     status: '作成中' },
 ];
 
 // ===== 病棟管理 =====
