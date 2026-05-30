@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead,
@@ -874,6 +874,248 @@ const ObservationListTab: React.FC = () => {
   );
 };
 
+// ===== 行動制限台帳: tab=3（月・病棟指定で台帳表示）=====
+
+// 凡例（参考システムの行動制限一覧性台帳の様式に準拠）
+const LEDGER_REASON_LEGEND: { code: string; text: string }[] = [
+  { code: 'A', text: '自傷・他害の防止' },
+  { code: 'B', text: '多動・不穏が顕著' },
+  { code: 'C', text: '身体処置を受けられない' },
+  { code: 'E', text: '本人希望で隔離' },
+  { code: 'F', text: 'その他' },
+];
+
+const LEDGER_CONTENT_LEGEND: string[] = [
+  '身：身体拘束', '延：退院延期',
+  '隔：施錠隔離', '面：面会制限',
+  '通：通信制限', '外：外出外泊',
+];
+
+// 台帳フッターの施設名（モック表示用）
+const LEDGER_FACILITY = '医療法人　邦央会　楽仙堂病院';
+
+// 様式に合わせ常に 1〜31 日のマスを描画する
+const LEDGER_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+const toReiwa = (d: Date): string => `R${d.getFullYear() - 2018}.${d.getMonth() + 1}.${d.getDate()}`;
+
+const ledgerAdmitLabel = (patientId: string): string =>
+  patientAdmitForm(patientId) === '任意入院' ? '任意' : '医保';
+
+// 制限理由(A〜F)はマスタに無いため id から決定論的にダミー割当
+const ledgerReasonCode = (id: string): string => {
+  const codes = ['A', 'B', 'B', 'F', 'A', 'B'];
+  const sum = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return codes[sum % codes.length];
+};
+
+// 制限内容コード（隔離→隔 / 拘束→身）
+const ledgerContentCode = (o: IsolationOrder): string => {
+  const st = getSubtype(o);
+  return st === '隔離' ? '隔' : st === '拘束' ? '身' : '隔';
+};
+
+interface LedgerRow {
+  order: IsolationOrder;
+  name: string;
+  admit: string;
+  startLabel: string;
+  reason: string;
+  content: string;
+  dayMarks: Record<number, string>; // 日(1..31) → 制限状況マーク
+}
+
+// 'YYYY-MM-DD HH:mm' / ISO を日付(時刻切捨て)へ
+function ledgerDateOnly(s: string): Date {
+  const d = new Date(s.replace(' ', 'T'));
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// 指定年月・病棟に重なる隔離拘束指示を台帳行へ変換
+function computeLedgerRows(year: number, month: number, ward: WardId | 'all'): LedgerRow[] {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month - 1, daysInMonth);
+  return ISOLATION_ORDERS
+    .filter((o) => ward === 'all' || o.wardId === ward)
+    .filter((o) => {
+      const start = ledgerDateOnly(o.startDatetime);
+      const end = o.endDatetime ? ledgerDateOnly(o.endDatetime) : null;
+      return start <= monthEnd && (!end || end >= monthStart); // 当月と期間が重なる
+    })
+    .map((o) => {
+      const start = ledgerDateOnly(o.startDatetime);
+      const end = o.endDatetime ? ledgerDateOnly(o.endDatetime) : null;
+      const dayMarks: Record<number, string> = {};
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cur = new Date(year, month - 1, d);
+        if (cur < start) continue;
+        if (end && cur > end) continue;
+        if (cur.getTime() === start.getTime()) dayMarks[d] = '開始';
+        else if (end && cur.getTime() === end.getTime()) dayMarks[d] = '解除';
+        else dayMarks[d] = '→';
+      }
+      return {
+        order: o,
+        name: `${o.patientName}　様`,
+        admit: ledgerAdmitLabel(o.patientId),
+        startLabel: toReiwa(start),
+        reason: ledgerReasonCode(o.id),
+        content: ledgerContentCode(o),
+        dayMarks,
+      };
+    });
+}
+
+const cellSx = {
+  border: '1px solid #cbd5e1',
+  p: '2px 4px',
+  fontSize: 11,
+  textAlign: 'center' as const,
+  whiteSpace: 'nowrap' as const,
+};
+
+const BehaviorRestrictLedgerTab: React.FC = () => {
+  const [month, setMonth] = useState('2026-06'); // YYYY-MM
+  const [ward, setWard] = useState<WardId | 'all'>('all');
+
+  const [year, mon] = month.split('-').map(Number);
+  const daysInMonth = new Date(year, mon, 0).getDate();
+  const rows = useMemo(() => computeLedgerRows(year, mon, ward), [year, mon, ward]);
+
+  // 様式の体裁を保つため空行を補充
+  const MIN_ROWS = 18;
+  const emptyRows = Math.max(0, MIN_ROWS - rows.length);
+
+  return (
+    <Box>
+      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+        <TextField
+          type="month" size="small" label="対象月"
+          value={month} onChange={(e) => setMonth(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          select size="small" label="病棟" value={ward} sx={{ minWidth: 140 }}
+          onChange={(e) => setWard(e.target.value as WardId | 'all')}
+        >
+          <MenuItem value="all">全病棟</MenuItem>
+          <MenuItem value="ward1">第１病棟</MenuItem>
+          <MenuItem value="ward2">第２病棟</MenuItem>
+        </TextField>
+        <Box sx={{ flex: 1 }} />
+        <Button variant="outlined" startIcon={<Print />}>印刷</Button>
+      </Stack>
+
+      <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+        {/* タイトル行 */}
+        <Stack direction="row" alignItems="center" sx={{ px: 1, py: 0.75, borderBottom: '1px solid #cbd5e1' }}>
+          <Typography sx={{ fontWeight: 600, minWidth: 200, whiteSpace: 'nowrap' }}>
+            令和 {year - 2018}年 {mon}月
+          </Typography>
+          <Typography sx={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 18 }}>
+            行動制限一覧性台帳
+          </Typography>
+          <Box sx={{ minWidth: 200 }} />
+        </Stack>
+
+        <Table size="small" sx={{ '& th, & td': cellSx }}>
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f1f5f9' }}>
+              <TableCell sx={{ minWidth: 110 }}>氏名</TableCell>
+              <TableCell>入院形態</TableCell>
+              <TableCell>開始日</TableCell>
+              <TableCell>制限理由</TableCell>
+              <TableCell>制限内容</TableCell>
+              <TableCell sx={{ fontSize: 10 }}>日</TableCell>
+              {LEDGER_DAYS.map((d) => (
+                <TableCell key={d} sx={{ width: 22, color: d > daysInMonth ? 'text.disabled' : 'inherit' }}>
+                  {d}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.order.id}>
+                <TableCell sx={{ textAlign: 'right' }}>{r.name}</TableCell>
+                <TableCell>{r.admit}</TableCell>
+                <TableCell>{r.startLabel}</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: 14 }}>{r.reason}</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: 14 }}>{r.content}</TableCell>
+                <TableCell sx={{ fontSize: 9, lineHeight: 1.1, color: 'text.secondary' }}>制限<br />状況</TableCell>
+                {LEDGER_DAYS.map((d) => {
+                  const mark = d <= daysInMonth ? (r.dayMarks[d] ?? '') : '';
+                  const emphasized = mark === '開始' || mark === '解除';
+                  return (
+                    <TableCell
+                      key={d}
+                      sx={{
+                        bgcolor: d > daysInMonth ? '#f8fafc' : 'transparent',
+                        color: emphasized ? 'primary.main' : 'text.secondary',
+                        fontSize: mark.length > 1 ? 8 : 13,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {mark}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+            {Array.from({ length: emptyRows }).map((_, i) => (
+              <TableRow key={`empty-${i}`} sx={{ height: 30 }}>
+                <TableCell sx={{ textAlign: 'right' }}>　様</TableCell>
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell sx={{ fontSize: 9, lineHeight: 1.1, color: 'text.secondary' }}>制限<br />状況</TableCell>
+                {LEDGER_DAYS.map((d) => (
+                  <TableCell key={d} sx={{ bgcolor: d > daysInMonth ? '#f8fafc' : 'transparent' }} />
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* 凡例＋施設名 */}
+      <Stack direction="row" spacing={2} sx={{ mt: 2 }} flexWrap="wrap" alignItems="stretch">
+        <Paper variant="outlined" sx={{ p: 1.5, minWidth: 220 }}>
+          <Typography sx={{ fontWeight: 600, textAlign: 'center', mb: 1 }}>制限理由</Typography>
+          <Stack spacing={0.3}>
+            {LEDGER_REASON_LEGEND.map((x) => (
+              <Typography key={x.code} variant="body2">{x.code}：{x.text}</Typography>
+            ))}
+          </Stack>
+        </Paper>
+        <Paper variant="outlined" sx={{ p: 1.5, minWidth: 240 }}>
+          <Typography sx={{ fontWeight: 600, textAlign: 'center', mb: 1 }}>制限内容</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 1.5, rowGap: 0.3 }}>
+            {LEDGER_CONTENT_LEGEND.map((x) => (
+              <Typography key={x} variant="body2">{x}</Typography>
+            ))}
+          </Box>
+        </Paper>
+        <Paper variant="outlined" sx={{ p: 1.5, minWidth: 220 }}>
+          <Typography sx={{ fontWeight: 600, textAlign: 'center', mb: 1 }}>制限状況</Typography>
+          <Stack spacing={0.3} sx={{ textAlign: 'center' }}>
+            <Typography variant="body2">開始</Typography>
+            <Typography variant="body2">解除</Typography>
+            <Typography variant="body2">転：転院　退：退院</Typography>
+            <Typography variant="body2">→：継続</Typography>
+          </Stack>
+        </Paper>
+        <Box sx={{ flex: 1 }} />
+        <Stack justifyContent="flex-end">
+          <Typography sx={{ color: '#1e40af', fontWeight: 500 }}>{LEDGER_FACILITY}</Typography>
+        </Stack>
+      </Stack>
+    </Box>
+  );
+};
+
 // ===== 既存タブ（ep-08 で再構成予定）=====
 
 const IsolationRestraint: React.FC = () => {
@@ -906,17 +1148,7 @@ const IsolationRestraint: React.FC = () => {
       {/* ===== ep-08 隔離拘束歴: tab=2 改修済 ===== */}
       {tab === 2 && <IsolationHistoryView />}
 
-      {tab === 3 && (
-        <Box>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary">行動制限一覧性台帳</Typography>
-            <Button variant="outlined" startIcon={<Print />}>印刷</Button>
-          </Stack>
-          <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="text.secondary">月と病棟を指定して台帳を表示・印刷できます</Typography>
-          </Paper>
-        </Box>
-      )}
+      {tab === 3 && <BehaviorRestrictLedgerTab />}
     </Box>
   );
 };
