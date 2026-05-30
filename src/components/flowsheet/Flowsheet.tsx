@@ -39,6 +39,7 @@ interface DailyRow {
   transferLinks: string[];
   nursingLinks: string[];
   stoolDetail: string;
+  laxative: string;
   bath: string;
   sign: string;
 }
@@ -48,73 +49,73 @@ const DAILY: DailyRow[] = [
     date: '2026/5/13', weekday: '水', admitDay: 28, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '検', '処'], labLinks: ['外(CRC)血液'],
     meal: { morning: '通常指示', lunch: '臨時変更', dinner: '通常指示' },
-    height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '—',
+    height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '1100',
     intake: { morning: '5', lunch: '8', dinner: '7' },
     sleep: '浅眠',
     med: { morning: '—', lunch: '—', dinner: '—', night: '—' },
     karteLinks: ['隔離開始(タイトル)', '生理(指示)'],
     deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: [],
-    stoolDetail: '—', bath: '入浴', sign: '鈴木',
+    stoolDetail: '—', laxative: 'なし', bath: '入浴', sign: '鈴木',
   },
   {
     date: '2026/5/14', weekday: '木', admitDay: 29, isToday: false, room: 'E102号室',
     orderKinds: ['注', '検', '処'], labLinks: ['院内血液', '外(CRC)血液', '院内血液'],
     meal: { morning: '通常指示', lunch: '欠食', dinner: '通常指示' },
-    height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '○',
+    height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '1300',
     intake: { morning: '2', lunch: '0', dinner: '5' },
     sleep: '良眠',
     med: { morning: '✓(高橋)', lunch: '✓(高橋)', dinner: '✓(高橋)', night: '—' },
     karteLinks: ['精神療法(xx開始)', '生理(指示)'],
     deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: ['看護記録(熱発)'],
-    stoolDetail: '硬便', bath: '入浴', sign: '高橋',
+    stoolDetail: '2', laxative: '緩下剤', bath: '入浴', sign: '高橋',
   },
   {
     date: '2026/5/15', weekday: '金', admitDay: 30, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '注', '検', '処'], labLinks: [],
     meal: { morning: '通常指示', lunch: '通常指示', dinner: '通常指示' },
-    height: 167.8, weightBmi: '55.8(19.8)', stool: 2, urine: '—',
+    height: 167.8, weightBmi: '55.8(19.8)', stool: 2, urine: '950',
     intake: { morning: '5', lunch: '5', dinner: '10' },
     sleep: '普通',
     med: { morning: '✓(山本)', lunch: '—', dinner: '✓(山本)', night: '✓(山本)' },
     karteLinks: ['隔離開始(タイトル)', '精神療法(xx開始)', '生理(指示)'],
     deptLinks: [], transferLinks: [], nursingLinks: [],
-    stoolDetail: '普通便', bath: 'シャワー浴', sign: '山本',
+    stoolDetail: '4', laxative: 'なし', bath: 'シャワー浴', sign: '山本',
   },
   {
     date: '2026/5/16', weekday: '土', admitDay: 31, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '注', '検', '処', '画', '心', 'E'], labLinks: ['院内血液'],
     meal: { morning: '外出・外泊', lunch: '通常指示', dinner: '欠食' },
-    height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '○',
+    height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '1250',
     intake: { morning: '2', lunch: '8', dinner: '0' },
     sleep: '浅眠',
     med: { morning: '✓(佐々木)', lunch: '✓(佐々木)', dinner: '—', night: '✓(佐々木)' },
     karteLinks: [],
     deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: ['看護記録(熱発)'],
-    stoolDetail: '硬便', bath: '清拭', sign: '佐々木',
+    stoolDetail: '2', laxative: '坐薬', bath: '清拭', sign: '佐々木',
   },
   {
     date: '2026/5/17', weekday: '日', admitDay: 32, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '画'], labLinks: ['外(CRC)血液'],
     meal: { morning: '通常指示', lunch: '通常指示', dinner: '外出・外泊' },
-    height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '—',
+    height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '1000',
     intake: { morning: '5', lunch: '0', dinner: '2' },
     sleep: '良眠',
     med: { morning: '✓(中田)', lunch: '—', dinner: '✓(中田)', night: '✓(中田)' },
     karteLinks: ['隔離開始(タイトル)', '精神療法(xx開始)'],
     deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: [],
-    stoolDetail: '—', bath: '入浴', sign: '中田',
+    stoolDetail: '—', laxative: 'なし', bath: '入浴', sign: '中田',
   },
   {
     date: '2026/5/18', weekday: '月', admitDay: 33, isToday: false, room: 'E102号室',
     orderKinds: ['注', '画'], labLinks: ['院内血液', '外(CRC)血液'],
     meal: { morning: '通常指示', lunch: '通常指示', dinner: '臨時変更' },
-    height: 167.8, weightBmi: '57(20.2)', stool: 2, urine: '○',
+    height: 167.8, weightBmi: '57(20.2)', stool: 2, urine: '1180',
     intake: { morning: '2', lunch: '5', dinner: '8' },
     sleep: '普通',
     med: { morning: '✓(鈴木)', lunch: '✓(鈴木)', dinner: '✓(鈴木)', night: '—' },
     karteLinks: ['精神療法(xx開始)', '生理(指示)'],
     deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: ['看護記録(熱発)'],
-    stoolDetail: '普通便', bath: 'シャワー浴', sign: '鈴木',
+    stoolDetail: '4', laxative: 'なし', bath: 'シャワー浴', sign: '鈴木',
   },
   {
     date: '2026/5/19', weekday: '火', admitDay: 34, isToday: true, room: 'E102号室',
@@ -126,7 +127,7 @@ const DAILY: DailyRow[] = [
     med: { morning: '✓(高橋)', lunch: '—', dinner: '✓(高橋)', night: '—' },
     karteLinks: ['隔離開始(タイトル)', '精神療法(xx開始)'],
     deptLinks: ['摂食療法(実施)'], transferLinks: [], nursingLinks: [],
-    stoolDetail: '—', bath: '—', sign: '高橋',
+    stoolDetail: '—', laxative: 'なし', bath: '—', sign: '高橋',
   },
 ];
 
@@ -631,14 +632,29 @@ const FlowsheetView: React.FC<Props> = () => {
               ))}
             </TableRow>
             <TableRow>
-              <TableCell sx={stickyLabelCell}>便</TableCell>
+              <TableCell sx={stickyLabelCell}>便(回数)</TableCell>
               <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stool}</TableCell>
               ))}
             </TableRow>
             <TableRow>
-              <TableCell sx={stickyLabelCell}>尿</TableCell>
+              {/* 便の性状はブリストルスケールの番号(1〜7)で記入 */}
+              <TableCell sx={stickyLabelCell}>便(性状)</TableCell>
+              <TableCell sx={stickySubCell} />
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stoolDetail}</TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell sx={stickyLabelCell}>下剤</TableCell>
+              <TableCell sx={stickySubCell} />
+              {DAILY.map((d, i) => (
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.laxative}</TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell sx={stickyLabelCell}>尿量</TableCell>
               <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.urine}</TableCell>
@@ -659,13 +675,7 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableRow>
               );
             })}
-            <TableRow>
-              <TableCell sx={stickyLabelCell}>睡眠</TableCell>
-              <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
-                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.sleep}</TableCell>
-              ))}
-            </TableRow>
+            {/* 睡眠行は一旦非表示（PM指示） */}
             {/* 服薬 朝/昼/夕/寝 */}
             {(['morning', 'lunch', 'dinner', 'night'] as const).map((k, idx) => {
               const sub = k === 'morning' ? '朝' : k === 'lunch' ? '昼' : k === 'dinner' ? '夕' : '寝';
@@ -755,13 +765,7 @@ const FlowsheetView: React.FC<Props> = () => {
 
             {/* ===== 個別ケア・観察項目 ===== */}
             <SectionHeaderRow title="個別ケア・観察項目" />
-            <TableRow>
-              <TableCell sx={stickyLabelCell}>便(性状)</TableCell>
-              <TableCell sx={stickySubCell} />
-              {DAILY.map((d, i) => (
-                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stoolDetail}</TableCell>
-              ))}
-            </TableRow>
+            {/* 便(性状) はバイタル群（便の回数の直下）へ移動済み */}
             <TableRow>
               <TableCell sx={stickyLabelCell}>入浴</TableCell>
               <TableCell sx={stickySubCell} />
