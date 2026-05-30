@@ -202,7 +202,13 @@ const WardMap: React.FC = () => {
           variant="outlined"
           disabled={selectedRooms.size === 0}
           endIcon={<ArrowForward />}
-          onClick={() => navigate('/nursing/bulk-vitals')}
+          onClick={() => {
+            // 選択中の病棟・病室を一括バイタル入力へ引き継ぐ
+            navigate('/nursing/bulk-vitals', {
+              state: { wardId: ward, rooms: [...selectedRooms].sort() },
+            });
+            clearSelectedRooms();
+          }}
         >
           一括入力へ
         </Button>

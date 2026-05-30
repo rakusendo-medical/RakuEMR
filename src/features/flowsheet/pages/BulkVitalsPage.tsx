@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import {
   Box, Paper, Typography, Stack, Select, MenuItem, FormControl, InputLabel,
   TextField, Button, Checkbox, FormControlLabel,
@@ -20,6 +20,12 @@ interface RowDraft {
   selected: boolean;
   time: string;
   values: Record<string, string>;
+}
+
+// 病棟マップ「一括入力へ」から引き継がれる遷移 state
+interface BulkVitalsNavState {
+  wardId?: string;
+  rooms?: string[];
 }
 
 const numFromStr = (s: string): number | undefined => {
@@ -48,7 +54,7 @@ const BulkVitalsPage: React.FC = () => {
   }, [staffs, currentStaffId]);
 
   const [wardId, setWardId] = useState<string>(initialWard);
-  const [room, setRoom] = useState<string>('');
+  const [rooms, setRooms] = useState<string[]>([]);
   const [kindId, setKindId] = useState<BulkVitalKindId>('basic');
   const [recordDate, setRecordDate] = useState<ISODate>(TODAY);
   const [inputTargetOnly, setInputTargetOnly] = useState<boolean>(property.inputTargetOnlyDefault);
@@ -68,9 +74,13 @@ const BulkVitalsPage: React.FC = () => {
     return Array.from(set).sort();
   }, [wardId]);
 
-  const handleSearch = () => {
-    let list = PATIENTS.filter((p) => p.wardId === wardId);
-    if (room) list = list.filter((p) => p.roomNumber === room);
+  // 引数で病棟・病室を上書きできる（遷移 state からの自動検索用）。
+  // 省略時は現在の wardId / rooms を使用。
+  const handleSearch = (overrideWardId?: string, overrideRooms?: string[]) => {
+    const targetWardId = overrideWardId ?? wardId;
+    const targetRooms = overrideRooms ?? rooms;
+    let list = PATIENTS.filter((p) => p.wardId === targetWardId);
+    if (targetRooms.length > 0) list = list.filter((p) => targetRooms.includes(p.roomNumber));
     // モックでは全患者がパターン適用対象とみなす（spec の「対象項目設定あり」は将来）
     if (inputTargetOnly) {
       // 表示は全件で同じだが、UI 仕様確認用フラグ
@@ -83,6 +93,23 @@ const BulkVitalsPage: React.FC = () => {
     })));
     setSavedMsg(null);
   };
+
+  // 病棟マップ「一括入力へ」からの遷移。選択病棟・病室を引き継いで自動表示する。
+  const location = useLocation();
+  const navStateApplied = useRef(false);
+  useEffect(() => {
+    if (navStateApplied.current) return;
+    const navState = location.state as BulkVitalsNavState | null;
+    if (!navState?.wardId) return;
+    navStateApplied.current = true;
+    const validRooms = (navState.rooms ?? []).filter((r) =>
+      PATIENTS.some((p) => p.wardId === navState.wardId && p.roomNumber === r),
+    );
+    setWardId(navState.wardId);
+    setRooms(validRooms);
+    handleSearch(navState.wardId, validRooms);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // 種類変更時に時刻だけ追従させる（既存値は保持）。一括時刻欄も既定値へ戻す
   useEffect(() => {
@@ -151,24 +178,28 @@ const BulkVitalsPage: React.FC = () => {
           <Typography variant="h6">一括バイタル入力</Typography>
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>病棟</InputLabel>
-            <Select label="病棟" value={wardId} onChange={(e) => { setWardId(e.target.value); setRoom(''); }}>
+            <Select label="病棟" value={wardId} onChange={(e) => { setWardId(e.target.value); setRooms([]); }}>
               {FLOWSHEET_WARDS.map((w) => (
                 <MenuItem key={w.id} value={w.id}>{w.label}</MenuItem>
               ))}
             </Select>
           </FormControl>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ minWidth: 160, maxWidth: 280 }}>
             <InputLabel shrink>病室</InputLabel>
             <Select
               label="病室"
-              value={room}
-              onChange={(e) => setRoom(e.target.value)}
+              multiple
+              value={rooms}
+              onChange={(e) => setRooms(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
               displayEmpty
               notched
+              renderValue={(selected) => (selected.length === 0 ? '全室' : selected.join('、'))}
             >
-              <MenuItem value=""><em>全室</em></MenuItem>
               {roomsForWard.map((r) => (
-                <MenuItem key={r} value={r}>{r}</MenuItem>
+                <MenuItem key={r} value={r}>
+                  <Checkbox size="small" checked={rooms.includes(r)} sx={{ p: 0.5, mr: 0.5 }} />
+                  {r}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -199,7 +230,7 @@ const BulkVitalsPage: React.FC = () => {
             }
             label="入力対象患者のみ"
           />
-          <Button variant="contained" size="small" onClick={handleSearch}>表示</Button>
+          <Button variant="contained" size="small" onClick={() => handleSearch()}>表示</Button>
         </Stack>
       </Paper>
 
@@ -224,7 +255,7 @@ const BulkVitalsPage: React.FC = () => {
           <Box sx={{ flex: 1 }} />
           <Tooltip title="再表示（入力値は破棄）">
             <span>
-              <IconButton size="small" onClick={handleSearch}><RefreshIcon fontSize="small" /></IconButton>
+              <IconButton size="small" onClick={() => handleSearch()}><RefreshIcon fontSize="small" /></IconButton>
             </span>
           </Tooltip>
         </Stack>
