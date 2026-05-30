@@ -49,7 +49,8 @@ const FlowsheetHeader: React.FC<Props> = ({
     >
       <Tab label="フローシート" value="flowsheet" />
       <Tab label="隔離拘束" value="isolation" />
-      <Tab label="睡眠・活動" value="sleep" />
+      {/* 睡眠・活動タブは一旦非表示（PM指示）。復活させる場合は下行を有効化 */}
+      {/* <Tab label="睡眠・活動" value="sleep" /> */}
       {showObservationTab && <Tab label="観察" value="observation" />}
     </Tabs>
 

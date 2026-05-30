@@ -40,7 +40,11 @@ export const MASTER_CARE_ITEMS: CareItemMaster[] = [
   { id: 'ci-medication-evening', name: '夕食後服薬', type: 'check',  unit: '済' },
   { id: 'ci-medication-bedtime', name: '眠前服薬',   type: 'check',  unit: '済' },
   { id: 'ci-bath',           name: '入浴',         type: 'radio', options: ['一般浴', 'シャワー', '清拭', '未'] },
-  { id: 'ci-bowel',          name: '排便',         type: 'radio', options: ['有', '無'] },
+  { id: 'ci-bowel',          name: '便の回数',     type: 'combo', options: ['0回', '1回', '2回', '3回', '4回以上'] },
+  // 便の性状はブリストルスケールの番号で記入（1:コロコロ便〜7:水様便）
+  { id: 'ci-stool',          name: '便の性状',     type: 'combo', options: ['1 コロコロ便', '2 硬い便', '3 やや硬い便', '4 普通便', '5 やや軟らかい便', '6 泥状便', '7 水様便'] },
+  { id: 'ci-laxative',       name: '下剤',         type: 'combo', options: ['なし', '緩下剤', '坐薬', '浣腸'] },
+  { id: 'ci-urine',          name: '尿量',         type: 'text',  unit: 'mL' },
   { id: 'ci-mood',           name: '気分',         type: 'combo', options: ['良好', '普通', '不安', '落ち込み', '不穏'] },
   { id: 'ci-restraint-check', name: '拘束観察', type: 'check-multi', options: ['皮膚状態', '循環', '可動域', '苦痛訴え'] },
 ];
@@ -53,7 +57,7 @@ export const MASTER_FLOWSHEET_PATTERNS: FlowsheetPatternMaster[] = [
     careItemIds: [
       'ci-meal-breakfast', 'ci-meal-lunch', 'ci-meal-dinner',
       'ci-medication-morning', 'ci-medication-noon', 'ci-medication-evening', 'ci-medication-bedtime',
-      'ci-bath', 'ci-bowel', 'ci-mood',
+      'ci-bath', 'ci-bowel', 'ci-stool', 'ci-laxative', 'ci-urine', 'ci-mood',
     ],
   },
   {
@@ -62,7 +66,7 @@ export const MASTER_FLOWSHEET_PATTERNS: FlowsheetPatternMaster[] = [
     careItemIds: [
       'ci-meal-breakfast', 'ci-meal-lunch', 'ci-meal-dinner',
       'ci-medication-morning', 'ci-medication-noon', 'ci-medication-evening', 'ci-medication-bedtime',
-      'ci-bowel', 'ci-mood', 'ci-restraint-check',
+      'ci-bowel', 'ci-stool', 'ci-laxative', 'ci-urine', 'ci-mood', 'ci-restraint-check',
     ],
   },
   {
@@ -71,7 +75,7 @@ export const MASTER_FLOWSHEET_PATTERNS: FlowsheetPatternMaster[] = [
     careItemIds: [
       'ci-meal-breakfast', 'ci-meal-lunch', 'ci-meal-dinner',
       'ci-medication-morning', 'ci-medication-noon', 'ci-medication-evening',
-      'ci-bath', 'ci-bowel',
+      'ci-bath', 'ci-bowel', 'ci-stool', 'ci-laxative', 'ci-urine',
     ],
   },
 ];
