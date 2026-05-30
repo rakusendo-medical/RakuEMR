@@ -25,20 +25,20 @@ export const REVISIONS: Revision[] = [
     context: '楽仙堂と改修',
     summary: 'アコーディオン形式で改定履歴ページを追加。フローシート（排便系項目の再構成・日列クリック入力・看護記録の新規登録）、オーダ管理、隔離拘束まわりを中心に調整。',
     commits: [
-      { hash: '65ae582', time: '06:35', subject: 'karte/flowsheet: 看護記録の新規登録ダイアログを追加' },
-      { hash: 'fd6f946', time: '06:10', subject: 'karte/flowsheet: 日列クリックで当日項目を入力できる編集ダイアログを追加' },
-      { hash: '0b5403e', time: '05:54', subject: 'karte/flowsheet: 便(性状)セルに番号＋性状名を併記' },
-      { hash: '9030ee5', time: '05:49', subject: 'karte/flowsheet: 排便系項目を再構成（便回数/性状/下剤/尿量）＋睡眠非表示' },
-      { hash: '2167484', time: '05:35', subject: 'flowsheet: 排便系項目の再構成（便の回数/性状/下剤/尿量）＋睡眠タブ非表示' },
-      { hash: '5556580', time: '05:20', subject: 'orders: オーダー管理に「調整中・仮実装」の注意書きを追加' },
-      { hash: 'ada758f', time: '04:45', subject: 'isolation/ledger: 行動制限台帳に月・病棟指定UIとダミーデータ表示を実装' },
-      { hash: '0a3d7cb', time: '04:41', subject: 'orders: オーダ管理に患者/種類フィルター追加＋リハオーダー種別を新設' },
-      { hash: '4ae52ea', time: '03:49', subject: 'flowsheet/bulk-vitals: 病棟マップで選択した複数病室を一括入力へ引き継ぎ' },
-      { hash: '36ad4bb', time: '03:47', subject: 'layout: サイドナビ再編（外来セクション新設・共通運用を病床管理へ統合）' },
-      { hash: '941ec30', time: '03:39', subject: 'flowsheet/bulk: 一括バイタル・看護経過記録のUI統一＋保存トースト右上化' },
-      { hash: '305aa6a', time: '03:24', subject: 'layout: サイドナビから睡眠表項目を一旦除外' },
-      { hash: 'e2f03a9', time: '03:19', subject: 'flowsheet/bulk-vitals: 設定ボタンを画面下部固定の保存バーに変更' },
-      { hash: 'a739aae', time: '02:57', subject: 'ward-map: 病室/床数の見直し＋患者番号8桁化＋status新モデル統合' },
+      { hash: '65ae582', time: '15:35', subject: 'karte/flowsheet: 看護記録の新規登録ダイアログを追加' },
+      { hash: 'fd6f946', time: '15:10', subject: 'karte/flowsheet: 日列クリックで当日項目を入力できる編集ダイアログを追加' },
+      { hash: '0b5403e', time: '14:54', subject: 'karte/flowsheet: 便(性状)セルに番号＋性状名を併記' },
+      { hash: '9030ee5', time: '14:49', subject: 'karte/flowsheet: 排便系項目を再構成（便回数/性状/下剤/尿量）＋睡眠非表示' },
+      { hash: '2167484', time: '14:35', subject: 'flowsheet: 排便系項目の再構成（便の回数/性状/下剤/尿量）＋睡眠タブ非表示' },
+      { hash: '5556580', time: '14:20', subject: 'orders: オーダー管理に「調整中・仮実装」の注意書きを追加' },
+      { hash: 'ada758f', time: '13:45', subject: 'isolation/ledger: 行動制限台帳に月・病棟指定UIとダミーデータ表示を実装' },
+      { hash: '0a3d7cb', time: '13:41', subject: 'orders: オーダ管理に患者/種類フィルター追加＋リハオーダー種別を新設' },
+      { hash: '4ae52ea', time: '12:49', subject: 'flowsheet/bulk-vitals: 病棟マップで選択した複数病室を一括入力へ引き継ぎ' },
+      { hash: '36ad4bb', time: '12:47', subject: 'layout: サイドナビ再編（外来セクション新設・共通運用を病床管理へ統合）' },
+      { hash: '941ec30', time: '12:39', subject: 'flowsheet/bulk: 一括バイタル・看護経過記録のUI統一＋保存トースト右上化' },
+      { hash: '305aa6a', time: '12:24', subject: 'layout: サイドナビから睡眠表項目を一旦除外' },
+      { hash: 'e2f03a9', time: '12:19', subject: 'flowsheet/bulk-vitals: 設定ボタンを画面下部固定の保存バーに変更' },
+      { hash: 'a739aae', time: '11:57', subject: 'ward-map: 病室/床数の見直し＋患者番号8桁化＋status新モデル統合' },
     ],
   },
   {
@@ -100,7 +100,7 @@ const RevisionHistory: React.FC = () => {
                 <>
                   <Divider sx={{ mb: 1 }} />
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                    当日のコミット履歴（{rev.commits.length} 件）
+                    当日のコミット履歴（JST・{rev.commits.length} 件）
                   </Typography>
                   <List dense disablePadding>
                     {rev.commits.map((c) => (
