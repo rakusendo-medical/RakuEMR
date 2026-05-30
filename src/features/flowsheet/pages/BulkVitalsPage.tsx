@@ -246,7 +246,7 @@ const BulkVitalsPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <MuiLink component={RouterLink} to={`/karte/${p.id}#flowsheet`}>
-                        {p.id}
+                        {p.patientNumber ?? p.id}
                       </MuiLink>
                     </TableCell>
                     <TableCell>{p.name}</TableCell>

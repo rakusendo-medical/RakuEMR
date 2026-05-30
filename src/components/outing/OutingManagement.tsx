@@ -6,7 +6,7 @@ import {
   FormControl, FormLabel, RadioGroup, FormControlLabel, Radio,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
-import { OUTING_RECORDS } from '../../data/mockData';
+import { OUTING_RECORDS, patientNumberOf } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
 const OutingManagement: React.FC = () => {
@@ -44,7 +44,7 @@ const OutingManagement: React.FC = () => {
               {OUTING_RECORDS.map((o) => (
                 <TableRow key={o.id} hover>
                   <TableCell sx={{ fontWeight: 600 }}>{o.patientName}</TableCell>
-                  <TableCell>{o.patientId}</TableCell>
+                  <TableCell>{patientNumberOf(o.patientId)}</TableCell>
                   <TableCell>
                     <Chip label={o.type} size="small" color={o.type === '外泊' ? 'info' : 'success'} variant="outlined" />
                   </TableCell>

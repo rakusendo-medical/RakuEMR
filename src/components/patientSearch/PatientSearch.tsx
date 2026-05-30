@@ -140,7 +140,7 @@ const PatientSearch: React.FC = () => {
                       sx={{ cursor: 'pointer' }}
                       onClick={() => handleInpatientClick(p.id)}
                     >
-                      <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{p.id}</TableCell>
+                      <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{p.patientNumber ?? p.id}</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>{p.name}</TableCell>
                       <TableCell>{p.age}歳</TableCell>
                       <TableCell>{p.gender === 'M' ? '男' : '女'}</TableCell>

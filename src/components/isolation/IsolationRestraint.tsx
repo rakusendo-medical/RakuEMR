@@ -10,7 +10,7 @@ import {
   ISOLATION_ORDERS, generateObservationRecords,
   MASTER_STAFF_FOR_SIGN, MASTER_BEHAVIOR_RESTRICT_WARDS,
   MASTER_OBSERVATION_FREQUENCY, MASTER_OBSERVATION_STATES,
-  PATIENTS,
+  PATIENTS, patientNumberOf,
   type AdmitFormType,
 } from '../../data/mockData';
 import type {
@@ -455,9 +455,9 @@ const IsolationOrderListTab: React.FC = () => {
                           e.stopPropagation();
                           openBedMove(row.patient!);
                         }}>
-                        {row.order.patientId}
+                        {patientNumberOf(row.order.patientId)}
                       </Button>
-                    ) : row.order.patientId}
+                    ) : patientNumberOf(row.order.patientId)}
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.7rem' }}>
                     <Typography variant="caption" sx={{ fontWeight: 600 }}>

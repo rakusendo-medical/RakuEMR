@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import type { WardId, BehaviorRangeLevel } from '../../types';
-import { BEHAVIOR_RANGES } from '../../data/mockData';
+import { BEHAVIOR_RANGES, patientNumberOf } from '../../data/mockData';
 import WardFilterTabs from '../common/WardFilterTabs';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -44,7 +44,7 @@ const BehaviorRange: React.FC = () => {
             {filtered.map((b) => (
               <TableRow key={b.id} hover>
                 <TableCell sx={{ fontWeight: 600 }}>{b.patientName}</TableCell>
-                <TableCell>{b.patientId}</TableCell>
+                <TableCell>{patientNumberOf(b.patientId)}</TableCell>
                 <TableCell>
                   <Chip label={b.level} size="small" sx={{ bgcolor: LEVEL_COLORS[b.level] + '18', color: LEVEL_COLORS[b.level], fontWeight: 600, border: `1px solid ${LEVEL_COLORS[b.level]}30` }} />
                 </TableCell>

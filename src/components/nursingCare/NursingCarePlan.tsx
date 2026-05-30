@@ -4,7 +4,7 @@ import {
   Paper, Chip, Typography, Checkbox, Button, Stack,
 } from '@mui/material';
 import type { WardId } from '../../types';
-import { NURSING_CARE_SCHEDULES } from '../../data/mockData';
+import { NURSING_CARE_SCHEDULES, patientNumberOf } from '../../data/mockData';
 import WardFilterTabs from '../common/WardFilterTabs';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -38,7 +38,7 @@ const NursingCarePlan: React.FC = () => {
             {filtered.map((c) => (
               <TableRow key={c.id} hover>
                 <TableCell sx={{ fontWeight: 600 }}>{c.patientName}</TableCell>
-                <TableCell>{c.patientId}</TableCell>
+                <TableCell>{patientNumberOf(c.patientId)}</TableCell>
                 <TableCell><Chip label={c.careType} size="small" variant="outlined" /></TableCell>
                 <TableCell>{c.scheduledDate}</TableCell>
                 <TableCell>{c.wardId === 'ward1' ? '第１病棟' : '第２病棟'}</TableCell>

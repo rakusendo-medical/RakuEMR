@@ -160,7 +160,7 @@ export default function KartePatientHeader({ patient, mode, onBack }: KartePatie
         </Box>
 
         <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-          {patient.id}
+          {patient.patientNumber ?? patient.id}
         </Typography>
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
           {patient.name}

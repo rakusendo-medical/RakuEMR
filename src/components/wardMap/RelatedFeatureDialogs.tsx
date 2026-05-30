@@ -401,12 +401,14 @@ const AbsentContent: React.FC<{ ward: WardId }> = ({ ward }) => {
 const AdmissionInfoContent: React.FC<{ ward: WardId }> = ({ ward }) => {
   const wardPatients = PATIENTS.filter((p) => p.wardId === ward);
   const total = wardPatients.length;
-  const isolated = wardPatients.filter((p) => p.status === 'isolation').length;
-  const restrained = wardPatients.filter((p) => p.status === 'restraint').length;
   const outing = wardPatients.filter((p) => p.status === 'outing').length;
   const observation = wardPatients.filter((p) => p.status === 'observation').length;
 
   const wardRooms = ROOMS.filter((r) => r.wardId === ward);
+  // 隔離・拘束はステータスではなく運用フラグで管理しているため、ベッドのフラグから集計する
+  const wardBeds = wardRooms.flatMap((r) => r.beds);
+  const isolated = wardBeds.filter((b) => b.flags?.includes('isolation')).length;
+  const restrained = wardBeds.filter((b) => b.flags?.includes('restraint')).length;
   const totalBeds = wardRooms.reduce((sum, r) => sum + r.beds.filter((b) => !b.disabled).length, 0);
   const occupiedBeds = wardRooms.reduce(
     (sum, r) => sum + r.beds.filter((b) => b.patientId).length,

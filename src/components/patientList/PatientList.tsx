@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import {
   Search, Male, Female, NotificationsActive, NotificationsNone,
-  CheckCircle, RadioButtonUnchecked, People as PeopleIcon,
+  CheckCircle, People as PeopleIcon,
 } from '@mui/icons-material';
 import type { WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
@@ -327,7 +327,7 @@ const PatientList: React.FC = () => {
                       '&:hover': { textDecoration: 'underline' },
                     }}
                   >
-                    {p.id}
+                    {p.patientNumber ?? p.id}
                   </TableCell>
                   <TableCell>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -379,27 +379,43 @@ const PatientList: React.FC = () => {
                   </TableCell>
                   <TableCell>{p.doctorName}</TableCell>
                   <TableCell align="center">
-                    <Tooltip
-                      title={
-                        finished
-                          ? `診察終了 / ${finished.staffName} / ${new Date(finished.finishedAt).toLocaleString('ja-JP')}`
-                          : '診察終了にする'
-                      }
-                    >
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleConsultationFinished(p.id, operator);
-                        }}
+                    {finished ? (
+                      <Tooltip
+                        title={`診察終了 / ${finished.staffName} / ${new Date(finished.finishedAt).toLocaleString('ja-JP')}（クリックで解除）`}
                       >
-                        {finished ? (
-                          <CheckCircle sx={{ fontSize: 18, color: '#16a34a' }} />
-                        ) : (
-                          <RadioButtonUnchecked sx={{ fontSize: 18, color: 'text.disabled' }} />
-                        )}
-                      </IconButton>
-                    </Tooltip>
+                        <Chip
+                          icon={<CheckCircle sx={{ fontSize: 16 }} />}
+                          label="終了済"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleConsultationFinished(p.id, operator);
+                          }}
+                          sx={{
+                            bgcolor: '#16a34a',
+                            color: '#fff',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            '& .MuiChip-icon': { color: '#fff' },
+                            '&:hover': { bgcolor: '#15803d' },
+                          }}
+                        />
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="診察終了にする">
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleConsultationFinished(p.id, operator);
+                          }}
+                          sx={{ minWidth: 0, px: 1.25, py: 0.25, fontSize: '0.75rem', lineHeight: 1.6 }}
+                        >
+                          終了
+                        </Button>
+                      </Tooltip>
+                    )}
                   </TableCell>
                 </TableRow>
               );

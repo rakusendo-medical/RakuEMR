@@ -11,8 +11,8 @@ export const WARD_LABELS: Record<WardId, string> = {
 export type PatientStatus =
   | "stable"
   | "observation"
-  | "isolation"
-  | "restraint"
+  | "unstable"
+  | "critical"
   | "outing"
   | "empty";
 
@@ -93,6 +93,8 @@ export interface Room {
 /** 患者情報 */
 export interface Patient {
   id: string;
+  /** 表示用の患者番号（8桁）。内部 id とは別。一覧・ヘッダ等の「患者番号」表示に使う */
+  patientNumber?: string;
   name: string;
   age: number;
   gender: Gender;
