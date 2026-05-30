@@ -4,7 +4,7 @@ import {
   Box, Paper, Typography, Stack, Select, MenuItem, FormControl, InputLabel,
   TextField, Button, Checkbox, FormControlLabel, Tooltip, Alert, Link as MuiLink,
   Table, TableBody, TableCell, TableHead, TableRow, ToggleButton, ToggleButtonGroup,
-  Dialog, DialogTitle, DialogContent, DialogActions,
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar,
 } from '@mui/material';
 import { PATIENTS } from '../../../data/mockData';
 import { useFlowsheetStore, resolveShift } from '../store';
@@ -108,6 +108,8 @@ const BulkNursingRecordsPage: React.FC = () => {
     setBulkBodyOpen(false);
   };
 
+  const selectedCount = rows.filter((r) => r.selected).length;
+
   const handleRegister = () => {
     const errs: string[] = [];
     if (title.trim() === '') errs.push('共通記事タイトルが未入力です');
@@ -135,7 +137,7 @@ const BulkNursingRecordsPage: React.FC = () => {
       });
       count += 1;
     });
-    setSavedMsg(`${count} 名分の看護経過記録を登録しました。`);
+    setSavedMsg('保存しました');
     setRows((rs) => rs.map((r) => (r.selected ? { ...r, selected: false, text: '' } : r)));
   };
 
@@ -151,8 +153,8 @@ const BulkNursingRecordsPage: React.FC = () => {
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>病室</InputLabel>
-            <Select label="病室" value={room} onChange={(e) => setRoom(e.target.value)} displayEmpty>
+            <InputLabel shrink>病室</InputLabel>
+            <Select label="病室" value={room} onChange={(e) => setRoom(e.target.value)} displayEmpty notched>
               <MenuItem value=""><em>全室</em></MenuItem>
               {roomsForWard.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
             </Select>
@@ -162,12 +164,13 @@ const BulkNursingRecordsPage: React.FC = () => {
             InputLabelProps={{ shrink: true }}
           />
           <Button size="small" variant="contained" onClick={handleSearch}>表示</Button>
-          {savedMsg && <Alert severity="success" sx={{ ml: 'auto' }}>{savedMsg}</Alert>}
         </Stack>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 1.5 }}>
         <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
+          <Button size="small" variant="outlined" onClick={() => setRows((rs) => rs.map((r) => ({ ...r, selected: true })))}>全て選択</Button>
+          <Button size="small" variant="outlined" onClick={() => setRows((rs) => rs.map((r) => ({ ...r, selected: false })))}>クリア</Button>
           <TextField
             size="small" label="共通記事タイトル"
             value={title} onChange={(e) => setTitle(e.target.value)}
@@ -177,20 +180,19 @@ const BulkNursingRecordsPage: React.FC = () => {
             size="small" exclusive value={formType}
             onChange={(_, v: RecordFormType | null) => v && setFormType(v)}
           >
-            <ToggleButton value="focus">FOCUS</ToggleButton>
             <ToggleButton value="soap">SOAP</ToggleButton>
             <ToggleButton value="free">フリー</ToggleButton>
           </ToggleButtonGroup>
           <Tooltip title="全患者の時間を一括設定">
-            <Button size="small" variant="outlined" onClick={() => setBulkTimeOpen(true)}>時間一括</Button>
+            <span>
+              <Button size="small" variant="outlined" onClick={() => setBulkTimeOpen(true)} disabled={rows.length === 0}>時間一括</Button>
+            </span>
           </Tooltip>
           <Tooltip title="全患者の本文を一括設定（同形式の患者全員に反映）">
-            <Button size="small" variant="outlined" onClick={() => { setBulkBodyText(''); setBulkBodyOpen(true); }}>本文一括</Button>
+            <span>
+              <Button size="small" variant="outlined" onClick={() => { setBulkBodyText(''); setBulkBodyOpen(true); }} disabled={rows.length === 0}>本文一括</Button>
+            </span>
           </Tooltip>
-          <Box sx={{ flex: 1 }} />
-          <Button size="small" onClick={() => setRows((rs) => rs.map((r) => ({ ...r, selected: true })))}>全て選択</Button>
-          <Button size="small" onClick={() => setRows((rs) => rs.map((r) => ({ ...r, selected: false })))}>クリア</Button>
-          <Button size="small" variant="contained" onClick={handleRegister} disabled={rows.every((r) => !r.selected)}>登録</Button>
         </Stack>
 
         {errors.length > 0 && (
@@ -291,6 +293,34 @@ const BulkNursingRecordsPage: React.FC = () => {
         )}
       </Paper>
 
+      {/* 画面下部に常時表示する操作バー（スクロールしても張り付く） */}
+      <Paper
+        variant="outlined"
+        sx={{
+          position: 'sticky',
+          bottom: 0,
+          zIndex: (theme) => theme.zIndex.appBar,
+          p: 1,
+          borderRadius: 0,
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.08)',
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Typography variant="body2" color="text.secondary">
+            選択 {selectedCount} 件
+          </Typography>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleRegister}
+            disabled={selectedCount === 0}
+          >
+            保存
+          </Button>
+        </Stack>
+      </Paper>
+
       {/* 時間一括設定 */}
       <Dialog open={bulkTimeOpen} onClose={() => setBulkTimeOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>時間設定</DialogTitle>
@@ -316,7 +346,7 @@ const BulkNursingRecordsPage: React.FC = () => {
           <TextField multiline rows={6} fullWidth
             value={bulkBodyText}
             onChange={(e) => setBulkBodyText(e.target.value)}
-            placeholder="本文を入力。形式 SOAP→O / FOCUS→D / フリー→本文 に反映されます。"
+            placeholder="本文を入力。形式 SOAP→O / フリー→本文 に反映されます。"
           />
         </DialogContent>
         <DialogActions>
@@ -324,6 +354,17 @@ const BulkNursingRecordsPage: React.FC = () => {
           <Button variant="contained" onClick={handleBulkBody}>反映</Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!savedMsg}
+        autoHideDuration={3000}
+        onClose={() => setSavedMsg(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={() => setSavedMsg(null)} severity="success" variant="filled" sx={{ width: '100%' }}>
+          {savedMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

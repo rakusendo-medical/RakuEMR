@@ -4,7 +4,7 @@ import {
   Box, Paper, Typography, Stack, Select, MenuItem, FormControl, InputLabel,
   TextField, Button, Checkbox, FormControlLabel,
   Table, TableBody, TableCell, TableHead, TableRow, IconButton, Tooltip, Alert,
-  Link as MuiLink,
+  Link as MuiLink, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar,
 } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { PATIENTS } from '../../../data/mockData';
@@ -58,8 +58,9 @@ const BulkVitalsPage: React.FC = () => {
 
   const kindMaster = MASTER_BULK_VITAL_KINDS.find((k) => k.id === kindId)!;
 
-  // 時刻一括変更用（表示中の全行に適用）
+  // 時間一括設定用（ダイアログ。表示中の全行に適用）
   const [bulkTime, setBulkTime] = useState<string>(kindMaster.defaultTime);
+  const [bulkTimeOpen, setBulkTimeOpen] = useState(false);
 
   // 病室一覧（選択中病棟）
   const roomsForWard = useMemo(() => {
@@ -104,9 +105,11 @@ const BulkVitalsPage: React.FC = () => {
   const updateTime = (idx: number, time: string) =>
     setRows((rs) => rs.map((r, i) => (i === idx ? { ...r, time } : r)));
 
-  // 表示中の全行の時刻を一括で置き換える
-  const applyBulkTime = () =>
+  // 表示中の全行の時刻を一括で置き換える（ダイアログの[設定]で確定）
+  const handleBulkTime = () => {
     setRows((rs) => rs.map((r) => ({ ...r, time: bulkTime })));
+    setBulkTimeOpen(false);
+  };
 
   const setAllSelected = (sel: boolean) =>
     setRows((rs) => rs.map((r) => ({ ...r, selected: sel })));
@@ -136,7 +139,7 @@ const BulkVitalsPage: React.FC = () => {
       }
       count += 1;
     });
-    setSavedMsg(`${count} 名のバイタルを登録しました${bulkSign ? `（${kindMaster.signShift === 'day' ? '日勤' : kindMaster.signShift === 'night' ? '深夜' : '準夜'}サイン連動）` : ''}。`);
+    setSavedMsg('保存しました');
     // 値はクリア
     setRows((rs) => rs.map((r) => (r.selected ? { ...r, values: {}, selected: false } : r)));
   };
@@ -197,7 +200,6 @@ const BulkVitalsPage: React.FC = () => {
             label="入力対象患者のみ"
           />
           <Button variant="contained" size="small" onClick={handleSearch}>表示</Button>
-          {savedMsg && <Alert severity="success" sx={{ ml: 'auto' }}>{savedMsg}</Alert>}
         </Stack>
       </Paper>
 
@@ -205,18 +207,9 @@ const BulkVitalsPage: React.FC = () => {
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
           <Button size="small" variant="outlined" onClick={() => setAllSelected(true)}>全て選択</Button>
           <Button size="small" variant="outlined" onClick={() => setAllSelected(false)}>クリア</Button>
-          <TextField
-            size="small" label="時刻一括" placeholder="HH:mm"
-            value={bulkTime}
-            onChange={(e) => setBulkTime(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 104 }}
-          />
-          <Tooltip title="表示中の全行の時刻をこの値に置き換えます">
+          <Tooltip title="全患者の時間を一括設定">
             <span>
-              <Button size="small" variant="outlined" onClick={applyBulkTime} disabled={rows.length === 0}>
-                全行に適用
-              </Button>
+              <Button size="small" variant="outlined" onClick={() => setBulkTimeOpen(true)} disabled={rows.length === 0}>時間一括</Button>
             </span>
           </Tooltip>
           <FormControlLabel
@@ -326,6 +319,35 @@ const BulkVitalsPage: React.FC = () => {
           </Button>
         </Stack>
       </Paper>
+
+      {/* 時間一括設定 */}
+      <Dialog open={bulkTimeOpen} onClose={() => setBulkTimeOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>時間設定</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={1}>
+            <TextField size="small" label="時間 (HH:mm)" value={bulkTime}
+              onChange={(e) => setBulkTime(e.target.value)} />
+            <Typography variant="caption" color="text.secondary">
+              表示中の全患者の時刻に反映されます。
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkTimeOpen(false)}>キャンセル</Button>
+          <Button variant="contained" onClick={handleBulkTime} disabled={bulkTime.trim() === ''}>設定</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={!!savedMsg}
+        autoHideDuration={3000}
+        onClose={() => setSavedMsg(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={() => setSavedMsg(null)} severity="success" variant="filled" sx={{ width: '100%' }}>
+          {savedMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
