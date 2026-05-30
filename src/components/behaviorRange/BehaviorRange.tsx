@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Chip, Typography, Button, Stack, TextField, MenuItem, Dialog,
-  DialogTitle, DialogContent, DialogActions, Grid,
+  DialogTitle, DialogContent, DialogActions, Grid, Tooltip,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import type { WardId, BehaviorRangeLevel } from '../../types';
@@ -17,8 +17,15 @@ const LEVEL_COLORS: Record<BehaviorRangeLevel, string> = {
 const BehaviorRange: React.FC = () => {
   const [wardFilter, setWardFilter] = useState<WardId | 'all'>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  // 新規指示フォーム（必須: 患者番号・行動範囲）
+  const [formPatientNo, setFormPatientNo] = useState('');
+  const [formLevel, setFormLevel] = useState('');
   const { showSnackbar } = useAppStore();
   const filtered = wardFilter === 'all' ? BEHAVIOR_RANGES : BEHAVIOR_RANGES.filter((b) => b.wardId === wardFilter);
+
+  const canSubmit = formPatientNo.trim() !== '' && formLevel !== '';
+  const closeDialog = () => { setDialogOpen(false); setFormPatientNo(''); setFormLevel(''); };
+  const submitDialog = () => { closeDialog(); showSnackbar('行動範囲指示を登録しました', 'success'); };
 
   return (
     <Box>
@@ -58,27 +65,38 @@ const BehaviorRange: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>行動範囲指示入力</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0 }}>
-            <Grid item xs={6}><TextField label="患者番号" fullWidth /></Grid>
-            <Grid item xs={6}><TextField label="患者氏名" fullWidth InputProps={{ readOnly: true }} /></Grid>
+      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 0.5 }}>
+          行動範囲指示入力
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            新規の行動範囲指示を登録します
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={1.5} sx={{ mt: 0 }}>
             <Grid item xs={6}>
-              <TextField label="行動範囲" select fullWidth defaultValue="">
+              <TextField label="患者番号" size="small" fullWidth value={formPatientNo} onChange={(e) => setFormPatientNo(e.target.value)} />
+            </Grid>
+            <Grid item xs={6}><TextField label="患者氏名" size="small" fullWidth InputProps={{ readOnly: true }} /></Grid>
+            <Grid item xs={6}>
+              <TextField label="行動範囲" select size="small" fullWidth value={formLevel} onChange={(e) => setFormLevel(e.target.value)}>
                 <MenuItem value="病棟内">病棟内</MenuItem>
                 <MenuItem value="院内">院内</MenuItem>
                 <MenuItem value="院外許可あり">院外許可あり</MenuItem>
                 <MenuItem value="開放病棟">開放病棟</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={6}><TextField label="開始日" type="date" fullWidth defaultValue="2026-02-24" InputLabelProps={{ shrink: true }} /></Grid>
-            <Grid item xs={12}><TextField label="備考" multiline rows={2} fullWidth /></Grid>
+            <Grid item xs={6}><TextField label="開始日" type="date" size="small" fullWidth defaultValue="2026-02-24" InputLabelProps={{ shrink: true }} /></Grid>
+            <Grid item xs={12}><TextField label="備考" multiline rows={2} size="small" fullWidth /></Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>キャンセル</Button>
-          <Button variant="contained" onClick={() => { setDialogOpen(false); showSnackbar('行動範囲指示を登録しました', 'success'); }}>登録</Button>
+          <Button variant="text" onClick={closeDialog}>キャンセル</Button>
+          <Tooltip title={canSubmit ? '' : '患者番号・行動範囲は必須です'}>
+            <span>
+              <Button variant="contained" disabled={!canSubmit} onClick={submitDialog}>登録</Button>
+            </span>
+          </Tooltip>
         </DialogActions>
       </Dialog>
     </Box>

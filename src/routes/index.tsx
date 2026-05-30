@@ -18,6 +18,7 @@ import DocumentManagement from '../components/documents/DocumentManagement';
 import WardManagement from '../components/wardManagement/WardManagement';
 import KartePage from '../components/karte/KartePage';
 import DesignGuide from '../components/designGuide/DesignGuide';
+import RevisionHistory from '../components/designGuide/RevisionHistory';
 import EpicReviewPage from '../components/epicReview/EpicReviewPage';
 import { CARE_PLAN_ROUTES } from '../features/carePlan/routes';
 import { FLOWSHEET_ROUTES } from '../features/flowsheet/routes';
@@ -54,6 +55,7 @@ const AppRoutes: React.FC = () => (
       <Route path="/documents" element={<DocumentManagement />} />
       <Route path="/ward-management" element={<WardManagement />} />
       <Route path="/design-guide" element={<DesignGuide />} />
+      <Route path="/revision-history" element={<RevisionHistory />} />
       <Route path="/epic-review/:epicId" element={<EpicReviewPage />} />
       <Route path="/epic-review" element={<Navigate to="/epic-review/ep-01" replace />} />
       {CARE_PLAN_ROUTES}

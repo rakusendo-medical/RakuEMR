@@ -7,6 +7,7 @@ import {
 import { Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useFlowsheetStore } from '../store';
 import { TODAY } from '../mockData';
+import { PATIENTS, patientNumberOf } from '../../../data/mockData';
 import type { ISODate, VitalEntry } from '../types';
 
 interface Props {
@@ -184,14 +185,15 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
   );
 
   const staffNameOf = (id: string) => staffs.find((s) => s.id === id)?.name ?? id;
+  const patient = PATIENTS.find((p) => p.id === patientId);
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-      <DialogTitle sx={{ pb: 1 }}>
-        <Stack direction="row" alignItems="baseline" spacing={1}>
-          <Typography variant="h6">バイタル編集</Typography>
-          <Typography variant="body2" color="text.secondary">{date}</Typography>
-        </Stack>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle sx={{ pb: 0.5 }}>
+        バイタル編集
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {patient ? `${patient.name}（${patientNumberOf(patientId)}）` : patientNumberOf(patientId)} / {date}
+        </Typography>
       </DialogTitle>
       <DialogContent dividers>
         {errors.length > 0 && (
@@ -315,7 +317,7 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>キャンセル</Button>
+        <Button variant="text" onClick={onClose}>キャンセル</Button>
         <Button variant="contained" onClick={() => handleRegister(false)}>登録</Button>
       </DialogActions>
     </Dialog>

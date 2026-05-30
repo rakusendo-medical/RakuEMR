@@ -45,10 +45,12 @@ import {
   Logout as LogoutIcon,
   ArticleOutlined,
   MonitorHeart,
+  History,
 } from "@mui/icons-material";
 import { Assignment } from "@mui/icons-material";
 import { useAppStore } from "../stores/useAppStore";
 import { EPICS } from "../components/epicReview/epicData";
+import { LATEST_VERSION } from "../components/designGuide/RevisionHistory";
 
 const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 60;
@@ -104,6 +106,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "開発",
     items: [
       { key: "design-guide", label: "デザインガイド", icon: <Palette />, path: "/design-guide" },
+      { key: "revision-history", label: "改定履歴", icon: <History />, path: "/revision-history" },
     ],
   },
   {
@@ -461,7 +464,7 @@ const MainLayout: React.FC = () => {
               textOverflow: "ellipsis",
             }}
           >
-            {sidebarOpen ? "© 2026 AMTC, Inc." : "© AMTC"}
+            {sidebarOpen ? `© 2026 AMTC, Inc.　${LATEST_VERSION}` : LATEST_VERSION}
           </Typography>
         </Box>
       </Drawer>
@@ -490,7 +493,7 @@ const MainLayout: React.FC = () => {
             sx={{ justifyContent: "space-between", minHeight: 48 }}
           >
             <Typography variant="h6" color="text.primary">
-              {currentNav?.label || "電子カルテ"}
+              {currentNav?.label || "カルテ画面"}
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               {/* シリーズ製品ランチャー(Raku シリーズ共通ヘッダー) */}

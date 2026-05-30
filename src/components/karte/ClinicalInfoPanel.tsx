@@ -34,10 +34,9 @@ type SubTabKey =
 const SUB_TABS: { key: SubTabKey; label: string }[] = [
   { key: 'diagnosis',         label: '診断名' },
   { key: 'basic',             label: '基本情報' },
-  { key: 'gaf',               label: 'GAF' },
+  // GAF・クリニカルパスは一旦非表示（PM 判断）。コンテンツ実装は残置し、再表示はこの配列に戻すだけ
   { key: 'documents',         label: '院外/状・診断書類' },
   { key: 'family',            label: 'ファミリ' },
-  { key: 'clinical-path',     label: 'クリニカルパス' },
   { key: 'orders-admission',  label: '指示/入室' },
 ];
 
@@ -193,29 +192,46 @@ function DiagnosisContent({ patient }: { patient: Patient }) {
   const drugs = idHash % 3 === 0 ? ['ペニシリン系'] : [];
   const foods = idHash % 4 === 0 ? ['卵アレルギー[鶏卵]'] : [];
 
+  // 病名一覧（主病名 + その他病名）。主病名フラグで主たる病名を識別する
+  const diagnoses = [
+    {
+      name: primaryDiag,
+      icd: primaryIcd,
+      onset: patient.admitDate ? `${patient.admitDate}（推定）` : undefined,
+      isPrimary: true,
+    },
+    ...complications.map((c) => ({ name: c.name, icd: c.icd, onset: c.onset, isPrimary: false })),
+  ];
+
   return (
     <Stack spacing={0.25}>
-      <InfoRow icon={<DiagnosisIcon sx={{ fontSize: 16 }} />} label="主病名">
-        <IcdBadge code={primaryIcd} />
-        <Box component="span" sx={{ fontWeight: 600 }}>{primaryDiag}</Box>
-        {patient.admitDate && (
-          <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
-            発症日: {patient.admitDate}（推定）
-          </Box>
-        )}
-      </InfoRow>
-      <InfoRow icon={<ComplicationIcon sx={{ fontSize: 16 }} />} label="合併症">
-        {complications.length === 0 ? (
-          <Box component="span" sx={{ color: 'text.disabled' }}>登録なし</Box>
-        ) : (
-          complications.map((c, i) => (
-            <Box component="span" key={i} sx={{ mr: 1.5 }}>
-              <IcdBadge code={c.icd} />
-              <Box component="span" sx={{ fontWeight: 600 }}>{c.name}</Box>
-              <Box component="span" sx={{ ml: 0.5, color: 'text.secondary' }}>（{c.onset}）</Box>
+      <InfoRow icon={<DiagnosisIcon sx={{ fontSize: 16 }} />} label="病名一覧">
+        <Stack spacing={0.5}>
+          {diagnoses.map((d, i) => (
+            <Box key={i} sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 0.5, rowGap: 0.25 }}>
+              {d.isPrimary ? (
+                <Chip
+                  label="主病名"
+                  size="small"
+                  color="primary"
+                  sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, mr: 0.25 }}
+                />
+              ) : (
+                <Chip
+                  label="副病名"
+                  size="small"
+                  variant="outlined"
+                  sx={{ height: 18, fontSize: '0.65rem', mr: 0.25, color: 'text.secondary' }}
+                />
+              )}
+              <IcdBadge code={d.icd} />
+              <Box component="span" sx={{ fontWeight: 600 }}>{d.name}</Box>
+              {d.onset && (
+                <Box component="span" sx={{ ml: 0.5, color: 'text.secondary' }}>発症: {d.onset}</Box>
+              )}
             </Box>
-          ))
-        )}
+          ))}
+        </Stack>
       </InfoRow>
       <InfoRow icon={<AllergyIcon sx={{ fontSize: 16 }} />} label="アレルギー" accent="#dc2626">
         {drugs.length === 0 && foods.length === 0 ? (
@@ -240,7 +256,7 @@ function BasicInfoContent({ patient }: { patient: Patient }) {
     selfPay: 30,
   };
   const responsibility = patient.admissionState === 'inpatient' ? '病棟内' : '外来通院';
-  const adl = { barthel: 95, gaf: 65, fixedAt: '2026-02-15' };
+  const adl = { barthel: 95, fixedAt: '2026-02-15' };
   const independence = { rank: 'B', day: '介助 (一部)', night: '見守り' };
 
   return (
@@ -255,12 +271,9 @@ function BasicInfoContent({ patient }: { patient: Patient }) {
         <Box component="span" sx={{ fontWeight: 600 }}>{responsibility}</Box>
         <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>（外出・外泊は別途指示）</Box>
       </InfoRow>
-      <InfoRow icon={<AdlIcon sx={{ fontSize: 16 }} />} label="ADL/GAF">
+      <InfoRow icon={<AdlIcon sx={{ fontSize: 16 }} />} label="ADL">
         <Box component="span" sx={{ mr: 1 }}>
           バーセル指数: <Box component="span" sx={{ fontWeight: 600 }}>{adl.barthel}</Box>
-        </Box>
-        <Box component="span" sx={{ mr: 1 }}>
-          GAF: <Box component="span" sx={{ fontWeight: 600 }}>{adl.gaf}</Box>
         </Box>
         <Box component="span" sx={{ color: 'text.secondary' }}>確定日: {adl.fixedAt}</Box>
       </InfoRow>

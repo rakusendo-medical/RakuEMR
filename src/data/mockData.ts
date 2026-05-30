@@ -183,7 +183,7 @@ export const medicalRecords: MedicalRecord[] = [
     author: '看護 花子',
     authorRole: '',
     content: '退院後の生活状況を確認。\n13時 00 分 ～ 13時 30分',
-    tags: ['退院支援', '看護師カンファ'],
+    tags: ['退院支援', 'カンファ'],
     orderNumber: 'NO827',
     timestamp: '2017/06/06',
     likes: 0,
@@ -240,13 +240,10 @@ export const subTabs = [
 ];
 
 export const recordFilterTabs = [
-  '全体カンファレンス',
-  'NSTカンファレンス',
-  '褥瘡カンファレンス',
-  '臨床記録',
+  'カンファ',
+  '看護記録',
   '行動範囲',
   '外出/外泊',
-  '日勤帯記録',
 ];
 
 export const actionButtons = [

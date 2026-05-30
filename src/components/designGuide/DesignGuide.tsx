@@ -1,9 +1,11 @@
 import React from 'react';
 import {
-  Box, Typography, Paper, Grid, Button, Chip, TextField, Alert,
+  Box, Typography, Paper, Grid, Button, Chip, TextField, Alert, Stack,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Card, CardContent, Divider, Avatar, IconButton, Tooltip, Switch,
   FormControlLabel, Tab, Tabs, Badge,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  FormControl, InputLabel, Select, MenuItem, Checkbox,
 } from '@mui/material';
 import {
   LocalHospital, People, Search, Description, Lock, Home,
@@ -74,6 +76,9 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 
 const DesignGuide: React.FC = () => {
   const [tabValue, setTabValue] = React.useState(0);
+  const [dialogOpen, setDialogOpen] = React.useState(false);          // 中（標準フォーム）
+  const [dialogLargeOpen, setDialogLargeOpen] = React.useState(false); // 大（多項目・複数セクション）
+  const [dialogConfirmOpen, setDialogConfirmOpen] = React.useState(false); // 確認のみ
 
   return (
     <Box sx={{ maxWidth: 1200 }}>
@@ -306,6 +311,213 @@ const DesignGuide: React.FC = () => {
             {['基本情報タブの内容がここに表示されます。', 'カルテタブの内容がここに表示されます。', 'オーダタブの内容がここに表示されます。', '看護記録タブの内容がここに表示されます。'][tabValue]}
           </Typography>
         </Paper>
+      </Section>
+
+      {/* ━━━ ダイアログ ━━━ */}
+      <Section title="ダイアログ">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          登録・編集を伴う操作はモーダルダイアログで行います。用途に応じて 3 つのサイズパターンを使い分けます。下のボタンから各サンプルを開けます。
+        </Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1, '& li': { mb: 0.5 } }}>
+          <Typography component="li" variant="body2" color="text.secondary">
+            <strong>大（<code>maxWidth="md"</code>）</strong>: 多項目・複数セクションを伴う登録手続き（例：入院指示／入院手続き）。<code>Divider</code> + <code>subtitle2</code> でセクション分け
+          </Typography>
+          <Typography component="li" variant="body2" color="text.secondary">
+            <strong>中（<code>maxWidth="sm"</code>）</strong>: 標準的な単一フォーム（例：転棟・転室）。<code>Grid</code> 整列が基本
+          </Typography>
+          <Typography component="li" variant="body2" color="text.secondary">
+            <strong>確認のみ（<code>maxWidth="xs"</code>）</strong>: 破棄・取消・実行可否などメッセージ＋2ボタンだけ。フォーム無し・<code>dividers</code> 不要
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+          <Button variant="contained" onClick={() => setDialogLargeOpen(true)}>大：入院指示（md）</Button>
+          <Button variant="contained" onClick={() => setDialogOpen(true)}>中：転棟・転室（sm）</Button>
+          <Button variant="contained" onClick={() => setDialogConfirmOpen(true)}>確認のみ（xs）</Button>
+        </Box>
+
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>構成要素</Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1, '& li': { mb: 0.5 } }}>
+          <Typography component="li" variant="body2" color="text.secondary">
+            <strong>ヘッダー</strong>: タイトル＋対象のコンテキスト行（患者名・年齢・性別・現在地など）を <code>caption</code> で添える
+          </Typography>
+          <Typography component="li" variant="body2" color="text.secondary">
+            <strong>ボディ</strong>: <code>DialogContent dividers</code> で枠線。フォームは <code>Grid</code> で整列し、区切り線（<code>Divider</code>）でグループ分け（入力 / 印刷オプション / 履歴 など）
+          </Typography>
+          <Typography component="li" variant="body2" color="text.secondary">
+            <strong>フッター</strong>: 右寄せ。キャンセル＝<code>variant="text"</code>、主アクション＝<code>variant="contained"</code>。必須未入力時は主アクションを <code>disabled</code>
+          </Typography>
+          <Typography component="li" variant="body2" color="text.secondary">
+            <strong>サイズ</strong>: <code>maxWidth="sm"</code> ＋ <code>fullWidth</code> を標準とし、項目が多い場合のみ <code>"md"</code>
+          </Typography>
+        </Box>
+
+        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ pb: 0.5 }}>
+            転棟・転室
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              田村 洋子 29歳 女性 / 現在 第1病棟 101号室 6床
+            </Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Chip label="移動" color="primary" size="small" sx={{ mb: 2 }} />
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} sm={4}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>移動先 病棟</InputLabel>
+                  <Select label="移動先 病棟" value="ward1">
+                    <MenuItem value="ward1">第1病棟</MenuItem>
+                    <MenuItem value="ward2">第2病棟</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel shrink>移動先 病室</InputLabel>
+                  <Select label="移動先 病室" value="" displayEmpty notched>
+                    <MenuItem value=""><em>移動先 病室</em></MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl size="small" fullWidth disabled>
+                  <InputLabel shrink>移動先 ベッド</InputLabel>
+                  <Select label="移動先 ベッド" value="" displayEmpty notched>
+                    <MenuItem value=""><em>移動先 ベッド</em></MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={8}>
+                <TextField
+                  label="移動日時" type="datetime-local" size="small" fullWidth
+                  defaultValue="2026-05-30T14:03" InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FormControlLabel control={<Checkbox size="small" />} label="隔離" />
+                <FormControlLabel control={<Checkbox size="small" />} label="拘束" />
+              </Grid>
+              <Grid item xs={12} sm={8}>
+                <TextField
+                  label="配膳先変更日時" type="datetime-local" size="small" fullWidth
+                  defaultValue="2026-05-30T14:03" InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>印刷オプション</Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <FormControlLabel control={<Checkbox size="small" />} label="移動箋" />
+              <FormControlLabel control={<Checkbox size="small" />} label="食事箋" />
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="caption" color="text.secondary">履歴</Typography>
+            <Paper variant="outlined" sx={{ p: 1.5, mt: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                この患者の登録済み移動はありません。
+              </Typography>
+            </Paper>
+          </DialogContent>
+          <DialogActions>
+            <Button variant="text" onClick={() => setDialogOpen(false)}>キャンセル</Button>
+            <Tooltip title="必須項目（移動先など）が未入力のため無効">
+              <span>
+                <Button variant="contained" disabled>登録</Button>
+              </span>
+            </Tooltip>
+          </DialogActions>
+        </Dialog>
+
+        {/* 大: 入院指示（md・多項目・複数セクション） */}
+        <Dialog open={dialogLargeOpen} onClose={() => setDialogLargeOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle sx={{ pb: 0.5 }}>
+            入院指示
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              00010001 山田 太郎 52歳 男性 / 主治医 田村 医師
+            </Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+              <Chip label="未確定" size="small" color="warning" />
+              <Chip label="操作者: 医師" size="small" />
+            </Stack>
+
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>日時</Typography>
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} sm={6}>
+                <TextField label="入院日" type="date" size="small" fullWidth defaultValue="2026-05-30" InputLabelProps={{ shrink: true }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField label="食事開始" type="datetime-local" size="small" fullWidth defaultValue="2026-05-30T12:00" InputLabelProps={{ shrink: true }} />
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>病室</Typography>
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} sm={4}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>病棟</InputLabel>
+                  <Select label="病棟" value="ward1">
+                    <MenuItem value="ward1">第1病棟</MenuItem>
+                    <MenuItem value="ward2">第2病棟</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel shrink>病室</InputLabel>
+                  <Select label="病室" value="" displayEmpty notched><MenuItem value=""><em>病室</em></MenuItem></Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl size="small" fullWidth disabled>
+                  <InputLabel shrink>ベッド</InputLabel>
+                  <Select label="ベッド" value="" displayEmpty notched><MenuItem value=""><em>ベッド</em></MenuItem></Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>入院時文書</Typography>
+            <Stack>
+              <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="告知・同意書" />
+              <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="入院診療計画書" />
+            </Stack>
+
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>入院決定の理由</Typography>
+            <TextField fullWidth size="small" multiline minRows={2} placeholder="メモ入力..." />
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5 }}>
+            <FormControlLabel
+              control={<Checkbox size="small" defaultChecked />}
+              label={<Typography variant="body2">指示箋を印刷する</Typography>}
+            />
+            <Stack direction="row" spacing={1}>
+              <Button variant="text" onClick={() => setDialogLargeOpen(false)}>キャンセル</Button>
+              <Button variant="outlined">更新</Button>
+              <Tooltip title="必須項目（病室など）が未入力のため無効">
+                <span><Button variant="contained" disabled>入院確定</Button></span>
+              </Tooltip>
+            </Stack>
+          </DialogActions>
+        </Dialog>
+
+        {/* 確認のみ: xs・メッセージ＋2ボタン */}
+        <Dialog open={dialogConfirmOpen} onClose={() => setDialogConfirmOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>保存していない変更があります</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              編集中の内容は保存されていません。破棄して画面を移動しますか？
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button variant="text" onClick={() => setDialogConfirmOpen(false)}>キャンセル</Button>
+            <Button variant="contained" color="warning" onClick={() => setDialogConfirmOpen(false)}>破棄して移動</Button>
+          </DialogActions>
+        </Dialog>
       </Section>
 
       {/* ━━━ アイコン ━━━ */}

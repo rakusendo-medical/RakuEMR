@@ -1,8 +1,8 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Stack, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem,
-  FormControlLabel, Checkbox, Alert, Chip,
+  Button, Stack, Typography, TextField, FormControl, InputLabel, Select, MenuItem,
+  FormControlLabel, Checkbox, Alert, Chip, Grid, Divider,
 } from '@mui/material';
 import {
   EventAvailable as EventAvailableIcon,
@@ -40,23 +40,20 @@ const MEAL_TIMINGS = ['朝', '昼', '夕'] as const;
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = ['00', '15', '30', '45'];
 
-// テーブル風 行 ラッパー
-const FormRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <Box
-    sx={{
-      display: 'grid',
-      gridTemplateColumns: '160px 1fr',
-      borderBottom: '1px solid #e2e8f0',
-      '&:last-of-type': { borderBottom: 'none' },
-    }}
-  >
-    <Box sx={{ bgcolor: '#f8fafc', p: 1.25, borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>{label}</Typography>
-    </Box>
-    <Box sx={{ p: 1.25 }}>
-      {children}
-    </Box>
-  </Box>
+// セクション見出し（DesignGuide 標準: Divider + subtitle2 でグループ分け）
+const SectionHeading: React.FC<{ children: React.ReactNode; first?: boolean }> = ({ children, first }) => (
+  <>
+    {!first && <Divider sx={{ my: 2 }} />}
+    <Typography variant="subtitle2" sx={{ mb: 1 }}>{children}</Typography>
+  </>
+);
+
+// フォーム1項目（左ラベル caption + フィールド）
+const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <Stack spacing={0.5}>
+    <Typography variant="caption" color="text.secondary">{label}</Typography>
+    {children}
+  </Stack>
 );
 
 const formatDateTimeNow = () => {
@@ -214,192 +211,205 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>
+        <DialogTitle sx={{ pb: 0.5 }}>
           入院手続き
           <Typography variant="caption" color="text.secondary" component="div">
             {patientNumberOf(order.patientId)} {order.patientName} / 主治医 {order.doctorName}
           </Typography>
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {/* 上部の状態チップ */}
-          <Box sx={{ px: 2, py: 1, borderBottom: '1px solid #e2e8f0' }}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Chip label={order.status === '手続完了' ? '確定済' : '未確定'} size="small" color={order.status === '手続完了' ? 'success' : 'warning'} />
-              <Chip label={`操作者: ${currentUserRole === 'doctor' ? '医師' : '事務'}`} size="small" />
-              {futureDate && <Chip label="未来日時" size="small" color="error" />}
-            </Stack>
-          </Box>
+        <DialogContent dividers>
+          {/* 状態 */}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+            <Chip label={order.status === '手続完了' ? '確定済' : '未確定'} size="small" color={order.status === '手続完了' ? 'success' : 'warning'} />
+            <Chip label={`操作者: ${currentUserRole === 'doctor' ? '医師' : '事務'}`} size="small" />
+            {futureDate && <Chip label="未来日時" size="small" color="error" />}
+          </Stack>
 
-          {/* テーブル風フォーム */}
-          <Box>
-            <FormRow label="入院日">
-              <Stack direction="row" spacing={1} alignItems="center">
+          {/* 日時 */}
+          <SectionHeading first>日時</SectionHeading>
+          <Grid container spacing={1.5}>
+            <Grid item xs={12} sm={6}>
+              <Field label="入院日">
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <TextField
+                    size="small" type="date"
+                    value={admitDate}
+                    onChange={(e) => setAdmitDate(e.target.value)}
+                    InputProps={{ endAdornment: <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} /> }}
+                    sx={{ width: 170 }}
+                  />
+                  <FormControl size="small" sx={{ width: 70 }}>
+                    <Select value={admitHour} onChange={(e) => setAdmitHour(e.target.value)}>
+                      {HOURS.map((h) => <MenuItem key={h} value={h}>{h}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                  <Typography>:</Typography>
+                  <FormControl size="small" sx={{ width: 70 }}>
+                    <Select value={admitMinute} onChange={(e) => setAdmitMinute(e.target.value)}>
+                      {MINUTES.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Field>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Field label="食事開始日">
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <TextField
+                    size="small" type="date"
+                    value={mealDate}
+                    onChange={(e) => setMealDate(e.target.value)}
+                    InputProps={{ endAdornment: <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} /> }}
+                    sx={{ width: 170 }}
+                  />
+                  <FormControl size="small" sx={{ width: 80 }}>
+                    <Select value={mealTiming} onChange={(e) => setMealTiming(e.target.value as typeof MEAL_TIMINGS[number])}>
+                      {MEAL_TIMINGS.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Field>
+            </Grid>
+            <Grid item xs={12}>
+              <Field label="食事内容">
                 <TextField
-                  size="small" type="date"
-                  value={admitDate}
-                  onChange={(e) => setAdmitDate(e.target.value)}
-                  InputProps={{ endAdornment: <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} /> }}
-                  sx={{ width: 170 }}
-                />
-                <FormControl size="small" sx={{ width: 70 }}>
-                  <Select value={admitHour} onChange={(e) => setAdmitHour(e.target.value)}>
-                    {HOURS.map((h) => <MenuItem key={h} value={h}>{h}</MenuItem>)}
-                  </Select>
-                </FormControl>
-                <Typography>:</Typography>
-                <FormControl size="small" sx={{ width: 70 }}>
-                  <Select value={admitMinute} onChange={(e) => setAdmitMinute(e.target.value)}>
-                    {MINUTES.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              </Stack>
-            </FormRow>
-
-            <FormRow label="食事開始日">
-              <Stack direction="row" spacing={1} alignItems="center">
-                <TextField
-                  size="small" type="date"
-                  value={mealDate}
-                  onChange={(e) => setMealDate(e.target.value)}
-                  InputProps={{ endAdornment: <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} /> }}
-                  sx={{ width: 170 }}
-                />
-                <FormControl size="small" sx={{ width: 80 }}>
-                  <Select value={mealTiming} onChange={(e) => setMealTiming(e.target.value as any)}>
-                    {MEAL_TIMINGS.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-                  </Select>
-                </FormControl>
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>食事内容</Typography>
-                <TextField
-                  size="small"
+                  size="small" fullWidth
                   value="朝: 普通食A 1800Kcal、昼: 普通食A 1800Kcal、…"
                   InputProps={{ readOnly: true }}
-                  sx={{ flex: 1, '& .MuiInputBase-input': { fontSize: '0.75rem', color: 'text.secondary' } }}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', color: 'text.secondary' } }}
                 />
-              </Stack>
-              {mealAt > admitAt && (
-                <Alert severity="info" sx={{ py: 0.5, mt: 1 }}>
-                  入院日時 → 食事開始日時の間に「食無し」指示(マスタ設定により「臨時欠食」)を自動生成します。
-                </Alert>
-              )}
-            </FormRow>
+              </Field>
+            </Grid>
+          </Grid>
+          {mealAt > admitAt && (
+            <Alert severity="info" sx={{ py: 0.5, mt: 1 }}>
+              入院日時 → 食事開始日時の間に「食無し」指示(マスタ設定により「臨時欠食」)を自動生成します。
+            </Alert>
+          )}
 
-            <FormRow label="病室情報">
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                <Typography variant="body2">病棟</Typography>
-                <FormControl size="small" sx={{ width: 130 }}>
-                  <Select value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}>
-                    <MenuItem value="ward1">第1病棟</MenuItem>
-                    <MenuItem value="ward2">第2病棟</MenuItem>
-                  </Select>
-                </FormControl>
-                <Typography variant="body2">病室</Typography>
-                <FormControl size="small" sx={{ width: 120 }} disabled={tentativeWard}>
-                  <Select value={toRoom} onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}>
-                    {wardRooms.map((r) => (
-                      <MenuItem key={r.roomNumber} value={r.roomNumber}>{r.roomNumber}号室</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <Typography variant="body2">ベッド</Typography>
-                <FormControl size="small" sx={{ width: 140 }} disabled={!room || tentativeWard}>
-                  <Select value={toBed} onChange={(e) => setToBed(e.target.value)}>
-                    {availableBeds.map((b) => (
-                      <MenuItem key={b.bed} value={b.bed}>{toRoom}号室 {b.bed}</MenuItem>
-                    ))}
-                    {availableBeds.length === 0 && <MenuItem value="" disabled>空きベッドなし</MenuItem>}
-                  </Select>
-                </FormControl>
-                <Button
-                  size="small" variant="contained" color="success"
-                  startIcon={<EventAvailableIcon />}
-                  onClick={onOpenVacancy}
-                >
-                  空床照会
-                </Button>
-                <FormControlLabel
-                  control={<Checkbox size="small" checked={tentativeWard} onChange={(_, v) => setTentativeWard(v)} />}
-                  label={<Typography variant="caption">仮病棟のまま確定</Typography>}
-                />
-              </Stack>
-            </FormRow>
+          {/* 病室 */}
+          <SectionHeading>病室</SectionHeading>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Typography variant="body2">病棟</Typography>
+            <FormControl size="small" sx={{ width: 130 }}>
+              <Select value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}>
+                <MenuItem value="ward1">第1病棟</MenuItem>
+                <MenuItem value="ward2">第2病棟</MenuItem>
+              </Select>
+            </FormControl>
+            <Typography variant="body2">病室</Typography>
+            <FormControl size="small" sx={{ width: 120 }} disabled={tentativeWard}>
+              <Select value={toRoom} onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}>
+                {wardRooms.map((r) => (
+                  <MenuItem key={r.roomNumber} value={r.roomNumber}>{r.roomNumber}号室</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Typography variant="body2">ベッド</Typography>
+            <FormControl size="small" sx={{ width: 140 }} disabled={!room || tentativeWard}>
+              <Select value={toBed} onChange={(e) => setToBed(e.target.value)}>
+                {availableBeds.map((b) => (
+                  <MenuItem key={b.bed} value={b.bed}>{toRoom}号室 {b.bed}</MenuItem>
+                ))}
+                {availableBeds.length === 0 && <MenuItem value="" disabled>空きベッドなし</MenuItem>}
+              </Select>
+            </FormControl>
+            <Button
+              size="small" variant="outlined" color="primary"
+              startIcon={<EventAvailableIcon />}
+              onClick={onOpenVacancy}
+            >
+              空床照会
+            </Button>
+            <FormControlLabel
+              control={<Checkbox size="small" checked={tentativeWard} onChange={(_, v) => setTentativeWard(v)} />}
+              label={<Typography variant="caption">仮病棟のまま確定</Typography>}
+            />
+          </Stack>
 
-            <FormRow label="メモ">
-              <TextField fullWidth multiline minRows={3} value={memo} onChange={(e) => setMemo(e.target.value)} />
-            </FormRow>
+          {/* メモ */}
+          <SectionHeading>メモ</SectionHeading>
+          <TextField fullWidth size="small" multiline minRows={3} value={memo} onChange={(e) => setMemo(e.target.value)} />
 
-            <FormRow label="入院時文書">
-              <Stack spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">
-                  入院形態: [任意入院]
-                </Typography>
-                {ADMIT_DOCS.map((d) => {
-                  const state = docs[d.name];
-                  return (
-                    <Stack key={d.name} direction="row" spacing={1} alignItems="center">
-                      <FormControlLabel
-                        control={<Checkbox size="small" checked={state.checked} onChange={() => toggleDoc(d.name)} />}
-                        label={<Typography variant="body2">{d.name}</Typography>}
-                        sx={{ minWidth: 200 }}
-                      />
-                      <Typography variant="caption" color="text.secondary">状態</Typography>
-                      <FormControl size="small" sx={{ width: 110 }}>
-                        <Select value={state.status} onChange={(e) => updateDocField(d.name, 'status', e.target.value)}>
-                          {DOC_STATUS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                        </Select>
-                      </FormControl>
-                      <Typography variant="caption" color="text.secondary">作成医</Typography>
-                      <FormControl size="small" sx={{ width: 130 }}>
-                        <Select value={state.doctor} onChange={(e) => updateDocField(d.name, 'doctor', e.target.value)}>
-                          {DOCTORS.map((doc) => <MenuItem key={doc} value={doc}>{doc}</MenuItem>)}
-                        </Select>
-                      </FormControl>
-                    </Stack>
-                  );
-                })}
-              </Stack>
-            </FormRow>
+          {/* 入院時文書 */}
+          <SectionHeading>入院時文書</SectionHeading>
+          <Stack spacing={0.5}>
+            <Typography variant="caption" color="text.secondary">
+              入院形態: [任意入院]
+            </Typography>
+            {ADMIT_DOCS.map((d) => {
+              const state = docs[d.name];
+              return (
+                <Stack key={d.name} direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <FormControlLabel
+                    control={<Checkbox size="small" checked={state.checked} onChange={() => toggleDoc(d.name)} />}
+                    label={<Typography variant="body2">{d.name}</Typography>}
+                    sx={{ minWidth: 200 }}
+                  />
+                  <Typography variant="caption" color="text.secondary">状態</Typography>
+                  <FormControl size="small" sx={{ width: 110 }}>
+                    <Select value={state.status} onChange={(e) => updateDocField(d.name, 'status', e.target.value)}>
+                      {DOC_STATUS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                  <Typography variant="caption" color="text.secondary">作成医</Typography>
+                  <FormControl size="small" sx={{ width: 130 }}>
+                    <Select value={state.doctor} onChange={(e) => updateDocField(d.name, 'doctor', e.target.value)}>
+                      {DOCTORS.map((doc) => <MenuItem key={doc} value={doc}>{doc}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              );
+            })}
+          </Stack>
 
-            <FormRow label="紹介医療機関">
-              <Stack direction="row" spacing={1} alignItems="center">
-                <TextField
-                  size="small" sx={{ flex: 1 }}
-                  value={hospital} onChange={(e) => setHospital(e.target.value)}
-                />
-                <Button size="small" variant="contained" color="primary">検索</Button>
-                <Button size="small" variant="outlined" color="primary">治療歴から複写</Button>
-                <Button size="small" variant="outlined" color="error">削除</Button>
-              </Stack>
-              <Box sx={{ mt: 0.5 }}>
+          {/* 紹介医療機関・入院決定の理由 */}
+          <SectionHeading>紹介医療機関・入院決定の理由</SectionHeading>
+          <Stack spacing={1.5}>
+            <Field label="紹介医療機関">
+              <Stack spacing={1}>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <TextField
+                    size="small" sx={{ flex: 1, minWidth: 200 }}
+                    value={hospital} onChange={(e) => setHospital(e.target.value)}
+                  />
+                  <Button size="small" variant="contained" color="primary">検索</Button>
+                  <Button size="small" variant="outlined" color="primary">治療歴から複写</Button>
+                  <Button size="small" variant="outlined" color="error">削除</Button>
+                </Stack>
                 <FormControl size="small" sx={{ minWidth: 200 }}>
                   <InputLabel>選択リスト</InputLabel>
                   <Select label="選択リスト" value={hospital || '—'} onChange={(e) => setHospital(e.target.value === '—' ? '' : e.target.value)}>
                     {HOSPITALS.map((h) => <MenuItem key={h} value={h}>{h}</MenuItem>)}
                   </Select>
                 </FormControl>
-              </Box>
-            </FormRow>
-
-            <FormRow label="入院決定の理由">
-              <TextField fullWidth multiline minRows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
-            </FormRow>
-
-            <FormRow label="指示内容(カルテ本文)">
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-                <Chip label="指示医" size="small" color="success" />
-                <FormControl size="small" sx={{ width: 160 }}>
-                  <Select value={orderDoctor} onChange={(e) => setOrderDoctor(e.target.value)}>
-                    {DOCTORS.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
-                  </Select>
-                </FormControl>
               </Stack>
-              <TextField fullWidth multiline minRows={3} value={orderText} onChange={(e) => setOrderText(e.target.value)} />
-            </FormRow>
+            </Field>
+            <Field label="入院決定の理由">
+              <TextField fullWidth size="small" multiline minRows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+            </Field>
+          </Stack>
 
-            <FormRow label="入院確定時の記事">
+          {/* 指示・記事 */}
+          <SectionHeading>指示・記事</SectionHeading>
+          <Stack spacing={1.5}>
+            <Field label="指示内容(カルテ本文)">
+              <Stack spacing={0.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip label="指示医" size="small" color="success" />
+                  <FormControl size="small" sx={{ width: 160 }}>
+                    <Select value={orderDoctor} onChange={(e) => setOrderDoctor(e.target.value)}>
+                      {DOCTORS.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Stack>
+                <TextField fullWidth size="small" multiline minRows={3} value={orderText} onChange={(e) => setOrderText(e.target.value)} />
+              </Stack>
+            </Field>
+            <Field label="入院確定時の記事">
               <TextField fullWidth size="small" value={article} onChange={(e) => setArticle(e.target.value)} />
-            </FormRow>
-          </Box>
+            </Field>
+          </Stack>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5 }}>
           <FormControlLabel
@@ -407,13 +417,13 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
             label={<Typography variant="body2">指示箋を印刷する</Typography>}
           />
           <Stack direction="row" spacing={1}>
-            <Button variant="contained" color="success" disabled={futureDate} onClick={startConfirmation}>
-              入院確定
-            </Button>
+            <Button variant="text" onClick={onClose}>戻る</Button>
             <Button variant="outlined" color="primary" onClick={handleUpdate}>
               更新
             </Button>
-            <Button variant="outlined" color="inherit" onClick={onClose}>戻る</Button>
+            <Button variant="contained" disabled={futureDate} onClick={startConfirmation}>
+              入院確定
+            </Button>
           </Stack>
         </DialogActions>
       </Dialog>

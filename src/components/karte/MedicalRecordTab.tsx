@@ -20,7 +20,6 @@ import type { KarteMode } from './KartePage';
 type RecordCategory =
   | '医師記録'
   | '看護記録'
-  | '看護サマリ'
   | '入退院記録'
   | 'オーダー';
 
@@ -41,7 +40,6 @@ interface TimelineRecord {
 const CATEGORY_COLORS: Record<RecordCategory, string> = {
   '医師記録': '#1e40af',
   '看護記録': '#c2410c',
-  '看護サマリ': '#7c3aed',
   '入退院記録': '#b91c1c',
   'オーダー': '#0891b2',
 };
@@ -51,12 +49,10 @@ const MOCK_RECORDS: TimelineRecord[] = [
   { id: 'kr2',  date: '2026/03/10', dayOfWeek: '月', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '山本 看護師',   authorRole: '',     content: '朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。',                tags: ['看護記録'],                timestamp: '2026/03/10 09:00' },
   { id: 'kr3',  date: '2026/03/09', dayOfWeek: '日', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'リスパダール 2mg → 3mg に増量指示。経過観察継続。',                                                          tags: [],                          orderNumber: 'NO.827', timestamp: '2026/03/09 13:45' },
   { id: 'kr4',  date: '2026/03/09', dayOfWeek: '日', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '中田 看護師',   authorRole: '',     content: '午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。',                                  tags: ['看護記録', 'クリニカルパス'], orderNumber: 'NO.827', timestamp: '2026/03/09 14:00' },
-  { id: 'kr5',  date: '2026/03/08', dayOfWeek: '土', category: '看護サマリ', categoryColor: CATEGORY_COLORS['看護サマリ'], author: '山本 看護師',   authorRole: '',     content: '面会あり（家族：妻）。面会後やや落ち着かない様子。見守り継続。30分後に落ち着きを取り戻す。',                tags: ['退院支援'],                orderNumber: 'NO.827', timestamp: '2026/03/08 10:30' },
   { id: 'kr6',  date: '2026/03/07', dayOfWeek: '金', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。',                                          tags: [],                          timestamp: '2026/03/07 15:00' },
   { id: 'kr7',  date: '2026/03/06', dayOfWeek: '木', category: '入退院記録', categoryColor: CATEGORY_COLORS['入退院記録'], author: '田村 医師',     authorRole: '医師D', content: '【精神科】退院環境調整の指示。当院病棟・101号室・身長167.8cm・体重72.0kg。',                                tags: [],                          orderNumber: 'NO.837', timestamp: '2026/03/06 17:23' },
-  { id: 'kr8',  date: '2026/03/05', dayOfWeek: '水', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                      tags: ['全体カンファレンス'],      timestamp: '2026/03/05 16:00' },
+  { id: 'kr8',  date: '2026/03/05', dayOfWeek: '水', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                      tags: ['カンファ'],                timestamp: '2026/03/05 16:00' },
   { id: 'kr9',  date: '2026/03/04', dayOfWeek: '火', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '佐々木 看護師', authorRole: '',     content: '作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。',                      tags: ['看護記録'],                timestamp: '2026/03/04 14:00' },
-  { id: 'kr10', date: '2026/03/03', dayOfWeek: '月', category: '看護サマリ', categoryColor: CATEGORY_COLORS['看護サマリ'], author: '山本 看護師',   authorRole: '',     content: '週間看護サマリ。全体的に状態安定。ADL自立度向上傾向。退院支援計画に沿って進行中。家族との面会も良好。',     tags: ['看護サマリ', '退院支援'],  timestamp: '2026/03/03 16:00' },
 ];
 
 // ===== オーダーをタイムラインレコードへ変換 =====
@@ -101,7 +97,6 @@ const FILTER_TABS: { key: RecordCategory | 'all'; label: string }[] = [
   { key: 'all',         label: '全て' },
   { key: '医師記録',    label: '医師記録' },
   { key: '看護記録',    label: '看護記録' },
-  { key: '看護サマリ',  label: '看護サマリ' },
   { key: '入退院記録',  label: '入退院記録' },
   { key: 'オーダー',    label: 'オーダー' },
 ];
@@ -109,13 +104,10 @@ const FILTER_TABS: { key: RecordCategory | 'all'; label: string }[] = [
 // ===== us-47: タグベースフィルタ Chip =====
 
 const TAG_FILTERS = [
-  '全体カンファレンス',
-  'NSTカンファレンス',
-  '褥瘡カンファレンス',
-  '臨床記録',
+  'カンファ',
+  '看護記録',
   '行動範囲',
   '外出/外泊',
-  '日勤帯記録',
 ];
 
 // ===== us-47: 期間切替 =====
@@ -129,9 +121,8 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
 };
 
 const TAG_BG_COLOR_MAP: Record<string, string> = {
-  '退院支援':       'error.light',
-  '看護師カンファ': 'success.light',
-  '全体カンファレンス': 'success.light',
+  '退院支援': 'error.light',
+  'カンファ': 'success.light',
 };
 
 // ===== Component =====
@@ -332,7 +323,7 @@ export default function MedicalRecordTab({
                   const d = date.split('/');
                   const dayStr = `${d[2]}日(${records[0].dayOfWeek})`;
                   const hasDoctor = records.some((r) => r.category === '医師記録');
-                  const hasNursing = records.some((r) => r.category === '看護記録' || r.category === '看護サマリ');
+                  const hasNursing = records.some((r) => r.category === '看護記録');
                   const hasAdmission = records.some((r) => r.category === '入退院記録');
                   const hasOrder = records.some((r) => r.category === 'オーダー');
                   return (
@@ -539,7 +530,7 @@ const INTERVIEW_FORMS = [
   { id: 'interview-1',  label: '外来面接 1' },
   { id: 'interview-2',  label: '外来面接 2' },
   { id: 'interview-3',  label: '外来面接 3' },
-  { id: 'conference',   label: 'カンファレンス' },
+  { id: 'conference',   label: 'カンファ' },
   { id: 'family',       label: '家族面接' },
 ] as const;
 
