@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Chip, Typography, Stack, FormControl, InputLabel, Select, MenuItem,
+  Paper, Chip, Typography, Stack, FormControl, InputLabel, Select, MenuItem, Alert,
 } from '@mui/material';
 import { ORDERS } from '../../data/mockData';
 import type { OrderType } from '../../types';
@@ -43,6 +43,9 @@ const OrderManagement: React.FC<Props> = ({ patientId }) => {
 
   return (
     <Box>
+      <Alert severity="info" sx={{ mb: 2 }}>
+        この画面は調整中です。表示・操作内容は仮実装です。
+      </Alert>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5, flexWrap: 'wrap', rowGap: 1 }}>
         {!patientId && (
           <FormControl size="small" sx={{ minWidth: 200 }}>
