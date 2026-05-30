@@ -45,7 +45,6 @@ import {
   Logout as LogoutIcon,
   ArticleOutlined,
   MonitorHeart,
-  EditNote,
 } from "@mui/icons-material";
 import { Assignment } from "@mui/icons-material";
 import { useAppStore } from "../stores/useAppStore";
@@ -69,17 +68,26 @@ interface NavSection {
 
 const NAV_SECTIONS: NavSection[] = [
   {
+    key: "outpatient-section",
+    label: "外来",
+    items: [
+      { key: "outpatient", label: "外来一覧", icon: <Groups />, path: "/outpatient" },
+      { key: "patient-search", label: "患者検索", icon: <Search />, path: "/patient-search" },
+      { key: "documents", label: "書類管理", icon: <FolderOpen />, path: "/documents" },
+      { key: "orders", label: "オーダ管理", icon: <Receipt />, path: "/orders" },
+    ],
+  },
+  {
     key: "bed",
     label: "病床管理",
     items: [
       { key: "ward-map", label: "病棟マップ", icon: <LocalHospital />, path: "/" },
       { key: "patient-list", label: "入院患者一覧", icon: <People />, path: "/patients" },
-      { key: "outpatient", label: "外来一覧", icon: <Groups />, path: "/outpatient" },
-      { key: "patient-search", label: "患者検索", icon: <Search />, path: "/patient-search" },
       { key: "admission", label: "入退院管理", icon: <MeetingRoom />, path: "/admission" },
       { key: "ward-mgmt", label: "病棟管理", icon: <Business />, path: "/ward-management" },
-      { key: "documents", label: "書類管理", icon: <FolderOpen />, path: "/documents" },
-      { key: "orders", label: "オーダ管理", icon: <Receipt />, path: "/orders" },
+      { key: "isolation", label: "隔離拘束", icon: <Lock />, path: "/isolation" },
+      { key: "behavior", label: "行動範囲", icon: <Lock />, path: "/behavior" },
+      { key: "outing", label: "外出外泊", icon: <Home />, path: "/outing" },
     ],
   },
   {
@@ -88,17 +96,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { key: "nursing-records", label: "部門記録簿", icon: <ArticleOutlined />, path: "/nursing/records" },
       { key: "bulk-vitals", label: "一括バイタル", icon: <MonitorHeart />, path: "/nursing/bulk-vitals" },
-      { key: "bulk-records", label: "一括看護経過記録", icon: <EditNote />, path: "/nursing/bulk-records" },
       { key: "care-plan", label: "看護過程", icon: <EventNote />, path: "/care-plan" },
-    ],
-  },
-  {
-    key: "common",
-    label: "共通・運用",
-    items: [
-      { key: "isolation", label: "隔離拘束", icon: <Lock />, path: "/isolation" },
-      { key: "behavior", label: "行動範囲", icon: <Lock />, path: "/behavior" },
-      { key: "outing", label: "外出外泊", icon: <Home />, path: "/outing" },
     ],
   },
   {
