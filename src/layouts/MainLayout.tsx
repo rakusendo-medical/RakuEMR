@@ -45,7 +45,6 @@ import {
   Logout as LogoutIcon,
   ArticleOutlined,
   MonitorHeart,
-  Bedtime,
   EditNote,
 } from "@mui/icons-material";
 import { Assignment } from "@mui/icons-material";
@@ -89,7 +88,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { key: "nursing-records", label: "部門記録簿", icon: <ArticleOutlined />, path: "/nursing/records" },
       { key: "bulk-vitals", label: "一括バイタル", icon: <MonitorHeart />, path: "/nursing/bulk-vitals" },
-      { key: "sleep-table", label: "睡眠表", icon: <Bedtime />, path: "/nursing/sleep-table" },
       { key: "bulk-records", label: "一括看護経過記録", icon: <EditNote />, path: "/nursing/bulk-records" },
       { key: "care-plan", label: "看護過程", icon: <EventNote />, path: "/care-plan" },
     ],
