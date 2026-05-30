@@ -131,6 +131,13 @@ const DAILY: DailyRow[] = [
   },
 ];
 
+// ブリストルスケール: 番号 → 性状名（便(性状)セルの表示用）
+const BRISTOL_LABEL: Record<string, string> = {
+  '1': 'コロコロ便', '2': '硬い便', '3': 'やや硬い便', '4': '普通便',
+  '5': 'やや軟便', '6': '泥状便', '7': '水様便',
+};
+const formatStool = (v: string): string => (BRISTOL_LABEL[v] ? `${v} ${BRISTOL_LABEL[v]}` : v);
+
 // 隔離拘束帯: dateIdx range [from, to]
 interface RestraintBar {
   from: number;
@@ -643,7 +650,7 @@ const FlowsheetView: React.FC<Props> = () => {
               <TableCell sx={stickyLabelCell}>便(性状)</TableCell>
               <TableCell sx={stickySubCell} />
               {DAILY.map((d, i) => (
-                <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.stoolDetail}</TableCell>
+                <TableCell key={i} sx={dayCellSx(d.isToday)}>{formatStool(d.stoolDetail)}</TableCell>
               ))}
             </TableRow>
             <TableRow>
