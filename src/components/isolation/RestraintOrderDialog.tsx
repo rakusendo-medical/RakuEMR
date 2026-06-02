@@ -3,28 +3,26 @@
 // 参考システムマニュアル: 01 基本システム.pdf p.2182-2210
 //
 // タイトルセレクトで 12 種（隔離/拘束/隔離拘束 × 開始/解除/継続/変更）に切替し、
-// 表示項目（開始日時/終了日時/拘束部位/開放時間/文書チェック）が動的に連動する。
+// 表示項目（開始日時/終了日時/拘束部位）が動的に連動する。
 // 「告知書を印刷する」ON で作成完了時に RestraintNoticePrintDialog を起動する。
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Stack, TextField, MenuItem, Typography, Box, Chip,
-  FormControlLabel, Checkbox, IconButton, Divider, Alert,
+  FormControlLabel, Checkbox, Divider, Alert,
   FormControl, InputLabel, Select,
 } from '@mui/material';
 import {
-  Add as AddIcon, Delete as DeleteIcon, Print as PrintIcon,
-  Schedule as ScheduleIcon,
+  Print as PrintIcon,
 } from '@mui/icons-material';
 import type {
-  IsolationOrder, IsolationSubtype, IsolationOperation, ReleaseTimeEntry, Patient,
+  IsolationOrder, IsolationSubtype, IsolationOperation, Patient, WardId,
 } from '../../types';
+import { WARD_LABELS } from '../../types';
 import {
   MASTER_RESTRAINT_PARTS,
-  MASTER_RELEASE_TIME_TEMPLATES,
-  MASTER_ISOLATION_DOCS_BY_CONTEXT,
   ISOLATION_ORDERS,
-  type AdmitFormType,
+  ROOMS,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import RestraintNoticePrintDialog from './RestraintNoticePrintDialog';
@@ -45,17 +43,14 @@ function parseTitle(title: string): { subtype: IsolationSubtype; operation: Isol
 /** 表示項目の有無 */
 function fieldsForTitle(title: string) {
   const parsed = parseTitle(title);
-  if (!parsed) return { hasStart: true, hasEnd: false, hasParts: false, hasReleaseTimes: false, hasDocs: false };
+  if (!parsed) return { hasStart: true, hasEnd: false, hasParts: false };
   const { subtype, operation } = parsed;
   const isRelease = operation === '解除';
-  const isStart = operation === '開始';
   const isRestraintLike = subtype === '拘束' || subtype === '隔離拘束';
   return {
     hasStart: !isRelease,
     hasEnd: isRelease,
     hasParts: isRestraintLike && !isRelease,
-    hasReleaseTimes: !isRelease,
-    hasDocs: isStart,
   };
 }
 
@@ -87,23 +82,22 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
     );
   }, [editOrderId, dynamicOrders]);
 
-  // 患者の入院形態（モック: P003=措置入院 / P004=任意入院 / P006=医療保護入院 / その他は任意入院）
-  const admitForm: AdmitFormType = React.useMemo(() => {
-    if (!patient) return '任意入院';
-    if (patient.id === 'P003') return '措置入院';
-    if (patient.id === 'P006') return '医療保護入院';
-    return '任意入院';
-  }, [patient]);
-
   const [title, setTitle] = React.useState(initialTitle);
   const [startDatetime, setStartDatetime] = React.useState('');
   const [endDatetime, setEndDatetime] = React.useState('');
   const [restraintParts, setRestraintParts] = React.useState<string[]>([]);
-  const [releaseTimes, setReleaseTimes] = React.useState<ReleaseTimeEntry[]>([]);
-  const [showReleaseTimes, setShowReleaseTimes] = React.useState(false);
-  const [docChecks, setDocChecks] = React.useState<string[]>([]);
-  const [content, setContent] = React.useState('');
+  const [mealChangeDatetime, setMealChangeDatetime] = React.useState('');
+  const [toWard, setToWard] = React.useState<WardId>('ward1');
+  const [toRoom, setToRoom] = React.useState('');
+  const [toBed, setToBed] = React.useState('');
   const [printNotice, setPrintNotice] = React.useState(false);
+
+  // 移動先セレクト用
+  const wardRooms = ROOMS.filter((r) => r.wardId === toWard);
+  const selectedRoom = wardRooms.find((r) => r.roomNumber === toRoom);
+  const availableBeds = selectedRoom
+    ? selectedRoom.beds.filter((b) => !b.disabled && !b.patientId)
+    : [];
   const [errors, setErrors] = React.useState<string[]>([]);
   const [noticeOpen, setNoticeOpen] = React.useState(false);
   const [pendingNoticePayload, setPendingNoticePayload] = React.useState<{ orderId: string; orderDate: string; startDatetime: string } | null>(null);
@@ -116,20 +110,18 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
       setStartDatetime(sourceOrder.startDatetime ?? '');
       setEndDatetime(sourceOrder.endDatetime ?? '');
       setRestraintParts(sourceOrder.restraintParts ?? []);
-      setReleaseTimes(sourceOrder.releaseTimes ?? []);
-      setShowReleaseTimes((sourceOrder.releaseTimes ?? []).length > 0);
-      setDocChecks(sourceOrder.linkedDocumentChecks ?? []);
     } else {
       const now = new Date();
-      const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const iso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
       setStartDatetime(iso);
       setEndDatetime(iso);
+      setMealChangeDatetime(iso);
       setRestraintParts([]);
-      setReleaseTimes([]);
-      setShowReleaseTimes(false);
-      setDocChecks([]);
     }
-    setContent('');
+    setToWard('ward1');
+    setToRoom('');
+    setToBed('');
     setPrintNotice(false);
     setErrors([]);
   }, [open, initialTitle, sourceOrder]);
@@ -137,43 +129,8 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
   const fields = fieldsForTitle(title);
   const parsed = parseTitle(title);
 
-  // 開始時のみ参照する文書群
-  const docCandidates = React.useMemo<string[]>(() => {
-    if (!fields.hasDocs || !parsed) return [];
-    return MASTER_ISOLATION_DOCS_BY_CONTEXT[admitForm]?.[parsed.subtype] ?? [];
-  }, [fields.hasDocs, parsed, admitForm]);
-
-  // 開放時間の操作
-  const addReleaseRow = () => {
-    if (releaseTimes.length >= 9) return;
-    setReleaseTimes((prev) => [...prev, { start: '', end: '' }]);
-  };
-  const removeReleaseRow = (idx: number) => {
-    setReleaseTimes((prev) => prev.filter((_, i) => i !== idx));
-  };
-  const updateReleaseRow = (idx: number, patch: Partial<ReleaseTimeEntry>) => {
-    setReleaseTimes((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
-  };
-  const loadTemplate = (templateName: string) => {
-    const tmpl = MASTER_RELEASE_TIME_TEMPLATES.find((t) => t.name === templateName);
-    if (!tmpl) return;
-    if (releaseTimes.length > 0 && !window.confirm('既存の開放時間入力をクリアしてテンプレートを読み込みますか？')) return;
-    setReleaseTimes(tmpl.entries.map((e) => ({ ...e })));
-    setShowReleaseTimes(true);
-  };
-  const openReleaseTimes = () => {
-    setShowReleaseTimes(true);
-    if (releaseTimes.length === 0 && MASTER_RELEASE_TIME_TEMPLATES.length > 0) {
-      // 初回クリックでデフォルトテンプレートを読み込む
-      setReleaseTimes(MASTER_RELEASE_TIME_TEMPLATES[0].entries.map((e) => ({ ...e })));
-    }
-  };
-
   const toggleRestraintPart = (part: string) => {
     setRestraintParts((prev) => (prev.includes(part) ? prev.filter((p) => p !== part) : [...prev, part]));
-  };
-  const toggleDocCheck = (doc: string) => {
-    setDocChecks((prev) => (prev.includes(doc) ? prev.filter((d) => d !== doc) : [...prev, doc]));
   };
 
   const validate = (): string[] => {
@@ -185,14 +142,6 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
     if (fields.hasStart && !startDatetime) errs.push('開始日時を入力してください');
     if (fields.hasEnd && !endDatetime) errs.push('終了日時を入力してください');
     if (fields.hasParts && restraintParts.length === 0) errs.push('拘束部位を 1 件以上選択してください');
-    // 開放時間: 開始時間以前不可
-    if (fields.hasReleaseTimes && startDatetime) {
-      const startHHMM = startDatetime.slice(11, 16); // 'YYYY-MM-DD HH:mm' 想定
-      releaseTimes.forEach((r, i) => {
-        if (r.start && r.start < startHHMM) errs.push(`開放時間 ${i + 1} 行目: 開始時間が指示開始時間 (${startHHMM}) 以前です`);
-        if (r.start && r.end && r.start >= r.end) errs.push(`開放時間 ${i + 1} 行目: 開始時間 < 終了時間 となるよう入力してください`);
-      });
-    }
     return errs;
   };
 
@@ -214,8 +163,6 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
         startDatetime: fields.hasStart ? startDatetime : sourceOrder.startDatetime,
         endDatetime: fields.hasEnd ? endDatetime : undefined,
         restraintParts: fields.hasParts ? restraintParts : undefined,
-        releaseTimes: fields.hasReleaseTimes && releaseTimes.length > 0 ? releaseTimes : undefined,
-        linkedDocumentChecks: fields.hasDocs ? docChecks : sourceOrder.linkedDocumentChecks,
       });
     } else {
       // 新規
@@ -232,8 +179,6 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
         roomNumber: `${patient.roomNumber}-${patient.bedLabel}`,
         doctorName: patient.doctorName,
         restraintParts: fields.hasParts ? restraintParts : undefined,
-        releaseTimes: fields.hasReleaseTimes && releaseTimes.length > 0 ? releaseTimes : undefined,
-        linkedDocumentChecks: fields.hasDocs ? docChecks : undefined,
         isPending: false,
       };
       addIsolationOrder(newOrder);
@@ -244,11 +189,6 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
     if (fields.hasStart) tagBody.push(`開始: ${startDatetime}`);
     if (fields.hasEnd) tagBody.push(`終了: ${endDatetime}`);
     if (fields.hasParts && restraintParts.length > 0) tagBody.push(`拘束部位: ${restraintParts.join('・')}`);
-    if (fields.hasReleaseTimes && releaseTimes.length > 0) {
-      tagBody.push(`開放時間: ${releaseTimes.filter((r) => r.start && r.end).map((r) => `${r.start}-${r.end}`).join(', ')}`);
-    }
-    if (fields.hasDocs && docChecks.length > 0) tagBody.push(`文書: ${docChecks.join('・')}`);
-    if (content) tagBody.push(`所見: ${content}`);
 
     appendMedicalRecord(patient.id, {
       id: `MR-${orderId}`,
@@ -306,7 +246,7 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
           隔離拘束指示
           {patient && (
             <Typography variant="body2" color="text.secondary">
-              [{patient.patientNumber ?? patient.id}] {patient.name}（{patient.gender === 'M' ? '男' : '女'} {patient.age}歳 / 入院形態: {admitForm}）
+              [{patient.patientNumber ?? patient.id}] {patient.name}（{patient.gender === 'M' ? '男' : '女'} {patient.age}歳）
             </Typography>
           )}
           {isEdit && <Chip label="編集" size="small" color="info" variant="outlined" sx={{ ml: 'auto' }} />}
@@ -329,24 +269,81 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
               {titleOptions.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
             </TextField>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              {fields.hasStart && (
+            <Stack direction="row" spacing={1.5}>
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>移動先 病棟</InputLabel>
+                <Select
+                  label="移動先 病棟"
+                  value={toWard}
+                  onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}
+                >
+                  {(Object.keys(WARD_LABELS) as WardId[]).map((w) => (
+                    <MenuItem key={w} value={w}>{WARD_LABELS[w]}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+                <InputLabel>移動先 病室</InputLabel>
+                <Select
+                  label="移動先 病室"
+                  value={toRoom}
+                  onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}
+                >
+                  {wardRooms.map((r) => (
+                    <MenuItem key={r.roomNumber} value={r.roomNumber}>{r.roomNumber}号室</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 140 }} disabled={!selectedRoom}>
+                <InputLabel>移動先 ベッド</InputLabel>
+                <Select
+                  label="移動先 ベッド"
+                  value={toBed}
+                  onChange={(e) => setToBed(e.target.value)}
+                >
+                  {availableBeds.map((b) => (
+                    <MenuItem key={b.bed} value={b.bed}>{b.bed}</MenuItem>
+                  ))}
+                  {availableBeds.length === 0 && (
+                    <MenuItem value="" disabled>空きベッドなし</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            </Stack>
+
+            {fields.hasStart && (
+              <Stack spacing={1.5}>
                 <TextField
-                  size="small" label="開始日時" sx={{ flex: 1 }}
-                  placeholder="YYYY-MM-DD HH:mm"
+                  size="small"
+                  label="開始日時"
+                  type="datetime-local"
                   value={startDatetime}
                   onChange={(e) => setStartDatetime(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
                 />
-              )}
-              {fields.hasEnd && (
                 <TextField
-                  size="small" label="終了日時" sx={{ flex: 1 }}
-                  placeholder="YYYY-MM-DD HH:mm"
-                  value={endDatetime}
-                  onChange={(e) => setEndDatetime(e.target.value)}
+                  size="small"
+                  label="配膳先変更日時"
+                  type="datetime-local"
+                  value={mealChangeDatetime}
+                  onChange={(e) => setMealChangeDatetime(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
                 />
-              )}
-            </Box>
+              </Stack>
+            )}
+            {fields.hasEnd && (
+              <TextField
+                size="small"
+                label="終了日時"
+                type="datetime-local"
+                value={endDatetime}
+                onChange={(e) => setEndDatetime(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+            )}
 
             {fields.hasParts && (
               <Box>
@@ -364,110 +361,6 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
               </Box>
             )}
 
-            {fields.hasReleaseTimes && (
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">開放時間（最大 9 件）</Typography>
-                  <Box sx={{ flex: 1 }} />
-                  {!showReleaseTimes && (
-                    <Button size="small" variant="outlined" startIcon={<ScheduleIcon />} onClick={openReleaseTimes}>
-                      開放時間を入力
-                    </Button>
-                  )}
-                  {showReleaseTimes && (
-                    <FormControl size="small" sx={{ minWidth: 160 }}>
-                      <InputLabel shrink>テンプレート読込</InputLabel>
-                      <Select
-                        label="テンプレート読込"
-                        value=""
-                        displayEmpty
-                        notched
-                        onChange={(e) => loadTemplate(e.target.value as string)}
-                        MenuProps={{
-                          PaperProps: {
-                            sx: {
-                              mt: 0.5,
-                              bgcolor: 'background.paper',
-                              boxShadow: 3,
-                              '& .MuiMenuItem-root': {
-                                color: 'text.primary',
-                              },
-                            },
-                          },
-                          // Dialog 上で確実に最前面に出すため明示
-                          sx: { zIndex: (theme) => theme.zIndex.modal + 1 },
-                        }}
-                      >
-                        <MenuItem value="" disabled>
-                          <em>テンプレートを選択</em>
-                        </MenuItem>
-                        {MASTER_RELEASE_TIME_TEMPLATES.map((t) => (
-                          <MenuItem key={t.name} value={t.name}>{t.name}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                </Stack>
-                {showReleaseTimes && (
-                  <Stack spacing={0.5}>
-                    {releaseTimes.map((r, i) => (
-                      <Stack key={i} direction="row" spacing={1} alignItems="center">
-                        <Typography variant="caption" sx={{ width: 30 }}>{i + 1}.</Typography>
-                        <TextField
-                          size="small" placeholder="HH:mm" sx={{ width: 100 }}
-                          value={r.start}
-                          onChange={(e) => updateReleaseRow(i, { start: e.target.value })}
-                        />
-                        <Typography variant="caption">〜</Typography>
-                        <TextField
-                          size="small" placeholder="HH:mm" sx={{ width: 100 }}
-                          value={r.end}
-                          onChange={(e) => updateReleaseRow(i, { end: e.target.value })}
-                        />
-                        <IconButton size="small" onClick={() => removeReleaseRow(i)}><DeleteIcon fontSize="small" /></IconButton>
-                      </Stack>
-                    ))}
-                    <Button
-                      size="small" startIcon={<AddIcon />}
-                      onClick={addReleaseRow}
-                      disabled={releaseTimes.length >= 9}
-                      sx={{ alignSelf: 'flex-start' }}
-                    >
-                      追加 ({releaseTimes.length}/9)
-                    </Button>
-                  </Stack>
-                )}
-              </Box>
-            )}
-
-            {fields.hasDocs && (
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  文書チェック（入院形態: {admitForm} × {parsed?.subtype}）
-                </Typography>
-                {docCandidates.length === 0 && (
-                  <Typography variant="caption" color="text.disabled" display="block">
-                    対象文書がマスタに定義されていません
-                  </Typography>
-                )}
-                <Stack sx={{ mt: 0.5 }}>
-                  {docCandidates.map((d) => (
-                    <FormControlLabel
-                      key={d}
-                      control={<Checkbox size="small" checked={docChecks.includes(d)} onChange={() => toggleDocCheck(d)} />}
-                      label={<Typography variant="body2">{d}</Typography>}
-                    />
-                  ))}
-                </Stack>
-              </Box>
-            )}
-
-            <TextField
-              multiline minRows={3} fullWidth size="small" label="所見（カルテ本文）"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
-
             <Divider />
 
             <FormControlLabel
@@ -483,7 +376,13 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>キャンセル</Button>
-          <Button variant="contained" onClick={handleSubmit}>{isEdit ? '更新' : '作成'}</Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={!toRoom || !toBed}
+          >
+            {isEdit ? '更新' : '作成'}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -493,7 +392,7 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
         mode="new"
         orderDate={pendingNoticePayload?.orderDate ?? ''}
         startDatetime={pendingNoticePayload?.startDatetime ?? ''}
-        initialContent={content}
+        initialContent=""
         onPrint={handleNoticePrint}
       />
     </>

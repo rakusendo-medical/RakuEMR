@@ -19,6 +19,20 @@ type Revision = {
 
 export const REVISIONS: Revision[] = [
   {
+    version: 'ver0.12',
+    date: '6/2',
+    fullDate: '2026-06-02',
+    context: '梶井改修',
+    summary: '隔離拘束指示ダイアログを改修。開放時間・文書チェック・所見を削除。開始日時・終了日時の入力をdatetime-local形式に統一。配膳先変更日時を追加。移動先病棟・病室・ベッドのセレクトを追加。病室・ベッド未選択時は作成ボタンを非活性化。',
+    commits: [
+      { hash: '—', time: '—', subject: 'isolation: 隔離拘束指示ダイアログから開放時間・文書チェック・所見を削除' },
+      { hash: '—', time: '—', subject: 'isolation: 開始日時・終了日時の入力をdatetime-local形式に統一' },
+      { hash: '—', time: '—', subject: 'isolation: 配膳先変更日時フィールドを追加' },
+      { hash: '—', time: '—', subject: 'isolation: 移動先病棟・病室・ベッドのセレクトを追加' },
+      { hash: '—', time: '—', subject: 'isolation: 病室・ベッド未選択時に作成ボタンを非活性化' },
+    ],
+  },
+  {
     version: 'ver0.11',
     date: '5/30',
     fullDate: '2026-05-30',
