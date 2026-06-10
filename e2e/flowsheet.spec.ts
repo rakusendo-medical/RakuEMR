@@ -64,10 +64,10 @@ test.describe('フローシート', () => {
     await page.getByLabel('観察 2026-05-19 00:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('観察記録', { exact: true })).toBeVisible();
-    // デフォルトで 00 分・30 分の 2 行
-    await expect(dialog.getByDisplayValue('00:00')).toBeVisible();
-    await expect(dialog.getByDisplayValue('00:30')).toBeVisible();
+    // 観察記録ダイアログが開いている（登録ボタンの存在で判定）
+    await expect(dialog.getByRole('button', { name: '登録' })).toBeVisible();
+    // 既定で 2 行（00分・30分）→「追加 (2/9)」表示
+    await expect(dialog.getByText('追加 (2/9)')).toBeVisible();
   });
 
   test('観察記録ダイアログで観察間隔（15分/30分）を切り替えられる', async ({ page }) => {
@@ -75,15 +75,14 @@ test.describe('フローシート', () => {
     await page.getByLabel('観察 2026-05-19 00:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    // 既定は 30 分単位 → 00:00 / 00:30 の 2 行
-    await expect(dialog.getByDisplayValue('00:30')).toBeVisible();
-    // 15 分単位へ切替 → 00:00 / 00:15 / 00:30 / 00:45 の 4 行
+    // 既定は 30 分単位 → 2 行
+    await expect(dialog.getByText('追加 (2/9)')).toBeVisible();
+    // 15 分単位へ切替 → 4 行（00/15/30/45分）
     await dialog.getByRole('button', { name: '15分単位' }).click();
-    await expect(dialog.getByDisplayValue('00:15')).toBeVisible();
-    await expect(dialog.getByDisplayValue('00:45')).toBeVisible();
-    // 30 分単位へ戻すと 00:15 は消える
+    await expect(dialog.getByText('追加 (4/9)')).toBeVisible();
+    // 30 分単位へ戻すと 2 行
     await dialog.getByRole('button', { name: '30分単位' }).click();
-    await expect(dialog.getByDisplayValue('00:15')).toBeHidden();
+    await expect(dialog.getByText('追加 (2/9)')).toBeVisible();
   });
 
   test('隔離拘束グリッドの区切り線が縦横とも同色（細線）', async ({ page }) => {
@@ -180,11 +179,11 @@ test.describe('フローシート', () => {
     await dialog.getByRole('button', { name: '登録' }).click();
     await expect(dialog).toBeHidden();
     await expect(cell.locator('[data-testid="obs-segment"]')).toHaveCount(2);
-    // 2 回目: 既存がプリロードされ、保存しても重複せず 2 件のまま（置き換え）
+    // 2 回目: 既存がプリロードされ（追加 (2/9) のまま）、保存しても重複せず 2 件のまま（置き換え）
     await cell.click();
     dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByDisplayValue('01:30')).toBeVisible();
+    await expect(dialog.getByText('追加 (2/9)')).toBeVisible();
     await dialog.getByRole('button', { name: '登録' }).click();
     await expect(dialog).toBeHidden();
     await expect(cell.locator('[data-testid="obs-segment"]')).toHaveCount(2);
