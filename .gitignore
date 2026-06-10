@@ -53,3 +53,7 @@ docs/manuals/
 # PM ブリーフィング（PM 主導の都度更新ファイル・git に残さない）
 # 末尾スラッシュなしで symlink もカバーする（ワーカー worktree 用）
 .claude/briefings
+
+# Playwright 生成物（レポート・スクショ・動画など）
+/playwright-report/
+/test-results/

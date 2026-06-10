@@ -77,7 +77,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: 'medical-record', label: '診療録', hash: 'medical-record', icon: <MedicalRecordIcon fontSize="small" /> },
-  { id: 'flowsheet', label: 'フローシート', hash: 'flowsheet', icon: <FlowsheetIcon fontSize="small" /> },
+  { id: 'flowsheet', label: 'フローシート・隔離拘束', hash: 'flowsheet', icon: <FlowsheetIcon fontSize="small" /> },
   { id: 'orders', label: '指示簿', hash: 'orders', icon: <OrdersIcon fontSize="small" /> },
   { id: 'order-status', label: '指示状況', hash: 'order-status', icon: <OrderStatusIcon fontSize="small" /> },
   {

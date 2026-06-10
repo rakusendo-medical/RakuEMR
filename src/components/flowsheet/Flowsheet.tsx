@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
-  TableRow, Button, Stack, Link as MuiLink,
+  TableRow, Button, Stack, Link as MuiLink, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, MenuItem,
+  TextField, MenuItem, Checkbox, FormControlLabel,
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
@@ -11,6 +11,11 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
+import type { IsolationOrder, IsolationSubtype } from '../../types';
+import { PATIENTS, ISOLATION_ORDERS, MASTER_OBSERVATION_STATES } from '../../data/mockData';
+import { useAppStore } from '../../stores/useAppStore';
+import ObservationRecordDialog from '../isolation/ObservationRecordDialog';
+import { NewRecordDialog } from '../karte/MedicalRecordTab';
 
 interface Props {
   patientId?: string;
@@ -164,6 +169,41 @@ const RESTRAINTS = {
   behavior:  { from: 3, to: 6, startLabel: '09:00〜', endLabel: '〜08:00', bg: '#fff8c5' } as RestraintBar,
   outing:    { from: 4, to: 4, singleLabel: '10:00〜18:00', bg: '#dbeafe' } as RestraintBar,
 };
+
+// ===== 隔離拘束サブタブ（24 時間観察グリッド）=====
+// 0〜23 時の行
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+// 観察行の固定高さ（px）。セル高さを固定することで、複数記録の色セグメントを
+// flex で均等分割できる（百分率高さの解決ブレを避ける）。
+const OBS_ROW_HEIGHT = 32;
+
+// 診察記録の絞込設定ダイアログのチェック項目（参考システムの絞込設定に準拠）
+const EXAM_FILTER_OPTIONS = [
+  '隔離中診察', '拘束中診察', '隔離開始', '隔離解除',
+  '拘束開始', '拘束解除', '隔離継続', '隔離変更',
+  '拘束継続', '拘束変更',
+];
+
+// 表示用日付（"2026/5/13"）→ ISO（"2026-05-13"）。観察記録・指示の照合に使う
+function toIso(display: string): string {
+  const [y, m, d] = display.split('/');
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
+// 以下 2 つは RestraintObservationMatrix.tsx:31-46 と同等の純関数（結合回避のためローカル複製）
+function getSubtype(o: IsolationOrder): IsolationSubtype {
+  return o.subtype ?? (o.type === '隔離' ? '隔離' : '拘束');
+}
+function isActiveAt(o: IsolationOrder, dateStr: string, hour: number): boolean {
+  const target = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00`).getTime();
+  const start = new Date(o.startDatetime.replace(' ', 'T')).getTime();
+  if (target < start) return false;
+  if (o.endDatetime) {
+    const end = new Date(o.endDatetime.replace(' ', 'T')).getTime();
+    if (target > end) return false;
+  }
+  return true;
+}
 
 // チャート用データ(7日分)
 const CHART_DATA = DAILY.map((d) => {
@@ -319,11 +359,106 @@ function SectionHeaderRow({ title }: { title: string }) {
   );
 }
 
-const FlowsheetView: React.FC<Props> = () => {
+const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   // 表示データを state 化（日列クリックで当日分を編集できるようにする）
   const [rows, setRows] = useState<DailyRow[]>(DAILY);
   const [editDay, setEditDay] = useState<number | null>(null);
   const [draft, setDraft] = useState<DailyRow | null>(null);
+
+  // ----- サブタブ（フローシート / 隔離拘束）-----
+  // 外出・外泊行から下を切り替える。デフォルト flowsheet で既存挙動を維持。
+  const [subTab, setSubTab] = useState<'flowsheet' | 'isolation'>('flowsheet');
+
+  // ----- 隔離拘束 観察グリッド用データ（read-only 流用）-----
+  const dynamicOrders = useAppStore((s) => s.dynamicIsolationOrders);
+  const dynamicObservations = useAppStore((s) => s.dynamicObservationRecords);
+  const patient = useMemo(() => PATIENTS.find((p) => p.id === patientId), [patientId]);
+  // 7 日列の ISO 日付（共通ヘッダの日付列と一致）
+  const dayIso = useMemo(() => DAILY.map((d) => toIso(d.date)), []);
+  // 患者の指示集合（マスタ + dynamic、同 id は dynamic 優先）
+  const orders = useMemo<IsolationOrder[]>(() => {
+    if (!patientId) return [];
+    const merged = new Map<string, IsolationOrder>();
+    [...ISOLATION_ORDERS, ...dynamicOrders].forEach((o) => {
+      if (o.patientId === patientId) merged.set(o.id, o);
+    });
+    return Array.from(merged.values());
+  }, [patientId, dynamicOrders]);
+  const observations = useMemo(
+    () => dynamicObservations.filter((r) => r.patientId === patientId),
+    [dynamicObservations, patientId],
+  );
+  // 観察記録ダイアログ
+  const [obsDialog, setObsDialog] = useState<{
+    date: string; hour: number; subtype: IsolationSubtype | 'その他'; isolationOrderId?: string;
+  } | null>(null);
+
+  // 診療録作成ダイアログ（[未診察] セルから起動・カルテと同一の NewRecordDialog を再利用）
+  const showSnackbar = useAppStore((s) => s.showSnackbar);
+  const [examOpen, setExamOpen] = useState(false);
+  const openExam = () => setExamOpen(true);
+  const closeExam = () => setExamOpen(false);
+
+  // 診察記録の絞込設定ダイアログ（[絞込設定] から起動）。初期は全てチェック
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterChecks, setFilterChecks] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(EXAM_FILTER_OPTIONS.map((o) => [o, true])),
+  );
+  const setAllFilters = (v: boolean) =>
+    setFilterChecks(Object.fromEntries(EXAM_FILTER_OPTIONS.map((o) => [o, v])));
+
+  // 観察セル描画（縦=時刻 / 横=日）。どのセルもクリックで観察記録ダイアログを開く。
+  // active な隔離/拘束指示があれば subtype をそれに合わせ、無ければ「その他」で起票する。
+  const renderObsCell = (iso: string, hour: number) => {
+    const activeOrders = patient ? orders.filter((o) => isActiveAt(o, iso, hour)) : [];
+    // 拘束優先（spec us-13 AC-8）→ 隔離 → 無ければ「その他」
+    const restraint = activeOrders.find((o) => getSubtype(o) === '拘束' || getSubtype(o) === '隔離拘束');
+    const isolation = activeOrders.find((o) => getSubtype(o) === '隔離');
+    const primary = restraint ?? isolation;
+    const subtype: IsolationSubtype | 'その他' = primary ? getSubtype(primary) : 'その他';
+    // その時間帯の観察記録（複数回数分）を時刻順に並べ、各記録を色セグメントで表示。
+    // 後勝ちで 1 色に潰さず、それぞれの色を横並びで表示する（文字は出さない）。
+    const recs = observations
+      .filter((r) => r.date === iso && r.time.startsWith(`${String(hour).padStart(2, '0')}:`))
+      .slice()
+      .sort((a, b) => a.time.localeCompare(b.time));
+    // 背景: 指示下→未記入色 / 指示なし→白
+    const baseBg = primary ? '#f8fafc' : '#fff';
+    return (
+      <Box
+        aria-label={`観察 ${iso} ${String(hour).padStart(2, '0')}:00`}
+        onClick={() => setObsDialog({ date: iso, hour, subtype, isolationOrderId: primary?.id })}
+        sx={{
+          // セル高さを固定（行も OBS_ROW_HEIGHT 固定）。これで複数記録の
+          // 色セグメントを flex で均等分割できる（百分率高さのブレを回避）。
+          width: '100%', height: OBS_ROW_HEIGHT, cursor: 'pointer',
+          bgcolor: baseBg,
+          // 縦の区切り線のみセルに付与（横線はテーブル本来の行ボーダーに任せ、
+          // 二重線で太く見えるのを防ぐ）
+          borderRight: '1px solid #cbd5e1',
+          // 複数記録は上下に積み、各セグメントを均等高さで分割
+          display: 'flex', flexDirection: 'column',
+          '&:hover': { boxShadow: 'inset 0 0 0 2px #2563eb' },
+        }}
+      >
+        {recs.map((r, idx) => {
+          const conf = MASTER_OBSERVATION_STATES.find((s) => s.state === r.state);
+          return (
+            <Box
+              key={idx}
+              data-testid="obs-segment"
+              title={`${r.time} ${r.state}`}
+              sx={{
+                // flex-grow:1 / flex-basis:0 で均等分割。minHeight:0 で確実に縮む
+                flexGrow: 1, flexBasis: 0, minHeight: 0,
+                bgcolor: conf?.bgColor ?? baseBg,
+              }}
+            />
+          );
+        })}
+      </Box>
+    );
+  };
 
   const openEdit = (i: number) => {
     setEditDay(i);
@@ -504,6 +639,108 @@ const FlowsheetView: React.FC<Props> = () => {
             <RestraintRow label="行動制限(その他)" bar={RESTRAINTS.behavior} />
             <RestraintRow label="外出・外泊" bar={RESTRAINTS.outing} />
 
+            {/* サブタブ: ここから下を「フローシート / 隔離拘束」で切替（design-rules §2.3）。
+                横スクロールしても見えるよう左寄せ＋左 sticky で固定。 */}
+            <TableRow>
+              <TableCell
+                colSpan={9}
+                sx={{ p: 0, borderBottom: '2px solid #1e3a5f', bgcolor: '#f1f5f9' }}
+              >
+                <Box
+                  sx={{
+                    position: 'sticky', left: 0,
+                    display: 'inline-flex', alignItems: 'center', pl: 1,
+                  }}
+                >
+                  <Tabs
+                    value={subTab}
+                    onChange={(_, v: 'flowsheet' | 'isolation') => setSubTab(v)}
+                    sx={{ minHeight: 34 }}
+                  >
+                    <Tab label="フローシート" value="flowsheet" sx={{ minHeight: 34, py: 0, fontSize: '0.75rem' }} />
+                    <Tab label="隔離拘束" value="isolation" sx={{ minHeight: 34, py: 0, fontSize: '0.75rem' }} />
+                  </Tabs>
+                </Box>
+              </TableCell>
+            </TableRow>
+
+            {/* ===== 隔離拘束サブタブ: 診察記録 + 24 時間観察グリッド ===== */}
+            {subTab === 'isolation' && (
+              <>
+                {/* 診察記録 行。[未診察] クリックで診察録作成、[絞込設定] で絞込設定ダイアログ */}
+                <TableRow>
+                  <TableCell sx={{ ...stickyLabelCell, whiteSpace: 'nowrap', fontSize: '0.7rem' }}>
+                    診察記録{' '}
+                    <Box
+                      component="span"
+                      role="button"
+                      aria-label="絞込設定"
+                      onClick={() => setFilterOpen(true)}
+                      sx={{ color: '#1e40af', cursor: 'pointer', whiteSpace: 'nowrap', '&:hover': { textDecoration: 'underline' } }}
+                    >
+                      [絞込設定]
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={stickySubCell} />
+                  {rows.map((d, i) => (
+                    <TableCell key={i} sx={{ ...dayCellSx(d.isToday), p: 0 }}>
+                      <Box
+                        aria-label={`診療録作成 ${dayIso[i]}`}
+                        onClick={openExam}
+                        sx={{
+                          color: '#dc2626', fontWeight: 600, cursor: 'pointer', py: 0.5,
+                          '&:hover': { textDecoration: 'underline' },
+                        }}
+                      >
+                        [未診察]
+                      </Box>
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <SectionHeaderRow title="隔離拘束 観察記録" />
+                {/* 凡例（色 + 状態テキストで色覚配慮・design-rules §13.5）。
+                    どのセルもクリックで観察記録ダイアログを開ける。 */}
+                <TableRow>
+                  <TableCell colSpan={9} sx={{ py: 0.5, px: 1.5, borderBottom: '1px solid #e2e8f0' }}>
+                    <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center" useFlexGap>
+                      <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
+                        セルクリックで観察記録を入力
+                      </Typography>
+                      {MASTER_OBSERVATION_STATES.map((s) => (
+                        <Stack key={s.state} direction="row" spacing={0.4} alignItems="center">
+                          <Box sx={{ width: 12, height: 12, bgcolor: s.bgColor, border: '1px solid #cbd5e1' }} />
+                          <Typography sx={{ fontSize: '0.65rem', color: s.color }}>{s.state}</Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+                {/* 0〜23 時 × 7 日 */}
+                {HOURS.map((h) => (
+                  <TableRow key={`obs-${h}`}>
+                    {/* 行高を固定（セグメント均等分割のため）。横線の色は縦線（#cbd5e1）と揃える */}
+                    <TableCell sx={{ ...stickyLabelCell, height: OBS_ROW_HEIGHT, py: 0, borderBottom: '1px solid #cbd5e1' }}>{h}時</TableCell>
+                    <TableCell sx={{ ...stickySubCell, height: OBS_ROW_HEIGHT, py: 0, borderBottom: '1px solid #cbd5e1' }} />
+                    {rows.map((d, i) => (
+                      <TableCell
+                        key={i}
+                        sx={{
+                          p: 0, height: OBS_ROW_HEIGHT, minWidth: DAY_COL_WIDTH, width: DAY_COL_WIDTH,
+                          borderBottom: '1px solid #cbd5e1',
+                          bgcolor: d.isToday ? '#fff8e1' : undefined,
+                        }}
+                      >
+                        {renderObsCell(dayIso[i], h)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </>
+            )}
+
+            {/* ===== フローシートサブタブ: 既存セクション ===== */}
+            {subTab === 'flowsheet' && (
+            <>
             {/* ===== バイタル・サイングラフ ===== */}
             <SectionHeaderRow title="バイタル・サイングラフ" />
             <TableRow>
@@ -845,6 +1082,8 @@ const FlowsheetView: React.FC<Props> = () => {
                 </TableCell>
               ))}
             </TableRow>
+            </>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -954,6 +1193,70 @@ const FlowsheetView: React.FC<Props> = () => {
         <DialogActions>
           <Button onClick={closeNursing}>キャンセル</Button>
           <Button variant="contained" onClick={saveNursing}>登録</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 隔離拘束 観察記録ダイアログ（セルクリックで起動・既存 ep-07 ダイアログを流用） */}
+      {obsDialog && patient && (
+        <ObservationRecordDialog
+          open
+          onClose={() => setObsDialog(null)}
+          patient={{ id: patient.id, name: patient.name, age: patient.age, wardId: patient.wardId }}
+          date={obsDialog.date}
+          hour={obsDialog.hour}
+          subtype={obsDialog.subtype}
+          isolationOrderId={obsDialog.isolationOrderId}
+          defaultFrequency={2}
+          showIntervalToggle
+          replaceExistingForHour
+        />
+      )}
+
+      {/* 診療録作成ダイアログ（[未診察] セルから起動・カルテ画面と同一の NewRecordDialog を再利用） */}
+      <NewRecordDialog
+        open={examOpen}
+        mode="inpatient"
+        patientId={patientId}
+        onClose={closeExam}
+        onSaved={(m) => showSnackbar(m, 'success')}
+      />
+
+      {/* 絞込設定ダイアログ（診察記録 [絞込設定] から起動） */}
+      <Dialog open={filterOpen} onClose={() => setFilterOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>絞込設定</DialogTitle>
+        <DialogContent dividers>
+          <Stack direction="row" spacing={2}>
+            {/* 左: 操作（全てチェック / クリア） */}
+            <Stack spacing={0.5} sx={{ flexShrink: 0, pt: 0.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700 }}>絞込設定</Typography>
+              <Button size="small" variant="text" onClick={() => setAllFilters(true)} sx={{ justifyContent: 'flex-start', minWidth: 0, whiteSpace: 'nowrap' }}>
+                [全てチェック]
+              </Button>
+              <Button size="small" variant="text" onClick={() => setAllFilters(false)} sx={{ justifyContent: 'flex-start', minWidth: 0, whiteSpace: 'nowrap' }}>
+                [クリア]
+              </Button>
+            </Stack>
+            {/* 右: チェック項目（4 列） */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', columnGap: 1, rowGap: 0 }}>
+              {EXAM_FILTER_OPTIONS.map((o) => (
+                <FormControlLabel
+                  key={o}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={filterChecks[o] ?? false}
+                      onChange={(e) => setFilterChecks((prev) => ({ ...prev, [o]: e.target.checked }))}
+                    />
+                  }
+                  label={<Typography sx={{ fontSize: '0.8rem' }}>{o}</Typography>}
+                />
+              ))}
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFilterOpen(false)}>閉じる</Button>
+          <Button variant="contained" onClick={() => setFilterOpen(false)}>設定</Button>
         </DialogActions>
       </Dialog>
     </Box>

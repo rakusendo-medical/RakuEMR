@@ -9,7 +9,7 @@ import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Stack, TextField, MenuItem, Typography, Box, Chip,
-  Checkbox, IconButton, Tooltip,
+  Checkbox, IconButton, Tooltip, ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import type {
@@ -49,6 +49,14 @@ interface Props {
   subtype: IsolationSubtype | 'その他';
   /** 紐付き隔離拘束指示 ID（隔離/拘束/隔離拘束 の場合のみ） */
   isolationOrderId?: string;
+  /** 初期行数の上書き（未指定時は区分別マスタ MASTER_OBSERVATION_FREQUENCY を使用）。
+      例: 2 を渡すと 00 分・30 分の 2 行で開く */
+  defaultFrequency?: number;
+  /** 観察間隔（15 分単位 / 30 分単位）の切替を表示する */
+  showIntervalToggle?: boolean;
+  /** 同一時間帯の既存記録をプリロードし、保存時に置き換える（重複防止）。
+      フローシートの観察グリッドから開く場合に使用 */
+  replaceExistingForHour?: boolean;
 }
 
 function deriveShift(hour: number): 'night' | 'day' | 'evening' {
@@ -67,32 +75,56 @@ function buildSlots(hour: number, frequency: number): string[] {
   return slots;
 }
 
-const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date, hour, subtype, isolationOrderId }) => {
+const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date, hour, subtype, isolationOrderId, defaultFrequency, showIntervalToggle, replaceExistingForHour }) => {
   const addObservationRecordsBulk = useAppStore((s) => s.addObservationRecordsBulk);
+  const removeObservationRecord = useAppStore((s) => s.removeObservationRecord);
+  const dynamicObservations = useAppStore((s) => s.dynamicObservationRecords);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const currentUserRole = useAppStore((s) => s.currentUserRole);
   const addNursingRecord = useFlowsheetStore((s) => s.addNursingRecord);
 
-  // マスタの区分別観察回数を初期回数として使用
+  // 初期回数: defaultFrequency 優先、無ければ区分別マスタを使用
   const subtypeKey = subtype === '隔離拘束' ? '拘束' : (subtype as '隔離' | '拘束' | 'その他');
-  const initialFrequency = MASTER_OBSERVATION_FREQUENCY[subtypeKey] ?? 1;
+  const initialFrequency = defaultFrequency ?? MASTER_OBSERVATION_FREQUENCY[subtypeKey] ?? 1;
+
+  // 観察間隔（分）。間隔切替表示時のみ使用。初期値は initialFrequency から導出（4 回→15 分 / それ以外→30 分）
+  const [unitMinutes, setUnitMinutes] = React.useState<15 | 30>(initialFrequency >= 4 ? 15 : 30);
+  // 実効回数: 間隔切替が有効なら 60/間隔、無ければ従来の初期回数
+  const effectiveFrequency = showIntervalToggle ? Math.round(60 / unitMinutes) : initialFrequency;
 
   const [rows, setRows] = React.useState<RowDraft[]>([]);
   const [contentBulkOpen, setContentBulkOpen] = React.useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState<number | null>(null);
 
+  // 既定行（指定回数の等分スロット・状態は落ち着き）
+  const buildDefaultRows = React.useCallback((freq: number): RowDraft[] =>
+    buildSlots(hour, freq).map((time, i) => ({
+      occurrence: i + 1, selected: true, time, state: '落ち着き' as ObservationState, content: '', tags: [],
+    })), [hour]);
+
+  // 同一時間帯の既存記録（置き換えモードでプリロード・保存時に削除する対象）
+  const existingForHour = React.useMemo(() => {
+    const hh = String(hour).padStart(2, '0');
+    return dynamicObservations
+      .filter((r) => r.patientId === patient.id && r.date === date && r.time.startsWith(`${hh}:`))
+      .slice()
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [dynamicObservations, patient.id, date, hour]);
+
+  // 開いた瞬間のみ初期化（置き換えモードで既存があればプリロード、無ければ既定）。
+  // 間隔切替時の再構築はトグルの onChange 側で行う（ここでは effectiveFrequency に依存しない）。
   React.useEffect(() => {
     if (!open) return;
-    const slots = buildSlots(hour, initialFrequency);
-    setRows(slots.map((time, i) => ({
-      occurrence: i + 1,
-      selected: true,
-      time,
-      state: '落ち着き',
-      content: '',
-      tags: [],
-    })));
-  }, [open, hour, initialFrequency]);
+    if (replaceExistingForHour && existingForHour.length > 0) {
+      setRows(existingForHour.map((r, i) => ({
+        occurrence: i + 1, selected: true, time: r.time, state: r.state,
+        content: r.note ?? '', tags: r.tags ?? [],
+      })));
+    } else {
+      setRows(buildDefaultRows(effectiveFrequency));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, hour, date, patient.id]);
 
   const updateRow = (i: number, patch: Partial<RowDraft>) => {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -190,6 +222,10 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
       };
     });
 
+    // 置き換えモード: 同一時間帯の既存記録を削除してから登録（重複・累積を防ぐ）
+    if (replaceExistingForHour) {
+      existingForHour.forEach((r) => removeObservationRecord(r.id));
+    }
     addObservationRecordsBulk(newRecords);
     const linkedCount = newRecords.filter((r) => r.linkedNursingRecordId).length;
     showSnackbar(
@@ -212,6 +248,26 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={1}>
+            {/* 観察間隔の切替（タイトル直下の独立行）。間隔を変えると行を作り直す。 */}
+            {showIntervalToggle && (
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="body2" color="text.secondary">観察間隔:</Typography>
+                <ToggleButtonGroup
+                  size="small"
+                  exclusive
+                  value={unitMinutes}
+                  onChange={(_, v: 15 | 30 | null) => {
+                    if (!v) return;
+                    setUnitMinutes(v);
+                    // 間隔変更時は既定スロットで作り直す
+                    setRows(buildDefaultRows(Math.round(60 / v)));
+                  }}
+                >
+                  <ToggleButton value={15}>15分単位</ToggleButton>
+                  <ToggleButton value={30}>30分単位</ToggleButton>
+                </ToggleButtonGroup>
+              </Stack>
+            )}
             <Stack direction="row" alignItems="center" spacing={1}>
               <Button size="small" variant="outlined" onClick={toggleSelectAll}>
                 {rows.every((r) => r.selected) ? '全解除' : '全選択'}

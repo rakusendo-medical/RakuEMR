@@ -595,7 +595,7 @@ const DO_SECTIONS = [
 ] as const;
 type DoSectionId = typeof DO_SECTIONS[number]['id'];
 
-function NewRecordDialog({
+export function NewRecordDialog({
   open,
   mode,
   patientId,
