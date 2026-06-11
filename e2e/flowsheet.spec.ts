@@ -324,6 +324,72 @@ test.describe('フローシート', () => {
     await expect(delCell.locator('[data-testid="obs-segment"]')).toHaveCount(1);
   });
 
+  test('最大の9行まで増やして登録すると9セグメントが反映される', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    const cell = page.getByLabel('観察 2026-05-19 11:00');
+    await cell.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    const addBtn = dialog.getByRole('button', { name: /^追加 \(/ });
+    // 既定 2 行 → 9 行（上限）まで追加
+    for (let i = 0; i < 7; i++) await addBtn.click();
+    await expect(addBtn).toHaveText('追加 (9/9)');
+    // 登録 → セルに 9 セグメント
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(cell.locator('[data-testid="obs-segment"]')).toHaveCount(9);
+  });
+
+  test('既存記録のあるセルに上書きすると値が新しい状態へ正しく書き換わる', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    const cell = page.getByLabel('観察 2026-05-19 12:00');
+    const segs = cell.locator('[data-testid="obs-segment"]');
+    // 1 回目: 既定（落ち着き×2）で登録
+    await cell.click();
+    let dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(segs).toHaveCount(2);
+    // 先頭セグメントは「落ち着き」（title 属性 = 時刻 + 状態）
+    await expect(segs.first()).toHaveAttribute('title', /落ち着き/);
+    // 2 回目: 既存がプリロード → 先頭行の状態を「不穏」へ変更して上書き登録
+    await cell.click();
+    dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('追加 (2/9)')).toBeVisible();
+    await dialog.getByLabel('状態').first().click();
+    await page.getByRole('option', { name: '不穏', exact: true }).click();
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    // 件数は 2 のまま・先頭が「落ち着き」→「不穏」に正しく書き換わる（重複も残存もしない）
+    await expect(segs).toHaveCount(2);
+    await expect(segs.first()).toHaveAttribute('title', /不穏/);
+    await expect(cell).not.toContainText('落ち着き');
+  });
+
+  test('勤務帯（夜勤/日勤）を切り替えてから入力しても反映される', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    // 夜勤に切替 → 夜勤帯（22時）のセルに入力
+    await page.getByRole('button', { name: '夜勤' }).click();
+    const nightCell = page.getByLabel('観察 2026-05-19 22:00');
+    await expect(nightCell).toBeVisible();
+    await nightCell.click();
+    let dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(nightCell.locator('[data-testid="obs-segment"]')).toHaveCount(2);
+    // 夜勤表示のまま（9時は非表示）で反映されている
+    await expect(page.getByText('9時', { exact: true })).toBeHidden();
+    // 日勤に切替 → 日勤帯（14時）のセルにも入力できて反映される
+    await page.getByRole('button', { name: '日勤' }).click();
+    const dayCell = page.getByLabel('観察 2026-05-19 14:00');
+    await expect(dayCell).toBeVisible();
+    await dayCell.click();
+    dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(dayCell.locator('[data-testid="obs-segment"]')).toHaveCount(2);
+  });
+
   test('勤務帯ボタンは選択中だけが押下状態（aria-pressed）になる', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     const b24 = page.getByRole('button', { name: '24時間' });
