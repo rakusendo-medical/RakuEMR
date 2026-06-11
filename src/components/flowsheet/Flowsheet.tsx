@@ -4,6 +4,7 @@ import {
   TableRow, Button, Stack, Link as MuiLink, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, MenuItem, Checkbox, FormControlLabel,
+  ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
@@ -173,6 +174,9 @@ const RESTRAINTS = {
 // ===== 隔離拘束サブタブ（24 時間観察グリッド）=====
 // 0〜23 時の行
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+// 勤務帯フィルタ（PM 確定: 日勤 9〜16時 / 夜勤 17〜翌8時）
+const DAY_SHIFT_HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
+const NIGHT_SHIFT_HOURS = [17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7, 8];
 // 観察行の固定高さ（px）。セル高さを固定することで、複数記録の色セグメントを
 // flex で均等分割できる（百分率高さの解決ブレを避ける）。
 const OBS_ROW_HEIGHT = 32;
@@ -368,6 +372,10 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   // ----- サブタブ（フローシート / 隔離拘束）-----
   // 外出・外泊行から下を切り替える。デフォルト flowsheet で既存挙動を維持。
   const [subTab, setSubTab] = useState<'flowsheet' | 'isolation'>('flowsheet');
+
+  // ----- 勤務帯フィルタ（24時間 / 日勤 / 夜勤）-----
+  const [shift, setShift] = useState<'24h' | 'day' | 'night'>('24h');
+  const visibleHours = shift === 'day' ? DAY_SHIFT_HOURS : shift === 'night' ? NIGHT_SHIFT_HOURS : HOURS;
 
   // ----- 隔離拘束 観察グリッド用データ（read-only 流用）-----
   const dynamicOrders = useAppStore((s) => s.dynamicIsolationOrders);
@@ -697,7 +705,28 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                     </TableCell>
                   ))}
                 </TableRow>
-                <SectionHeaderRow title="隔離拘束 観察記録" />
+                {/* 観察記録ヘッダ + 勤務帯フィルタ（24時間 / 日勤 / 夜勤） */}
+                <TableRow>
+                  <TableCell colSpan={9} sx={{ ...sectionHeaderCellSx, py: 0.3 }}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e3a5f' }}>
+                        隔離拘束 観察記録
+                      </Typography>
+                      <Box sx={{ flex: 1 }} />
+                      <ToggleButtonGroup
+                        size="small"
+                        exclusive
+                        value={shift}
+                        onChange={(_, v: '24h' | 'day' | 'night' | null) => { if (v) setShift(v); }}
+                        sx={{ bgcolor: '#fff', '& .MuiToggleButton-root': { py: 0, px: 1, fontSize: '0.7rem', lineHeight: 1.6 } }}
+                      >
+                        <ToggleButton value="24h">24時間</ToggleButton>
+                        <ToggleButton value="day">日勤</ToggleButton>
+                        <ToggleButton value="night">夜勤</ToggleButton>
+                      </ToggleButtonGroup>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
                 {/* 凡例（色 + 状態テキストで色覚配慮・design-rules §13.5）。
                     どのセルもクリックで観察記録ダイアログを開ける。 */}
                 <TableRow>
@@ -715,8 +744,8 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                     </Stack>
                   </TableCell>
                 </TableRow>
-                {/* 0〜23 時 × 7 日 */}
-                {HOURS.map((h) => (
+                {/* 勤務帯に応じた時間行 × 7 日 */}
+                {visibleHours.map((h) => (
                   <TableRow key={`obs-${h}`}>
                     {/* 行高を固定（セグメント均等分割のため）。横線の色は縦線（#cbd5e1）と揃える */}
                     <TableCell sx={{ ...stickyLabelCell, height: OBS_ROW_HEIGHT, py: 0, borderBottom: '1px solid #cbd5e1' }}>{h}時</TableCell>

@@ -58,6 +58,27 @@ test.describe('フローシート', () => {
     await expect(page.getByText('睡眠', { exact: true }).first()).toBeVisible();
   });
 
+  test('隔離拘束グリッドで勤務帯（24時間/日勤/夜勤）を切り替えられる', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    // 既定は 24 時間（0時・23時あり）
+    await expect(page.getByText('0時', { exact: true })).toBeVisible();
+    await expect(page.getByText('23時', { exact: true })).toBeVisible();
+    // 日勤 → 9〜16時のみ（9時/16時あり、0時/23時なし）
+    await page.getByRole('button', { name: '日勤' }).click();
+    await expect(page.getByText('9時', { exact: true })).toBeVisible();
+    await expect(page.getByText('16時', { exact: true })).toBeVisible();
+    await expect(page.getByText('0時', { exact: true })).toBeHidden();
+    await expect(page.getByText('23時', { exact: true })).toBeHidden();
+    // 夜勤 → 17〜翌8時（17時/8時あり、9時なし）
+    await page.getByRole('button', { name: '夜勤' }).click();
+    await expect(page.getByText('17時', { exact: true })).toBeVisible();
+    await expect(page.getByText('8時', { exact: true })).toBeVisible();
+    await expect(page.getByText('9時', { exact: true })).toBeHidden();
+    // 24時間に戻す
+    await page.getByRole('button', { name: '24時間' }).click();
+    await expect(page.getByText('23時', { exact: true })).toBeVisible();
+  });
+
   test('隔離拘束グリッドのセルクリックで観察記録ダイアログが開く', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     // 当日(2026-05-19)の 0 時セルをクリック → 観察記録ダイアログ
