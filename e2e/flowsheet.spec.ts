@@ -210,6 +210,136 @@ test.describe('フローシート', () => {
     await expect(cell.locator('[data-testid="obs-segment"]')).toHaveCount(2);
   });
 
+  test('15分単位で登録するとセルが4セグメントに分割される', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    // 既存記録のない時間帯（03:00）を使う
+    const cell = page.getByLabel('観察 2026-05-19 03:00');
+    await cell.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // 15 分単位へ切替 → 4 行（00/15/30/45分）
+    await dialog.getByRole('button', { name: '15分単位' }).click();
+    await expect(dialog.getByText('追加 (4/9)')).toBeVisible();
+    // 登録 → セルに 4 セグメント（03:00/03:15/03:30/03:45）
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(cell.locator('[data-testid="obs-segment"]')).toHaveCount(4);
+  });
+
+  test('当日以外の日付列セルをクリックしても観察記録ダイアログが開く', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    // 7 日列の先頭日（2026-05-13・非当日）のセル
+    await page.getByLabel('観察 2026-05-13 00:00').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: '登録' })).toBeVisible();
+  });
+
+  test('観察記録の登録で成功トーストが表示される', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    await page.getByLabel('観察 2026-05-19 05:00').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '登録' }).click();
+    // MUI Alert（role=alert・右上 anchorOrigin）に登録メッセージ
+    await expect(page.getByRole('alert')).toContainText('観察記録を');
+  });
+
+  test('観察記録ダイアログに×ボタンが無く、キャンセルで閉じても記録は増えない', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    const cell = page.getByLabel('観察 2026-05-19 06:00');
+    await cell.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // design-rules: × ボタン（close）を置かない
+    await expect(dialog.getByRole('button', { name: /close|閉じる|×/i })).toHaveCount(0);
+    // キャンセルで閉じる → セルに記録は増えない
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(cell.locator('[data-testid="obs-segment"]')).toHaveCount(0);
+  });
+
+  test('絞込設定で[クリア]→[全てチェック]で全項目が再チェックされ[設定]で閉じる', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    await page.getByRole('button', { name: '絞込設定' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // クリアで全解除
+    await dialog.getByRole('button', { name: '[クリア]' }).click();
+    await expect(dialog.getByLabel('隔離中診察')).not.toBeChecked();
+    await expect(dialog.getByLabel('拘束変更')).not.toBeChecked();
+    // [全てチェック] で全項目が再チェック
+    await dialog.getByRole('button', { name: '[全てチェック]' }).click();
+    await expect(dialog.getByLabel('隔離中診察')).toBeChecked();
+    await expect(dialog.getByLabel('拘束変更')).toBeChecked();
+    // [設定] で閉じる
+    await dialog.getByRole('button', { name: '設定' }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test('観察記録ダイアログで行を追加・削除でき、9件で追加が止まる', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    await page.getByLabel('観察 2026-05-19 07:00').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    const addBtn = dialog.getByRole('button', { name: /^追加 \(/ });
+    const deleteIcons = dialog.locator('button:has([data-testid="DeleteIcon"])');
+    // 既定 2 行
+    await expect(addBtn).toHaveText('追加 (2/9)');
+    await expect(deleteIcons).toHaveCount(2);
+    // 1 行追加 → 3 行
+    await addBtn.click();
+    await expect(addBtn).toHaveText('追加 (3/9)');
+    await expect(deleteIcons).toHaveCount(3);
+    // 先頭行を削除 → 2 行に戻る
+    await deleteIcons.first().click();
+    await expect(addBtn).toHaveText('追加 (2/9)');
+    await expect(deleteIcons).toHaveCount(2);
+    // 9 件まで追加すると追加ボタンが無効化（上限）
+    for (let i = 0; i < 7; i++) await addBtn.click();
+    await expect(addBtn).toHaveText('追加 (9/9)');
+    await expect(addBtn).toBeDisabled();
+  });
+
+  test('行を増減した状態で登録するとセルにその件数が反映される', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    // 行を 1 つ追加（2→3 行）して登録 → 3 セグメント
+    const addCell = page.getByLabel('観察 2026-05-19 09:00');
+    await addCell.click();
+    let dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: /^追加 \(/ }).click();
+    await expect(dialog.getByText('追加 (3/9)')).toBeVisible();
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(addCell.locator('[data-testid="obs-segment"]')).toHaveCount(3);
+    // 行を 1 つ削除（2→1 行）して登録 → 1 セグメント
+    const delCell = page.getByLabel('観察 2026-05-19 10:00');
+    await delCell.click();
+    dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.locator('button:has([data-testid="DeleteIcon"])').first().click();
+    await expect(dialog.getByText('追加 (1/9)')).toBeVisible();
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(delCell.locator('[data-testid="obs-segment"]')).toHaveCount(1);
+  });
+
+  test('勤務帯ボタンは選択中だけが押下状態（aria-pressed）になる', async ({ page }) => {
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    const b24 = page.getByRole('button', { name: '24時間' });
+    const bDay = page.getByRole('button', { name: '日勤' });
+    const bNight = page.getByRole('button', { name: '夜勤' });
+    // 既定は 24 時間が押下状態
+    await expect(b24).toHaveAttribute('aria-pressed', 'true');
+    await expect(bDay).toHaveAttribute('aria-pressed', 'false');
+    await expect(bNight).toHaveAttribute('aria-pressed', 'false');
+    // 日勤へ切替 → 日勤のみ押下
+    await bDay.click();
+    await expect(bDay).toHaveAttribute('aria-pressed', 'true');
+    await expect(b24).toHaveAttribute('aria-pressed', 'false');
+    await expect(bNight).toHaveAttribute('aria-pressed', 'false');
+  });
+
   test('フローシートサブタブに戻すとグリッドが消え既存内容が出る', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     await expect(page.getByText('23時', { exact: true })).toBeVisible();
