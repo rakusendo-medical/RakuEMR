@@ -19,6 +19,13 @@ type Revision = {
 
 export const REVISIONS: Revision[] = [
   {
+    version: 'ver0.15',
+    date: '6/11',
+    fullDate: '2026-06-11',
+    context: '病棟マップ再設計',
+    summary: '病棟マップ右サイドバーを再設計。入院オーダー時の病棟指定を必須化し（「仮病棟」チェックを「病室未定」に是正）、「病棟未割当」状態を解消。これに伴い未割当者パネルを廃止し、「入院予定者／不在者／入院者情報」の3パネルをいずれも選択中病棟スコープに統一。入院予定者には入院予定日と病室バッジ（病室未／確定を色＋アイコンで判別）を表示し、入院手続き导线を病室確定済の行へ移設（病室確定が手続きの前提であることをUIで表現）。あわせて入院ライフサイクルのフローチャート・状態モデルを画面設計書（docs/design/screens/ep-01-bed-map/ward-map.md）に整備。',
+  },
+  {
     version: 'ver0.14',
     date: '6/11',
     fullDate: '2026-06-11',
@@ -91,6 +98,77 @@ export const REVISIONS: Revision[] = [
 /** 最新バージョン（サイドメニュー等の ver 表記はここを参照する） */
 export const LATEST_VERSION = REVISIONS[0].version;
 
+/** 改定履歴のアコーディオン一覧。`/revision-history` ページとヘッダーから開くダイアログで共用する。 */
+export const RevisionList: React.FC = () => (
+  <>
+    {REVISIONS.map((rev, idx) => (
+      <Accordion
+        key={rev.version}
+        defaultExpanded={idx === 0}
+        disableGutters
+        variant="outlined"
+        sx={{ mb: 1, '&:before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMore />}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', width: '100%' }}>
+            <Chip
+              label={rev.version}
+              color="primary"
+              size="small"
+              variant={idx === 0 ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 600, fontFamily: 'monospace' }}
+            />
+            <Typography variant="subtitle2">{rev.date}　{rev.context}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+              {rev.fullDate}
+            </Typography>
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails sx={{ pt: 0 }}>
+          <Typography variant="body2" sx={{ mb: rev.commits ? 1.5 : 0 }}>
+            {rev.summary}
+          </Typography>
+
+          {rev.commits && (
+            <>
+              <Divider sx={{ mb: 1 }} />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                当日のコミット履歴（JST・{rev.commits.length} 件）
+              </Typography>
+              <List dense disablePadding>
+                {rev.commits.map((c) => (
+                  <ListItem key={c.hash} disableGutters sx={{ py: 0.25, alignItems: 'flex-start' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ fontFamily: 'monospace', color: '#1e40af', flexShrink: 0 }}
+                      >
+                        {c.hash}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontFamily: 'monospace', flexShrink: 0 }}
+                      >
+                        {c.time}
+                      </Typography>
+                      <ListItemText
+                        primary={c.subject}
+                        primaryTypographyProps={{ variant: 'body2' }}
+                        sx={{ m: 0 }}
+                      />
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            </>
+          )}
+        </AccordionDetails>
+      </Accordion>
+    ))}
+  </>
+);
+
 const RevisionHistory: React.FC = () => {
   return (
     <Box sx={{ maxWidth: 1200 }}>
@@ -106,71 +184,7 @@ const RevisionHistory: React.FC = () => {
           バージョン一覧
         </Typography>
 
-        {REVISIONS.map((rev, idx) => (
-          <Accordion
-            key={rev.version}
-            defaultExpanded={idx === 0}
-            disableGutters
-            variant="outlined"
-            sx={{ mb: 1, '&:before': { display: 'none' } }}
-          >
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', width: '100%' }}>
-                <Chip
-                  label={rev.version}
-                  color="primary"
-                  size="small"
-                  variant={idx === 0 ? 'filled' : 'outlined'}
-                  sx={{ fontWeight: 600, fontFamily: 'monospace' }}
-                />
-                <Typography variant="subtitle2">{rev.date}　{rev.context}</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-                  {rev.fullDate}
-                </Typography>
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails sx={{ pt: 0 }}>
-              <Typography variant="body2" sx={{ mb: rev.commits ? 1.5 : 0 }}>
-                {rev.summary}
-              </Typography>
-
-              {rev.commits && (
-                <>
-                  <Divider sx={{ mb: 1 }} />
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                    当日のコミット履歴（JST・{rev.commits.length} 件）
-                  </Typography>
-                  <List dense disablePadding>
-                    {rev.commits.map((c) => (
-                      <ListItem key={c.hash} disableGutters sx={{ py: 0.25, alignItems: 'flex-start' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
-                          <Typography
-                            variant="caption"
-                            sx={{ fontFamily: 'monospace', color: '#1e40af', flexShrink: 0 }}
-                          >
-                            {c.hash}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontFamily: 'monospace', flexShrink: 0 }}
-                          >
-                            {c.time}
-                          </Typography>
-                          <ListItemText
-                            primary={c.subject}
-                            primaryTypographyProps={{ variant: 'body2' }}
-                            sx={{ m: 0 }}
-                          />
-                        </Box>
-                      </ListItem>
-                    ))}
-                  </List>
-                </>
-              )}
-            </AccordionDetails>
-          </Accordion>
-        ))}
+        <RevisionList />
       </Paper>
     </Box>
   );

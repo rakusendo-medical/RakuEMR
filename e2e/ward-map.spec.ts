@@ -87,7 +87,7 @@ test.describe('病棟マップ', () => {
     }
 
     // 退院確定の完了通知（スナックバー）が表示されること
-    await expect(page.locator('text=/退院確定/')).toBeVisible();
+    await expect(page.getByText(/退院確定:/)).toBeVisible();
   });
 
   test('第２病棟→患者選択→フローシート遷移→診療録タブ→退院指示→退院確定の一連フロー', async ({ page }) => {
@@ -124,7 +124,7 @@ test.describe('病棟マップ', () => {
     }
 
     // 退院確定の完了通知（スナックバー）が表示されること
-    await expect(page.locator('text=/退院確定/')).toBeVisible();
+    await expect(page.getByText(/退院確定:/)).toBeVisible();
   });
 
   // ===== B: 看護師の朝ラウンド（バイタル一括入力） =====
@@ -189,9 +189,9 @@ test.describe('病棟マップ', () => {
   });
 
   // ===== D: 入院受け入れ（入院予定者の入院指示） =====
-  test('D 右サイドバーの入院予定詳細→入院指示ダイアログ', async ({ page }) => {
-    // 入院予定セクションの「詳細」ボタンを探す（病棟により予定が無い場合はスキップ）
-    const admitSection = page.locator('.MuiPaper-root', { hasText: '入院予定' }).first();
+  test('D 右サイドバーの入院予定者詳細→入院指示ダイアログ', async ({ page }) => {
+    // 入院予定者セクションの「詳細」ボタンを探す（病棟により予定が無い場合はスキップ）
+    const admitSection = page.locator('.MuiPaper-root', { hasText: '入院予定者' }).first();
     const detailBtn = admitSection.getByRole('button', { name: '詳細' }).first();
 
     if (await detailBtn.isVisible().catch(() => false)) {
@@ -255,8 +255,8 @@ test.describe('病棟マップ', () => {
     await expect(page).toHaveURL(/\/care-plan\/patients\//);
   });
 
-  // ===== H: 空床照会→（未割当者の入院手続き） =====
-  test('H 空床照会ダイアログを表示→閉じる→未割当者の手続きを起動', async ({ page }) => {
+  // ===== H: 空床照会→（入院予定者の入院手続き） =====
+  test('H 空床照会ダイアログを表示→閉じる→入院予定者の手続きを起動', async ({ page }) => {
     // ① 空床照会ダイアログを開く
     await page.getByRole('button', { name: '空床照会' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -266,11 +266,12 @@ test.describe('病棟マップ', () => {
     await page.getByRole('button', { name: '閉じる' }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
 
-    // ③ 右サイドバー「未割当者」の詳細（在れば）→ 入院手続きダイアログ
-    const unassignedSection = page.locator('.MuiPaper-root', { hasText: '未割当者' }).first();
-    const detailBtn = unassignedSection.getByRole('button', { name: '詳細' }).first();
-    if (await detailBtn.isVisible().catch(() => false)) {
-      await detailBtn.click();
+    // ③ 入院予定者パネルの病室確定済の行 [手続き]（在れば）→ 入院手続きダイアログ
+    //    （[手続き] は病室確定済の行のみ表示。病室未定の行には出ない）
+    const admitSection = page.locator('.MuiPaper-root', { hasText: '入院予定者' }).first();
+    const procBtn = admitSection.getByRole('button', { name: '手続き' }).first();
+    if (await procBtn.isVisible().catch(() => false)) {
+      await procBtn.click();
       await expect(page.getByRole('dialog')).toBeVisible();
     }
   });

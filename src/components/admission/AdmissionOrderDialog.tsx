@@ -57,7 +57,8 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const [toWard, setToWard] = React.useState<WardId>(patient?.wardId ?? 'ward1');
   const [toRoom, setToRoom] = React.useState<string>('');
   const [toBed, setToBed] = React.useState<string>('');
-  const [tentativeWard, setTentativeWard] = React.useState<boolean>(false);
+  // 病室未定（病棟は必須・確定だが病室/ベッドは後で看護師が決める）。旧称「仮病棟」。
+  const [roomUndecided, setRoomUndecided] = React.useState<boolean>(false);
   const [memo, setMemo] = React.useState('');
   const [admitForm, setAdmitForm] = React.useState<AdmitFormType>('任意入院');
   const [docs, setDocs] = React.useState<Set<string>>(new Set());
@@ -84,7 +85,7 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       setToWard(patient.wardId);
       setToRoom('');
       setToBed('');
-      setTentativeWard(false);
+      setRoomUndecided(false);
       setMemo('');
       setAdmitForm('任意入院');
       setDocs(new Set(ADMIT_DOCS_BY_FORM['任意入院'].slice(0, 3)));
@@ -182,8 +183,8 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     scheduledDate: admitAt.split('T')[0],
     doctorName: patient.doctorName,
     wardId: toWard,
-    roomNumber: tentativeWard || !toRoom ? '—' : toRoom,
-    bedLabel: tentativeWard || !toBed ? '—' : toBed,
+    roomNumber: roomUndecided || !toRoom ? '—' : toRoom,
+    bedLabel: roomUndecided || !toBed ? '—' : toBed,
   });
 
   const handleRegisterOrder = () => {
@@ -297,27 +298,28 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
             )}
 
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <FormControl size="small" sx={{ minWidth: 140 }}>
+              {/* 病棟は必須（病棟未指定は不可）。空値を取れない Select で構造的に担保し、required で明示。 */}
+              <FormControl size="small" required sx={{ minWidth: 140 }}>
                 <InputLabel>病棟</InputLabel>
                 <Select label="病棟" value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}>
                   <MenuItem value="ward1">第１病棟</MenuItem>
                   <MenuItem value="ward2">第２病棟</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl size="small" sx={{ minWidth: 120 }} disabled={tentativeWard}>
+              <FormControl size="small" sx={{ minWidth: 120 }} disabled={roomUndecided}>
                 <InputLabel>病室</InputLabel>
                 <Select label="病室" value={toRoom} onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}>
                   {wardRooms.map((r) => (<MenuItem key={r.roomNumber} value={r.roomNumber}>{r.roomNumber}号室</MenuItem>))}
                 </Select>
               </FormControl>
-              <FormControl size="small" sx={{ minWidth: 100 }} disabled={!room || tentativeWard}>
+              <FormControl size="small" sx={{ minWidth: 100 }} disabled={!room || roomUndecided}>
                 <InputLabel>ベッド</InputLabel>
                 <Select label="ベッド" value={toBed} onChange={(e) => setToBed(e.target.value)}>
                   {availableBeds.map((b) => (<MenuItem key={b.bed} value={b.bed}>{b.bed}</MenuItem>))}
                   {availableBeds.length === 0 && <MenuItem value="" disabled>空きベッドなし</MenuItem>}
                 </Select>
               </FormControl>
-              <FormControlLabel control={<Checkbox checked={tentativeWard} onChange={(_, v) => setTentativeWard(v)} />} label="仮病棟" />
+              <FormControlLabel control={<Checkbox checked={roomUndecided} onChange={(_, v) => setRoomUndecided(v)} />} label="病室未定" />
               <Button size="small" variant="outlined" startIcon={<EventAvailableIcon />} onClick={() => setVacancyOpen(true)}>
                 空床照会
               </Button>

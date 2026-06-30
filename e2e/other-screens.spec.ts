@@ -50,10 +50,10 @@ test.describe('オーダ管理', () => {
   });
 });
 
-test.describe('看護ケア予定', () => {
+test.describe('看護予定', () => {
   test('画面が表示される', async ({ page }) => {
     await page.goto('/nursing-care');
-    await expect(page.getByRole('heading', { name: '看護ケア予定' }).first()).toBeVisible();
+    await expect(page.getByText('看護予定を一括入力・管理します')).toBeVisible();
   });
 });
 

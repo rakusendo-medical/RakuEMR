@@ -19,6 +19,10 @@ import {
   Tooltip,
   Collapse,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Link,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -46,11 +50,12 @@ import {
   ArticleOutlined,
   MonitorHeart,
   History,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { Assignment } from "@mui/icons-material";
 import { useAppStore } from "../stores/useAppStore";
 import { EPICS } from "../components/epicReview/epicData";
-import { LATEST_VERSION } from "../components/designGuide/RevisionHistory";
+import { LATEST_VERSION, REVISIONS, RevisionList } from "../components/designGuide/RevisionHistory";
 
 const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 60;
@@ -133,6 +138,8 @@ const MainLayout: React.FC = () => {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     'epic-review': !location.pathname.startsWith('/epic-review'),
   });
+  const [revisionDialogOpen, setRevisionDialogOpen] = useState(false);
+  const latestRevision = REVISIONS[0];
   const isCollapsible = (key: string) => key === 'epic-review';
   const toggleSection = (key: string) =>
     setCollapsedSections((s) => ({ ...s, [key]: !s[key] }));
@@ -492,9 +499,25 @@ const MainLayout: React.FC = () => {
             variant="dense"
             sx={{ justifyContent: "space-between", minHeight: 48 }}
           >
-            <Typography variant="h6" color="text.primary">
-              {currentNav?.label || "カルテ画面"}
-            </Typography>
+            <Stack direction="row" alignItems="baseline" spacing={1.5}>
+              <Typography variant="h6" color="text.primary">
+                {currentNav?.label || "カルテ画面"}
+              </Typography>
+              <Link
+                component="button"
+                type="button"
+                onClick={() => setRevisionDialogOpen(true)}
+                underline="hover"
+                sx={{
+                  fontSize: '0.75rem',
+                  color: 'text.disabled',
+                  '&:hover': { color: 'text.secondary' },
+                  cursor: 'pointer',
+                }}
+              >
+                {latestRevision.fullDate}　{latestRevision.context}
+              </Link>
+            </Stack>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               {/* シリーズ製品ランチャー(Raku シリーズ共通ヘッダー) */}
               <Stack direction="row" spacing={0.75} alignItems="center">
@@ -604,6 +627,29 @@ const MainLayout: React.FC = () => {
           <Outlet />
         </Box>
       </Box>
+
+      {/* 改定履歴ダイアログ（ヘッダーのキャプションから起動） */}
+      <Dialog
+        open={revisionDialogOpen}
+        onClose={() => setRevisionDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle sx={{ pr: 6 }}>
+          改定履歴
+          <IconButton
+            aria-label="閉じる"
+            onClick={() => setRevisionDialogOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <RevisionList />
+        </DialogContent>
+      </Dialog>
 
       {/* Snackbar */}
       <Snackbar
