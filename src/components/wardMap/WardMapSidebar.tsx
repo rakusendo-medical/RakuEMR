@@ -1,16 +1,20 @@
 import React from 'react';
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+import {
+  MeetingRoom as MeetingRoomIcon,
+  HelpOutline as HelpOutlineIcon,
+} from '@mui/icons-material';
 import type { WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
-import { ADMISSION_ORDERS, PATIENTS, ROOMS, UNASSIGNED_PATIENTS } from '../../data/mockData';
+import { ADMISSION_ORDERS, PATIENTS, ROOMS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
 interface Props {
   ward: WardId;
-  /** 未割当者の[詳細]クリック。id を渡して個別ダイアログ起動 */
-  onOpenUnassigned: (unassignedId: string) => void;
-  /** 入院予定の[詳細]クリック。AdmissionOrder.id を渡す */
+  /** 入院予定者の[詳細]クリック。AdmissionOrder.id を渡す（入院指示ダイアログ） */
   onOpenAdmissionSchedule: (orderId: string) => void;
+  /** 入院予定者の[手続き]クリック。AdmissionOrder.id を渡す（入院手続きダイアログ）。病室確定済の行のみ */
+  onOpenAdmissionProcedure: (orderId: string) => void;
   /** 不在者の[詳細]クリック。外出外泊画面へ */
   onOpenAbsent: () => void;
 }
@@ -34,40 +38,81 @@ const SectionHeader: React.FC<{
   </Stack>
 );
 
+/** 病室の決定状況バッジ。色＋アイコン＋文言で判別（色覚配慮） */
+const RoomBadge: React.FC<{ decided: boolean; room: string }> = ({ decided, room }) => (
+  <Stack
+    direction="row"
+    alignItems="center"
+    spacing={0.25}
+    sx={{
+      px: 0.5,
+      py: 0.1,
+      borderRadius: 0.75,
+      fontSize: '0.62rem',
+      fontWeight: 700,
+      whiteSpace: 'nowrap',
+      bgcolor: decided ? '#dcfce7' : '#fef3c7',
+      color: decided ? '#166534' : '#92400e',
+      border: '1px solid',
+      borderColor: decided ? '#86efac' : '#fcd34d',
+    }}
+  >
+    {decided ? (
+      <MeetingRoomIcon sx={{ fontSize: '0.8rem' }} />
+    ) : (
+      <HelpOutlineIcon sx={{ fontSize: '0.8rem' }} />
+    )}
+    <span>{decided ? `${room}号室` : '病室未'}</span>
+  </Stack>
+);
+
+const SmallButton: React.FC<{ label: string; onClick?: () => void }> = ({ label, onClick }) => (
+  <Button
+    size="small"
+    variant="outlined"
+    onClick={onClick}
+    sx={{ fontSize: '0.62rem', minWidth: 0, px: 0.6, py: 0, lineHeight: 1.5 }}
+  >
+    {label}
+  </Button>
+);
+
 const PersonRow: React.FC<{ name: string; onDetail?: () => void }> = ({ name, onDetail }) => (
   <Stack direction="row" alignItems="center" sx={{ py: 0.3 }}>
     <Typography variant="body2" sx={{ flex: 1, fontSize: '0.8rem' }}>
       {name}
     </Typography>
-    <Button
-      size="small" variant="outlined"
-      onClick={onDetail}
-      sx={{ fontSize: '0.65rem', minWidth: 0, px: 0.75, py: 0, lineHeight: 1.5 }}
-    >
-      詳細
-    </Button>
+    <SmallButton label="詳細" onClick={onDetail} />
   </Stack>
 );
 
 const WardMapSidebar: React.FC<Props> = ({
-  ward, onOpenUnassigned, onOpenAdmissionSchedule, onOpenAbsent,
+  ward, onOpenAdmissionSchedule, onOpenAdmissionProcedure, onOpenAbsent,
 }) => {
   const pendingOrders = useAppStore((s) => s.pendingOrders);
   const wardLabel = WARD_LABELS[ward];
 
-  // 未割当者(病棟切替に影響されない・全患者対象)
-  const unassigned = UNASSIGNED_PATIENTS;
-
-  // 入院予定: ADMISSION_ORDERS + pendingOrders(store) から、当該病棟の入院予定を抽出
+  // 入院予定者: 入院オーダー済・入院手続き前（指示済／手続中）を当該病棟ぶん抽出。
+  // 病棟は必須なので全件が病棟確定。病室は未定（'—'/空）の場合 [病室未] 表示。
   const scheduledAdmissions = React.useMemo(() => {
-    const fromMaster = ADMISSION_ORDERS
-      .filter((o) => o.type === '入院' && o.wardId === ward && o.scheduledDate);
-    const fromPending = pendingOrders
-      .filter((o) => o.type === '入院' && o.wardId === ward && o.scheduledDate);
-    return [
-      ...fromMaster.map((o) => ({ id: o.id, name: o.patientName })),
-      ...fromPending.map((o) => ({ id: o.id, name: o.patientName })),
-    ];
+    const roomDecidedOf = (room: string) => !!room && room !== '—';
+    const fromMaster = ADMISSION_ORDERS.filter(
+      (o) => o.type === '入院'
+        && o.wardId === ward
+        && o.scheduledDate
+        && o.status !== '手続完了'
+        && o.status !== 'キャンセル',
+    );
+    const fromPending = pendingOrders.filter(
+      (o) => o.type === '入院' && o.wardId === ward && o.scheduledDate,
+    );
+    return [...fromMaster, ...fromPending].map((o) => ({
+      id: o.id,
+      name: o.patientName,
+      scheduledDate: o.scheduledDate,
+      roomNumber: o.roomNumber,
+      roomDecided: roomDecidedOf(o.roomNumber),
+    }));
   }, [ward, pendingOrders]);
 
   // 不在者
@@ -95,25 +140,26 @@ const WardMapSidebar: React.FC<Props> = ({
 
   return (
     <Stack spacing={1.5}>
-      {/* 未割当者: 病棟横断 / [詳細] → 入院手続き */}
+      {/* 入院予定者: 選択中病棟 / 予定日＋病室バッジ / [詳細]→入院指示, [手続き]→入院手続き(病室確定済のみ) */}
       <Paper variant="outlined" sx={{ p: 1.25 }}>
-        <SectionHeader label="未割当者" count={unassigned.length} ward="全体" />
-        <Stack>
-          {unassigned.slice(0, 4).map((p) => (
-            <PersonRow key={p.id} name={p.name} onDetail={() => onOpenUnassigned(p.id)} />
-          ))}
-          {unassigned.length === 0 && (
-            <Typography variant="caption" color="text.secondary">なし</Typography>
-          )}
-        </Stack>
-      </Paper>
-
-      {/* 入院予定: 病棟別 / [詳細] → 入院指示 */}
-      <Paper variant="outlined" sx={{ p: 1.25 }}>
-        <SectionHeader label="入院予定" count={scheduledAdmissions.length} ward={wardLabel} />
-        <Stack>
-          {scheduledAdmissions.slice(0, 4).map((p) => (
-            <PersonRow key={p.id} name={p.name} onDetail={() => onOpenAdmissionSchedule(p.id)} />
+        <SectionHeader label="入院予定者" count={scheduledAdmissions.length} ward={wardLabel} />
+        <Stack divider={<Box sx={{ borderBottom: '1px dashed #e2e8f0' }} />}>
+          {scheduledAdmissions.slice(0, 5).map((p) => (
+            <Stack key={p.id} spacing={0.25} sx={{ py: 0.4 }}>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography sx={{ flex: 1, fontSize: '0.8rem' }} noWrap>{p.name}</Typography>
+                <RoomBadge decided={p.roomDecided} room={p.roomNumber} />
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography sx={{ flex: 1, fontSize: '0.65rem', color: 'text.secondary' }}>
+                  予定 {p.scheduledDate || '—'}
+                </Typography>
+                <SmallButton label="詳細" onClick={() => onOpenAdmissionSchedule(p.id)} />
+                {p.roomDecided && (
+                  <SmallButton label="手続き" onClick={() => onOpenAdmissionProcedure(p.id)} />
+                )}
+              </Stack>
+            </Stack>
           ))}
           {scheduledAdmissions.length === 0 && (
             <Typography variant="caption" color="text.secondary">なし</Typography>
@@ -121,7 +167,7 @@ const WardMapSidebar: React.FC<Props> = ({
         </Stack>
       </Paper>
 
-      {/* 不在者: 病棟別 / [詳細] → 外出外泊画面へ */}
+      {/* 不在者: 選択中病棟 / [詳細] → 外出外泊画面へ */}
       <Paper variant="outlined" sx={{ p: 1.25 }}>
         <SectionHeader label="不在者" count={absent.length} ward={wardLabel} />
         <Stack>
@@ -134,7 +180,7 @@ const WardMapSidebar: React.FC<Props> = ({
         </Stack>
       </Paper>
 
-      {/* 入院者情報: 病棟別 */}
+      {/* 入院者情報: 選択中病棟 */}
       <Paper
         variant="outlined"
         sx={{ p: 1.25, border: '1px solid #d97706', bgcolor: '#fffbeb' }}

@@ -32,8 +32,8 @@ test.describe('カルテ画面', () => {
     });
 
     test('フローシートタブに切り替えられる', async ({ page }) => {
-      await page.getByRole('tab', { name: 'フローシート' }).click();
-      await expect(page.getByRole('tab', { name: 'フローシート' })).toHaveAttribute('aria-selected', 'true');
+      await page.getByRole('tab', { name: 'フローシート・隔離拘束' }).click();
+      await expect(page.getByRole('tab', { name: 'フローシート・隔離拘束' })).toHaveAttribute('aria-selected', 'true');
     });
 
     test('患者情報タブに切り替えられる', async ({ page }) => {

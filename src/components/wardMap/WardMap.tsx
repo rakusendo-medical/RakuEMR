@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, UnassignedPatient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, UNASSIGNED_PATIENTS, patientNumberOf } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
 import { useAppStore } from '../../stores/useAppStore';
@@ -358,27 +358,30 @@ const WardMap: React.FC = () => {
           <BedFlagLegend />
         </Stack>
         </Box>
-        {/* 右サイドバー: 未割当者 / 入院予定 / 不在者 / 入院者情報 */}
+        {/* 右サイドバー: 入院予定者 / 不在者 / 入院者情報（いずれも選択中病棟スコープ） */}
         <Box sx={{ width: 220, flexShrink: 0 }}>
           <WardMapSidebar
             ward={ward}
-            onOpenUnassigned={(uid) => {
-              // 未割当者[詳細] → 入院手続きダイアログ。AdmissionOrder を合成して渡す
-              const u = UNASSIGNED_PATIENTS.find((x) => x.id === uid);
-              if (!u) return;
-              const synthetic: AdmissionOrder = {
-                id: `synthetic-admit-${u.id}`,
-                patientId: u.id,
-                patientName: u.name,
-                type: '入院',
-                status: '指示済',
-                scheduledDate: u.scheduledAdmitAt?.slice(0, 10) ?? '',
-                doctorName: u.doctorName,
-                roomNumber: u.designatedRoomNumber === 'tentative' ? '—' : u.designatedRoomNumber,
-                bedLabel: u.designatedBedLabel === 'tentative' ? '—' : u.designatedBedLabel,
-                wardId: u.designatedWardId === 'tentative' ? 'ward1' : u.designatedWardId,
-              };
-              setAdmissionConfirmOrder(synthetic);
+            onOpenAdmissionProcedure={(orderId) => {
+              // 入院予定者[手続き] → 入院手続きダイアログ（病室確定済の行のみ表示される）。
+              // master(ADMISSION_ORDERS) を優先し、無ければ当該セッション登録分(pendingOrders)から合成。
+              const master = ADMISSION_ORDERS.find((x) => x.id === orderId);
+              const pending = pendingOrders.find((x) => x.id === orderId);
+              const order: AdmissionOrder | null = master ?? (pending
+                ? {
+                    id: pending.id,
+                    patientId: pending.patientId,
+                    patientName: pending.patientName,
+                    type: '入院',
+                    status: '指示済',
+                    scheduledDate: pending.scheduledDate,
+                    doctorName: pending.doctorName,
+                    roomNumber: pending.roomNumber,
+                    bedLabel: pending.bedLabel,
+                    wardId: pending.wardId,
+                  }
+                : null);
+              if (order) setAdmissionConfirmOrder(order);
             }}
             onOpenAdmissionSchedule={(orderId) => {
               // 入院予定[詳細] → 入院指示ダイアログ
@@ -514,7 +517,7 @@ const WardMap: React.FC = () => {
         onClose={() => setDischargeOrderPatient(null)}
       />
 
-      {/* 右サイドバー 未割当者[詳細] → 入院手続きダイアログ */}
+      {/* 右サイドバー 入院予定者[手続き] → 入院手続きダイアログ（病室確定済のみ） */}
       <AdmissionConfirmDialog
         open={!!admissionConfirmOrder}
         order={admissionConfirmOrder}
@@ -523,7 +526,7 @@ const WardMap: React.FC = () => {
         onOpenVacancy={() => setActiveFeature('vacancy')}
       />
 
-      {/* 右サイドバー 入院予定[詳細] → 入院指示ダイアログ */}
+      {/* 右サイドバー 入院予定者[詳細] → 入院指示ダイアログ */}
       <AdmissionOrderDialog
         open={!!admissionOrderPatient}
         patient={admissionOrderPatient}
