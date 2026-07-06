@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Box, Typography, Paper, Chip, Divider,
+  Box, Stack, Typography, Paper, Chip, Divider,
   Accordion, AccordionSummary, AccordionDetails,
   List, ListItem, ListItemText,
 } from '@mui/material';
@@ -15,9 +15,89 @@ type Revision = {
   context: string;    // 合意・改修の相手／場
   summary: string;    // 改定概要
   commits?: Commit[]; // 当日のコミット履歴
+  designCompare?: React.ReactNode; // 新旧デザイン比較（任意）
 };
 
+/* ─── ver0.16: 「入院者情報」パネルの新旧デザイン比較 ─── */
+// 旧「入退院情報」ボタン（廃止）のダイアログ集計を、右サイドバー「入院者情報」パネルへ統合。
+// 数値は第1病棟のモック値を代表として表示する。
+const AiCommonTop: React.FC = () => (
+  <Box sx={{ fontSize: '0.7rem' }}>
+    <Typography sx={{ textAlign: 'center', fontWeight: 700, fontSize: '0.8rem', mb: 0.5 }}>
+      病床 42 / 44
+    </Typography>
+    <Box sx={{ display: 'grid', gridTemplateColumns: '1.4fr 0.6fr 0.6fr 0.6fr', columnGap: 0.5 }}>
+      <Box />
+      <Box sx={{ textAlign: 'right', color: 'text.secondary' }}>男</Box>
+      <Box sx={{ textAlign: 'right', color: 'text.secondary' }}>女</Box>
+      <Box sx={{ textAlign: 'right', color: 'text.secondary' }}>他</Box>
+      <Box>患者</Box><Box sx={{ textAlign: 'right' }}>0</Box><Box sx={{ textAlign: 'right' }}>42</Box><Box sx={{ textAlign: 'right' }}>0</Box>
+      <Box>不在者</Box><Box sx={{ textAlign: 'right' }}>0</Box><Box sx={{ textAlign: 'right' }}>1</Box><Box sx={{ textAlign: 'right' }}>0</Box>
+      <Box>在院者</Box><Box sx={{ textAlign: 'right' }}>0</Box><Box sx={{ textAlign: 'right' }}>41</Box><Box sx={{ textAlign: 'right' }}>0</Box>
+    </Box>
+    <Box sx={{ mt: 0.5 }}>
+      <Box>平均年齢(男) <strong>0歳</strong></Box>
+      <Box>平均年齢(女) <strong>45.4歳</strong></Box>
+      <Box>平均年齢(全) <strong>45.4歳</strong></Box>
+    </Box>
+  </Box>
+);
+
+const AiPanel: React.FC<{ tag: '旧' | '新'; children: React.ReactNode }> = ({ tag, children }) => (
+  <Paper variant="outlined" sx={{ p: 1.25, width: 230, border: '1px solid #d97706', bgcolor: '#fffbeb' }}>
+    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.75 }}>
+      <Chip
+        label={tag === '旧' ? '旧デザイン' : '新デザイン'}
+        size="small"
+        color={tag === '旧' ? 'default' : 'primary'}
+        sx={{ fontWeight: 700, height: 20 }}
+      />
+      <Typography sx={{ ml: 'auto', fontSize: '0.72rem', fontWeight: 700, color: '#1e3a5f' }}>
+        ■ 入院者情報
+      </Typography>
+    </Stack>
+    {children}
+  </Paper>
+);
+
+const AdmissionInfoDesignDiff: React.FC = () => (
+  <Box>
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+      デザイン新旧比較 — 病棟マップ右サイドバー「入院者情報」パネル。
+      <strong>緑背景</strong>が旧「入退院情報」ボタンから統合して追加した集計です。
+    </Typography>
+    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <AiPanel tag="旧">
+        <AiCommonTop />
+      </AiPanel>
+      <AiPanel tag="新">
+        <AiCommonTop />
+        <Box sx={{ mt: 0.75, pt: 0.5, px: 0.5, pb: 0.5, borderTop: '1px dashed #f59e0b', bgcolor: '#dcfce7', borderRadius: 0.5, fontSize: '0.7rem' }}>
+          <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#166534', mb: 0.25 }}>
+            ＋ 追加（旧「入退院情報」ボタンから統合）
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><span>稼働率</span><strong>95%</strong></Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><span>隔離中</span><strong>0名</strong></Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><span>拘束中</span><strong>1名</strong></Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><span>外出中</span><strong>1名</strong></Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><span>観察中</span><strong>5名</strong></Box>
+          </Box>
+        </Box>
+      </AiPanel>
+    </Box>
+  </Box>
+);
+
 export const REVISIONS: Revision[] = [
+  {
+    version: 'ver0.16',
+    date: '7/6',
+    fullDate: '2026-07-06',
+    context: '梶井改修',
+    summary: '旧「入退院情報」ボタン（ver0.15 の右サイドバー再設計以降、導線が外れオーファン化していた）を廃止。ボタンで開いていた入退院情報サマリ（稼働率・隔離中・拘束中・外出中・観察中）を、常時参照できるよう右サイドバー「入院者情報」パネルに統合した。従来の病床占有・男女内訳・平均年齢に加えて上記5項目を同パネル内へ追記表示する。オーファンなダイアログ本体（AdmissionInfoContent）も併せて撤去。',
+    designCompare: <AdmissionInfoDesignDiff />,
+  },
   {
     version: 'ver0.15',
     date: '6/30',
@@ -125,9 +205,16 @@ export const RevisionList: React.FC = () => (
           </Box>
         </AccordionSummary>
         <AccordionDetails sx={{ pt: 0 }}>
-          <Typography variant="body2" sx={{ mb: rev.commits ? 1.5 : 0 }}>
+          <Typography variant="body2" sx={{ mb: (rev.commits || rev.designCompare) ? 1.5 : 0 }}>
             {rev.summary}
           </Typography>
+
+          {rev.designCompare && (
+            <Box sx={{ mb: rev.commits ? 1.5 : 0 }}>
+              <Divider sx={{ mb: 1 }} />
+              {rev.designCompare}
+            </Box>
+          )}
 
           {rev.commits && (
             <>

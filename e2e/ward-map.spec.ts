@@ -276,4 +276,19 @@ test.describe('病棟マップ', () => {
     }
   });
 
+  // ===== I: 入院者情報サマリ（旧「入退院情報」ボタン廃止に伴う統合） =====
+  test('I 右サイドバー「入院者情報」に稼働率・隔離拘束・外出・観察の集計が統合表示される', async ({ page }) => {
+    const panel = page.locator('.MuiPaper-root', { hasText: '入院者情報' }).first();
+    await expect(panel).toBeVisible();
+    // 既存項目（病床占有・平均年齢）は維持
+    await expect(panel.getByText(/病床/)).toBeVisible();
+    await expect(panel.getByText(/平均年齢\(全\)/)).toBeVisible();
+    // 旧「入退院情報」ダイアログから統合した集計（稼働率・隔離中・拘束中・外出中・観察中）
+    await expect(panel.getByText('稼働率')).toBeVisible();
+    await expect(panel.getByText('隔離中')).toBeVisible();
+    await expect(panel.getByText('拘束中')).toBeVisible();
+    await expect(panel.getByText('外出中')).toBeVisible();
+    await expect(panel.getByText('観察中')).toBeVisible();
+  });
+
 });

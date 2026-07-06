@@ -138,6 +138,15 @@ const WardMapSidebar: React.FC<Props> = ({
   const avgAgeF = avgAge(wardPatients.filter((p) => p.gender === 'F'));
   const avgAgeAll = avgAge(wardPatients);
 
+  // 旧「入退院情報」ダイアログ（ボタン廃止）から統合した稼働・状態別集計。
+  // 稼働率＝稼働ベッド/総ベッド。隔離・拘束はベッドの運用フラグ、外出・観察は患者ステータスで数える。
+  const rate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
+  const wardBeds = wardRooms.flatMap((r) => r.beds);
+  const isolated = wardBeds.filter((b) => b.flags?.includes('isolation')).length;
+  const restrained = wardBeds.filter((b) => b.flags?.includes('restraint')).length;
+  const outing = wardPatients.filter((p) => p.status === 'outing').length;
+  const observation = wardPatients.filter((p) => p.status === 'observation').length;
+
   return (
     <Stack spacing={1.5}>
       {/* 入院予定者: 選択中病棟 / 予定日＋病室バッジ / [詳細]→入院指示, [手続き]→入院手続き(病室確定済のみ) */}
@@ -218,6 +227,27 @@ const WardMapSidebar: React.FC<Props> = ({
           <Box>平均年齢(男) <strong>{avgAgeM}歳</strong></Box>
           <Box>平均年齢(女) <strong>{avgAgeF}歳</strong></Box>
           <Box>平均年齢(全) <strong>{avgAgeAll}歳</strong></Box>
+        </Box>
+
+        {/* 旧「入退院情報」ダイアログ（ボタン廃止）から統合した稼働・状態別集計 */}
+        <Box sx={{ mt: 0.75, pt: 0.75, borderTop: '1px dashed #f59e0b', fontSize: '0.7rem' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>稼働率</span><strong>{rate}%</strong>
+          </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>隔離中</span><strong>{isolated}名</strong>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>拘束中</span><strong>{restrained}名</strong>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>外出中</span><strong>{outing}名</strong>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>観察中</span><strong>{observation}名</strong>
+            </Box>
+          </Box>
         </Box>
       </Paper>
     </Stack>
