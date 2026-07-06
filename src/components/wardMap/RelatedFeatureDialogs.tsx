@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography,
-  Tabs, Tab, Stack, Chip, Divider, Grid, FormControl, InputLabel, MenuItem, Select,
+  Tabs, Tab, Stack, Chip, FormControl, InputLabel, MenuItem, Select,
   IconButton, Drawer,
 } from '@mui/material';
 import {
@@ -15,7 +15,9 @@ import type { WardId } from '../../types';
 import { ROOMS, PATIENTS, ADMISSION_ORDERS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
-export type RelatedFeatureKey = 'vacancy' | 'admission-schedule' | 'absent' | 'admission-info';
+// 'admission-info'（旧「入退院情報」ダイアログ）は ver0.16 で廃止し、
+// 集計内容は病棟マップ右サイドバー「入院者情報」パネルに統合した。
+export type RelatedFeatureKey = 'vacancy' | 'admission-schedule' | 'absent';
 
 interface Props {
   open: boolean;
@@ -28,7 +30,6 @@ const titleMap: Record<RelatedFeatureKey, string> = {
   'vacancy': '空床照会',
   'admission-schedule': '入退院予定一覧',
   'absent': '不在者一覧',
-  'admission-info': '入退院情報',
 };
 
 /**
@@ -48,8 +49,8 @@ const RelatedFeatureDialogs: React.FC<Props> = ({ open, feature, ward, onClose }
 
   // 各モードの open フラグ(コンポーネントは常駐マウントし、open のみで開閉してアニメを揃える)
   const drawerOpen = open && (activeFeature === 'admission-schedule' || activeFeature === 'absent');
-  const dialogOpen = open && (activeFeature === 'vacancy' || activeFeature === 'admission-info');
-  const fullScreenPath = (activeFeature === 'admission-schedule' || activeFeature === 'admission-info') ? '/admission' : null;
+  const dialogOpen = open && activeFeature === 'vacancy';
+  const fullScreenPath = activeFeature === 'admission-schedule' ? '/admission' : null;
 
   const drawerTitle = activeFeature === 'admission-schedule' ? '入退院予定一覧'
     : activeFeature === 'absent' ? '不在者一覧' : '';
@@ -97,30 +98,18 @@ const RelatedFeatureDialogs: React.FC<Props> = ({ open, feature, ward, onClose }
         )}
       </Drawer>
 
-      {/* Dialog: 空床照会 / 入退院情報 — こちらも常駐レンダ */}
+      {/* Dialog: 空床照会 — こちらも常駐レンダ */}
       <Dialog
         open={dialogOpen}
         onClose={onClose}
-        maxWidth={activeFeature === 'vacancy' ? 'lg' : 'md'}
+        maxWidth="lg"
         fullWidth
       >
-        <DialogTitle sx={{ pb: 1 }}>
-          {activeFeature === 'vacancy' ? '空床照会'
-            : activeFeature === 'admission-info' ? '入退院情報' : ''}
-        </DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>空床照会</DialogTitle>
         <DialogContent dividers>
           {activeFeature === 'vacancy' && <VacancyContent ward={ward} />}
-          {activeFeature === 'admission-info' && <AdmissionInfoContent ward={ward} />}
         </DialogContent>
         <DialogActions>
-          {fullScreenPath && activeFeature === 'admission-info' && (
-            <Button
-              startIcon={<OpenInNewIcon />}
-              onClick={() => { onClose(); navigate(fullScreenPath); }}
-            >
-              入退院情報画面で開く
-            </Button>
-          )}
           <Button onClick={onClose}>閉じる</Button>
         </DialogActions>
       </Dialog>
@@ -398,57 +387,5 @@ const AbsentContent: React.FC<{ ward: WardId }> = ({ ward }) => {
   );
 };
 
-const AdmissionInfoContent: React.FC<{ ward: WardId }> = ({ ward }) => {
-  const wardPatients = PATIENTS.filter((p) => p.wardId === ward);
-  const total = wardPatients.length;
-  const outing = wardPatients.filter((p) => p.status === 'outing').length;
-  const observation = wardPatients.filter((p) => p.status === 'observation').length;
-
-  const wardRooms = ROOMS.filter((r) => r.wardId === ward);
-  // 隔離・拘束はステータスではなく運用フラグで管理しているため、ベッドのフラグから集計する
-  const wardBeds = wardRooms.flatMap((r) => r.beds);
-  const isolated = wardBeds.filter((b) => b.flags?.includes('isolation')).length;
-  const restrained = wardBeds.filter((b) => b.flags?.includes('restraint')).length;
-  const totalBeds = wardRooms.reduce((sum, r) => sum + r.beds.filter((b) => !b.disabled).length, 0);
-  const occupiedBeds = wardRooms.reduce(
-    (sum, r) => sum + r.beds.filter((b) => b.patientId).length,
-    0,
-  );
-  const rate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
-
-  const cards: { label: string; value: string }[] = [
-    { label: '在院患者', value: `${total}名` },
-    { label: '稼働率', value: `${rate}%` },
-    { label: '稼働ベッド', value: `${occupiedBeds}/${totalBeds}床` },
-    { label: '隔離中', value: `${isolated}名` },
-    { label: '拘束中', value: `${restrained}名` },
-    { label: '外出中', value: `${outing}名` },
-    { label: '観察中', value: `${observation}名` },
-  ];
-
-  return (
-    <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-        表示病棟の入退院情報サマリ（モック表示）
-      </Typography>
-      <Grid container spacing={1.5}>
-        {cards.map((c) => (
-          <Grid item xs={6} sm={3} key={c.label}>
-            <Box sx={{ p: 1.5, border: '1px solid #e2e8f0', borderRadius: 1, textAlign: 'center' }}>
-              <Typography variant="caption" color="text.secondary">{c.label}</Typography>
-              <Typography variant="h6" fontWeight={700} color="primary.dark" sx={{ mt: 0.5 }}>
-                {c.value}
-              </Typography>
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
-      <Divider sx={{ my: 2 }} />
-      <Typography variant="caption" color="text.secondary">
-        ※ 入退院手続き・指示の本処理は別エピック（入退院手続き／入退院指示）で実装します。
-      </Typography>
-    </Box>
-  );
-};
 
 export default RelatedFeatureDialogs;

@@ -10,7 +10,7 @@ import {
   ArticleOutlined as ArticleIcon,
   Lock as LockIcon,
 } from '@mui/icons-material';
-import type { AdmissionOrder, Bed, Patient, UnassignedPatient, WardId } from '../../types';
+import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
 import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
@@ -19,7 +19,6 @@ import { useAppStore } from '../../stores/useAppStore';
 import BedFlagIcons, { BedFlagLegend } from './BedFlagIcons';
 import RelatedFeatureDialogs from './RelatedFeatureDialogs';
 import type { RelatedFeatureKey } from './RelatedFeatureDialogs';
-import UnassignedPatientsPanel from './UnassignedPatientsPanel';
 import WardMapSidebar from './WardMapSidebar';
 import BedMoveDialog, { BedMoveMode, BedMoveTarget, BedMoveSubmitParams } from './BedMoveDialog';
 import DischargeConfirmDialog from '../admission/DischargeConfirmDialog';
@@ -42,7 +41,6 @@ const WardMap: React.FC = () => {
   const [ward, setWard] = React.useState<WardId>('ward1');
 
   const [activeFeature, setActiveFeature] = React.useState<RelatedFeatureKey | null>(null);
-  const [unassignedOpen, setUnassignedOpen] = React.useState(false);
   const [moveDialog, setMoveDialog] = React.useState<{ open: boolean; mode: BedMoveMode; target: BedMoveTarget | null }>({
     open: false,
     mode: 'move',
@@ -88,15 +86,6 @@ const WardMap: React.FC = () => {
     if (bed.disabled) return;
     if (!bed.patientId) return;
     setBedMenuPatientId(bed.patientId);
-  };
-
-  const handleAssign = (u: UnassignedPatient) => {
-    setUnassignedOpen(false);
-    setMoveDialog({
-      open: true,
-      mode: 'assign',
-      target: { unassigned: u },
-    });
   };
 
   const handleMove = (patient: Patient) => {
@@ -484,13 +473,6 @@ const WardMap: React.FC = () => {
         feature={activeFeature}
         ward={ward}
         onClose={() => setActiveFeature(null)}
-      />
-
-      {/* 未割当者一覧 */}
-      <UnassignedPatientsPanel
-        open={unassignedOpen}
-        onClose={() => setUnassignedOpen(false)}
-        onAssign={handleAssign}
       />
 
       {/* 転棟・転室ダイアログ */}
