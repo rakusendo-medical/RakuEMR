@@ -280,15 +280,17 @@ test.describe('病棟マップ', () => {
   test('I 右サイドバー「入院者情報」に稼働率・隔離拘束・外出・観察の集計が統合表示される', async ({ page }) => {
     const panel = page.locator('.MuiPaper-root', { hasText: '入院者情報' }).first();
     await expect(panel).toBeVisible();
-    // 既存項目（病床占有・平均年齢）は維持
-    await expect(panel.getByText(/病床/)).toBeVisible();
-    await expect(panel.getByText(/平均年齢\(全\)/)).toBeVisible();
-    // 旧「入退院情報」ダイアログから統合した集計（稼働率・隔離中・拘束中・外出中・観察中）
-    await expect(panel.getByText('稼働率')).toBeVisible();
-    await expect(panel.getByText('隔離中')).toBeVisible();
-    await expect(panel.getByText('拘束中')).toBeVisible();
-    await expect(panel.getByText('外出中')).toBeVisible();
-    await expect(panel.getByText('観察中')).toBeVisible();
+    // 病床稼働・平均年齢は維持
+    await expect(panel.getByText(/病床/).first()).toBeVisible();
+    await expect(panel.getByText(/平均年齢/).first()).toBeVisible();
+    // 稼働率＋本日日付（M/D 時点）
+    await expect(panel.getByText(/稼働率/).first()).toBeVisible();
+    await expect(panel.getByText(/本日 \d{1,2}\/\d{1,2} 時点/).first()).toBeVisible();
+    // 旧「入退院情報」ダイアログから統合した状態別集計（隔離 / 拘束 / 観察）。
+    // 外出は「不在者」列と重複するため状態別チップからは除外している。
+    await expect(panel.getByText(/隔離/).first()).toBeVisible();
+    await expect(panel.getByText(/拘束/).first()).toBeVisible();
+    await expect(panel.getByText(/観察/).first()).toBeVisible();
   });
 
 });
