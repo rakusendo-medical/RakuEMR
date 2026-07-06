@@ -293,4 +293,12 @@ test.describe('病棟マップ', () => {
     await expect(panel.getByText(/観察/).first()).toBeVisible();
   });
 
+  // ===== J: 入院予定者の病室未割当バッジ（入院オーダー時に病室未決定） =====
+  test('J 入院予定者パネルに「病室未割当」バッジが表示される', async ({ page }) => {
+    const admitSection = page.locator('.MuiPaper-root', { hasText: '入院予定者' }).first();
+    await expect(admitSection).toBeVisible();
+    // 病室未決定の入院予定者は「病室未割当」バッジ（色＋アイコンで判別）
+    await expect(admitSection.getByText('病室未割当').first()).toBeVisible();
+  });
+
 });

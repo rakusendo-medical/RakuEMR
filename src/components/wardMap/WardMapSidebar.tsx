@@ -1,5 +1,9 @@
 import React from 'react';
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+import {
+  MeetingRoom as MeetingRoomIcon,
+  HelpOutline as HelpOutlineIcon,
+} from '@mui/icons-material';
 import type { WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
 import { ADMISSION_ORDERS, PATIENTS, ROOMS } from '../../data/mockData';
@@ -46,18 +50,25 @@ const PanelHeader: React.FC<{ label: string; count?: number; ward: string }> = (
   </Box>
 );
 
-/** 病室の決定状況バッジ。色＋文言で判別（色覚配慮: 「病室未」/「N号室」で文言が異なる） */
+/**
+ * 病室の割当状況バッジ。色＋アイコン＋文言で判別（色覚配慮）。
+ * - 割当済み（オーダー時に病室決定）: 青系 ＋ 病室アイコン ＋「N号室」
+ * - 未割当（看護師が病室を決めるまで）: アンバー系 ＋ ？アイコン ＋「病室未割当」
+ */
 const RoomBadge: React.FC<{ decided: boolean; room: string }> = ({ decided, room }) => (
   <Box
     component="span"
     sx={{
-      display: 'inline-flex', alignItems: 'center', borderRadius: 999,
-      px: 1, py: 0.25, fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
-      bgcolor: decided ? '#e9f2fd' : '#fdf3e3',
-      color: decided ? '#2f6fd6' : '#b06e00',
+      display: 'inline-flex', alignItems: 'center', gap: 0.25, borderRadius: 999,
+      px: 0.75, py: 0.25, fontSize: '0.66rem', fontWeight: 700, whiteSpace: 'nowrap',
+      border: '1px solid',
+      ...(decided
+        ? { bgcolor: '#e9f2fd', color: '#2f6fd6', borderColor: '#c7d5ec' }
+        : { bgcolor: '#fdf3e3', color: '#b06e00', borderColor: '#f2c879' }),
     }}
   >
-    {decided ? `${room}号室` : '病室未'}
+    {decided ? <MeetingRoomIcon sx={{ fontSize: '0.9rem' }} /> : <HelpOutlineIcon sx={{ fontSize: '0.9rem' }} />}
+    {decided ? `${room}号室` : '病室未割当'}
   </Box>
 );
 

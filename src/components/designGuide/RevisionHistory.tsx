@@ -4,7 +4,11 @@ import {
   Accordion, AccordionSummary, AccordionDetails,
   List, ListItem, ListItemText,
 } from '@mui/material';
-import { ExpandMore } from '@mui/icons-material';
+import {
+  ExpandMore,
+  MeetingRoom as MeetingRoomIcon,
+  HelpOutline as HelpOutlineIcon,
+} from '@mui/icons-material';
 
 /* ─── 改定履歴データ ─── */
 type Commit = { hash: string; time: string; subject: string };
@@ -12,7 +16,7 @@ type Revision = {
   version: string;
   date: string;       // 表示用（M/D）
   fullDate: string;   // YYYY-MM-DD
-  context: string;    // 合意・改修の相手／場
+  context: string;    // 改定の要点（ヘッダーに1行表示されるため簡潔に）
   summary: string;    // 改定概要
   commits?: Commit[]; // 当日のコミット履歴
   designCompare?: React.ReactNode; // 新旧デザイン比較（任意）
@@ -128,12 +132,55 @@ const AdmissionInfoDesignDiff: React.FC = () => {
   );
 };
 
+/* ─── ver0.17: 入院予定者「病室割当状況」バッジの凡例 ─── */
+const RoomBadgeMini: React.FC<{ decided: boolean }> = ({ decided }) => (
+  <Box
+    component="span"
+    sx={{
+      display: 'inline-flex', alignItems: 'center', gap: 0.25, borderRadius: 999,
+      px: 0.75, py: 0.25, fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', border: '1px solid',
+      ...(decided
+        ? { bgcolor: '#e9f2fd', color: '#2f6fd6', borderColor: '#c7d5ec' }
+        : { bgcolor: '#fdf3e3', color: '#b06e00', borderColor: '#f2c879' }),
+    }}
+  >
+    {decided ? <MeetingRoomIcon sx={{ fontSize: '1rem' }} /> : <HelpOutlineIcon sx={{ fontSize: '1rem' }} />}
+    {decided ? '305号室' : '病室未割当'}
+  </Box>
+);
+
+const AdmissionOrderBadgeLegend: React.FC = () => (
+  <Box>
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+      入院予定者パネルの「病室割当状況」バッジ。色＋アイコン＋文言で判別します（色覚配慮）。
+    </Typography>
+    <Stack spacing={1}>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <RoomBadgeMini decided={false} />
+        <Typography variant="body2">未割当 — 入院オーダーはあるが病室未決定（看護師が病室を決めるまで）</Typography>
+      </Stack>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <RoomBadgeMini decided />
+        <Typography variant="body2">割当済み — オーダー時に病室決定済み（N号室）</Typography>
+      </Stack>
+    </Stack>
+  </Box>
+);
+
 export const REVISIONS: Revision[] = [
+  {
+    version: 'ver0.17',
+    date: '7/6',
+    fullDate: '2026-07-06',
+    context: '入院オーダー・病室割当整理',
+    summary: '入院オーダー・病室割当のライフサイクルを整理。入院オーダー時は病棟を必須（validation）とし、病室の割当状況は入院予定者パネルの「病室割当状況」バッジで色＋アイコン＋文言により判別する（割当済み＝青＋病室アイコン＋「N号室」／未割当＝アンバー＋？＋「病室未割当」）。病棟必須化により「病棟未割当」は発生しなくなったため、未割当の用語は「病室未割当」に統一し、未割当者パネル／導線（残存していた死にコード）を撤去。右サイドバーは入院予定者・不在者・入院者情報の3パネル（いずれも選択中病棟スコープ）に一本化した。参考システムは病室割当まで踏み込まない運用のため、本画面は参考システムに準拠せず当院運用に合わせる。',
+    designCompare: <AdmissionOrderBadgeLegend />,
+  },
   {
     version: 'ver0.16',
     date: '7/6',
     fullDate: '2026-07-06',
-    context: '梶井改修',
+    context: '右サイドバー3パネル刷新',
     summary: '旧「入退院情報」ボタン（ver0.15 の右サイドバー再設計以降、導線が外れオーファン化していた）を廃止し、ダイアログで表示していたサマリ（稼働率・隔離・拘束・観察）を右サイドバー「入院者情報」パネルへ統合。あわせて右サイドバー3パネルを白背景カードに刷新した。入院者情報はダッシュボード型（病床稼働バー＋稼働率／本日日付、患者・在院者・不在者の3列内訳、状態別チップ、平均年齢）に再設計。入院予定者・不在者は氏名＋バッジ＋操作ボタンのカード行に整理。稼働率は本日日付（M/D 時点）を併記。外出は「不在者」列と重複するため状態別チップからは除外した。淡色背景の低コントラストを是正し文字色を濃く調整。オーファンなダイアログ本体（AdmissionInfoContent）も撤去。',
     designCompare: <AdmissionInfoDesignDiff />,
   },
@@ -148,7 +195,7 @@ export const REVISIONS: Revision[] = [
     version: 'ver0.14',
     date: '6/11',
     fullDate: '2026-06-11',
-    context: '梶井改修',
+    context: '観察グリッド勤務帯切替',
     summary: '隔離拘束観察グリッドに勤務帯切替（24時間／日勤9〜16時／夜勤17〜翌8時）を追加。あわせて観察グリッドの e2e テストを拡充（最大9行・最小1行での登録反映、既存セルへの上書きで状態が正しく書き換わること、勤務帯切替後の入力反映、行の追加削除・上限9件、絞込設定の全チェック・クローズなど）。',
     commits: [
       { hash: 'e157d20', time: '11:22', subject: 'test/flowsheet: 隔離拘束観察グリッドの e2e を補強（最大9行/上書き書換え/勤務帯切替後の入力反映）' },
@@ -160,7 +207,7 @@ export const REVISIONS: Revision[] = [
     version: 'ver0.13',
     date: '6/10',
     fullDate: '2026-06-10',
-    context: '梶井改修',
+    context: '隔離拘束観察グリッド追加',
     summary: 'カルテのフローシートタブを「フローシート・隔離拘束」に改称。サブタブ（フローシート／隔離拘束）で外出・外泊行から下を切り替え可能にし、隔離拘束サブタブに 24時間×7日の観察グリッドを追加。セルクリックで観察記録ダイアログ（00分/30分の2行を既定、15分/30分単位の切替）を起動し、各記録を色セグメントで均等分割表示。診察記録の[未診察]セルから診療録作成ダイアログ、[絞込設定]から絞込ダイアログを起動。ヘッドレス CI 用の Playwright 設定を追加。',
     commits: [
       { hash: '2ca1477', time: '22:14', subject: 'e2e: ヘッドレスCI用の Playwright 設定とスクリプトを追加' },
@@ -172,7 +219,7 @@ export const REVISIONS: Revision[] = [
     version: 'ver0.12',
     date: '6/2',
     fullDate: '2026-06-02',
-    context: '梶井改修',
+    context: '隔離拘束指示ダイアログ改修',
     summary: '隔離拘束指示ダイアログを改修。開放時間・文書チェック・所見を削除。開始日時・終了日時の入力をdatetime-local形式に統一。配膳先変更日時を追加。移動先病棟・病室・ベッドのセレクトを追加。病室・ベッド未選択時は作成ボタンを非活性化。',
     commits: [
       { hash: '—', time: '—', subject: 'isolation: 隔離拘束指示ダイアログから開放時間・文書チェック・所見を削除' },
