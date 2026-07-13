@@ -37,6 +37,8 @@ interface Props {
   cancelledMoveIds?: string[];
   /** 履歴の「取消」実行 */
   onCancelMove?: (id: string) => void;
+  /** 履歴の「更新」実行（移動先・移動日時の変更） */
+  onUpdateMove?: (id: string, patch: { toWardId: WardId; toRoom: string; toBed: string; scheduledAt: string }) => void;
   onClose: () => void;
   onSubmit: (params: BedMoveSubmitParams) => void;
 }
@@ -63,7 +65,7 @@ const formatNow = () => {
 
 const BedMoveDialog: React.FC<Props> = ({
   open, mode, target, orderingMode = false, mealCutoff = '17:00',
-  moves = [], cancelledMoveIds = [], onCancelMove, onClose, onSubmit,
+  moves = [], cancelledMoveIds = [], onCancelMove, onUpdateMove, onClose, onSubmit,
 }) => {
   const initialWard: WardId = (target?.currentWard
     ?? (target?.unassigned?.designatedWardId !== 'tentative' ? target?.unassigned?.designatedWardId as WardId : undefined)
@@ -82,6 +84,8 @@ const BedMoveDialog: React.FC<Props> = ({
   const [outOfRangeWarn, setOutOfRangeWarn] = React.useState(false);
   // 履歴の取消確認対象（要件4）
   const [cancelTargetId, setCancelTargetId] = React.useState<string | null>(null);
+  // 更新モード（履歴行を選択して編集中の移動 ID）。null=新規登録モード
+  const [editingMoveId, setEditingMoveId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -96,6 +100,7 @@ const BedMoveDialog: React.FC<Props> = ({
       setConfirmCutoff(false);
       setOutOfRangeWarn(false);
       setCancelTargetId(null);
+      setEditingMoveId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target?.patient?.id, target?.unassigned?.id]);
@@ -149,6 +154,25 @@ const BedMoveDialog: React.FC<Props> = ({
     });
   };
 
+  // 履歴行を選択 → フォームに値を読み込み、更新モードへ（削除は不可）
+  const startEdit = (mv: ScheduledMove) => {
+    setToWard(mv.toWardId);
+    setToRoom(mv.toRoom);
+    setMoveAt(mv.scheduledAt);
+    setEditingMoveId(mv.id);
+  };
+  const exitEdit = () => {
+    setEditingMoveId(null);
+    setToWard(initialWard);
+    setToRoom(initialRoom);
+    setMoveAt(formatNow());
+  };
+  const handleUpdate = () => {
+    if (!editingMoveId || !toRoom || availableBeds.length === 0) return;
+    onUpdateMove?.(editingMoveId, { toWardId: toWard, toRoom, toBed: autoBed, scheduledAt: moveAt });
+    onClose(); // AC-5: 更新後はダイアログを閉じて病棟マップに反映
+  };
+
   const submitLabel = mode === 'assign' ? '割当登録' : '登録';
   const headerLabel = mode === 'assign' ? '転棟・転室ダイアログ（割当）' : '転棟・転室ダイアログ（移動）';
 
@@ -163,8 +187,13 @@ const BedMoveDialog: React.FC<Props> = ({
       <DialogContent dividers>
         <Stack spacing={2}>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <Chip label={mode === 'assign' ? '割当' : '移動'} size="small" color="primary" />
+            <Chip label={mode === 'assign' ? '割当' : editingMoveId ? '移動（更新）' : '移動'} size="small" color={editingMoveId ? 'warning' : 'primary'} />
             {orderingMode && <Chip label="オーダリング運用" size="small" color="warning" />}
+            {editingMoveId && (
+              <Typography variant="caption" color="text.secondary">
+                履歴の移動を更新中（下部の履歴から選択。[新規登録に戻る] で解除）
+              </Typography>
+            )}
           </Stack>
 
           <Stack direction="row" spacing={1.5}>
@@ -255,7 +284,8 @@ const BedMoveDialog: React.FC<Props> = ({
                       <Typography variant="caption" sx={{ textAlign: 'center' }}>種別</Typography>
                       <Typography variant="caption" sx={{ textAlign: 'right' }}>操作</Typography>
                     </Box>
-                    {[...moves].sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1)).map((m) => {
+                    {/* 入院（最古）を先頭に、以降は移動履歴（時系列・昇順） */}
+                    {[...moves].sort((a, b) => (a.scheduledAt < b.scheduledAt ? -1 : 1)).map((m) => {
                       const cancelled = cancelledMoveIds.includes(m.id);
                       const sameWard = m.fromWardId === m.toWardId;
                       const isAdmission = sameWard && m.fromRoom === m.toRoom; // 入院（最初の病室）
@@ -263,13 +293,20 @@ const BedMoveDialog: React.FC<Props> = ({
                       const statusColor = cancelled ? 'default' : status === '未' ? 'warning' : 'info';
                       const kind = isAdmission ? '入院' : sameWard ? '移動' : '転棟';
                       const kindColor = isAdmission ? 'primary' : sameWard ? 'default' : 'secondary';
+                      const editable = !isAdmission && !cancelled && !!onUpdateMove; // 予定・移動済のみ更新可
+                      const editing = editingMoveId === m.id;
                       return (
                         <Box
                           key={m.id}
+                          onClick={editable ? () => startEdit(m) : undefined}
                           sx={{
                             display: 'grid', gridTemplateColumns: '120px 1fr 52px 64px 56px', columnGap: 1, alignItems: 'center',
-                            px: 1, py: 0.75, border: '1px solid', borderColor: 'divider', borderRadius: 1,
-                            opacity: cancelled ? 0.6 : 1,
+                            px: 1, py: 0.75, border: '1px solid',
+                            borderColor: editing ? 'primary.main' : 'divider',
+                            bgcolor: editing ? 'action.selected' : 'transparent',
+                            borderRadius: 1, opacity: cancelled ? 0.6 : 1,
+                            cursor: editable ? 'pointer' : 'default',
+                            '&:hover': editable ? { bgcolor: editing ? 'action.selected' : 'action.hover' } : undefined,
                           }}
                         >
                           <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -292,7 +329,12 @@ const BedMoveDialog: React.FC<Props> = ({
                           </Box>
                           <Box sx={{ textAlign: 'right' }}>
                             {!cancelled && !isAdmission && onCancelMove && (
-                              <Button size="small" color="error" sx={{ minWidth: 0, px: 0.5 }} onClick={() => setCancelTargetId(m.id)}>
+                              <Button
+                                size="small"
+                                color="error"
+                                sx={{ minWidth: 0, px: 0.5 }}
+                                onClick={(e) => { e.stopPropagation(); setCancelTargetId(m.id); }}
+                              >
                                 取消
                               </Button>
                             )}
@@ -341,14 +383,27 @@ const BedMoveDialog: React.FC<Props> = ({
         </Stack>
       </DialogContent>
       <DialogActions>
+        {editingMoveId && (
+          <Button onClick={exitEdit} sx={{ mr: 'auto' }}>新規登録に戻る</Button>
+        )}
         <Button onClick={onClose}>キャンセル</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={!toRoom || availableBeds.length === 0}
-        >
-          {(cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn) ? '確認' : submitLabel}
-        </Button>
+        {editingMoveId ? (
+          <Button
+            variant="contained"
+            onClick={handleUpdate}
+            disabled={!toRoom || availableBeds.length === 0}
+          >
+            更新
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={!toRoom || availableBeds.length === 0}
+          >
+            {(cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn) ? '確認' : submitLabel}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

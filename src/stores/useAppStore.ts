@@ -111,6 +111,10 @@ interface AppState {
   //   （モックのためセッション限定・非永続化）。移動元病室への戻し等の振る舞いは要件5/6 で対応。
   cancelledMoveIds: string[];
   cancelMove: (id: string) => void;
+  // us-02: 移動履歴の「更新」。移動先（病棟／病室）・移動日時の変更差分を id 単位で保持
+  //   （seed／登録分の両方に適用。モックのためセッション限定・非永続化）。
+  moveEdits: Record<string, { toWardId: WardId; toRoom: string; toBed: string; scheduledAt: string }>;
+  updateMove: (id: string, patch: { toWardId: WardId; toRoom: string; toBed: string; scheduledAt: string }) => void;
 
   // ep-02/ep-03: カルテ記事への動的書込（永続化対象）
   // patientId をキーに、確定時に追記された MedicalRecord 配列を保持。
@@ -261,6 +265,8 @@ export const useAppStore = create<AppState>()(
       cancelMove: (id) => set((state) => (
         state.cancelledMoveIds.includes(id) ? state : { cancelledMoveIds: [...state.cancelledMoveIds, id] }
       )),
+      moveEdits: {},
+      updateMove: (id, patch) => set((state) => ({ moveEdits: { ...state.moveEdits, [id]: patch } })),
 
       dynamicMedicalRecords: {},
       // カルテ記事追加: 入退院確定や指示登録時に呼び出される。新カルテ画面（KartePage）が表示時にマージする。

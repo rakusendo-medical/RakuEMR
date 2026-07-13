@@ -34,7 +34,7 @@ const WardMap: React.FC = () => {
     setSelectedPatient, bedMenuPatientId, setBedMenuPatientId,
     setWardMapNavigation, showSnackbar,
     scheduledMoves, addScheduledMove,
-    cancelledMoveIds, cancelMove,
+    cancelledMoveIds, cancelMove, moveEdits, updateMove,
     pendingOrders, confirmedAdmissionIds,
     sidebarOpen,
   } = useAppStore();
@@ -58,12 +58,15 @@ const WardMap: React.FC = () => {
   // ===== ep-08 隔離拘束歴 =====
   const [isolationHistoryPatientId, setIsolationHistoryPatientId] = React.useState<string | null>(null);
 
+  // 全移動（seed＋登録分）に更新差分（moveEdits）を適用したもの
+  const allMoves = React.useMemo(
+    () => [...MOVE_HISTORY_SAMPLES, ...scheduledMoves].map((m) => (moveEdits[m.id] ? { ...m, ...moveEdits[m.id] } : m)),
+    [scheduledMoves, moveEdits],
+  );
   // 取消（移動済）を反映したベッド配置 → 表示中病棟で絞り込み（要件5: 取消で移動前病室へ戻す）
   const displayedRooms = React.useMemo(
-    () => applyCancelledMoves(
-      ROOMS, [...MOVE_HISTORY_SAMPLES, ...scheduledMoves], cancelledMoveIds, new Date(),
-    ),
-    [scheduledMoves, cancelledMoveIds],
+    () => applyCancelledMoves(ROOMS, allMoves, cancelledMoveIds, new Date()),
+    [allMoves, cancelledMoveIds],
   );
   const rooms = displayedRooms.filter((r) => r.wardId === ward);
 
@@ -142,12 +145,12 @@ const WardMap: React.FC = () => {
       m.patientId === patientId && !cancelledMoveIds.includes(m.id) && new Date(m.scheduledAt) > now);
   }, [scheduledMoves, cancelledMoveIds]);
 
-  // 転棟・転室ダイアログの履歴欄用: 対象患者の移動（seed＋登録分）。
+  // 転棟・転室ダイアログの履歴欄用: 対象患者の移動（seed＋登録分・更新差分適用済み）。
   const movesForDialog = React.useMemo(() => {
     const pid = moveDialog.target?.patient?.id;
     if (!pid) return [];
-    return [...MOVE_HISTORY_SAMPLES, ...scheduledMoves].filter((m) => m.patientId === pid);
-  }, [moveDialog.target, scheduledMoves]);
+    return allMoves.filter((m) => m.patientId === pid);
+  }, [moveDialog.target, allMoves]);
 
   /** 退院手続きダイアログを起動。対象患者の退院指示（ADMISSION_ORDERS + pendingOrders、未確定）を引き当てる。 */
   const handleOpenDischargeConfirm = (patient: Patient) => {
@@ -499,6 +502,7 @@ const WardMap: React.FC = () => {
         moves={movesForDialog}
         cancelledMoveIds={cancelledMoveIds}
         onCancelMove={(id) => { cancelMove(id); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}
+        onUpdateMove={(id, patch) => { updateMove(id, patch); showSnackbar('移動を更新しました', 'info'); }}
         onClose={closeMoveDialog}
         onSubmit={handleMoveSubmit}
       />
