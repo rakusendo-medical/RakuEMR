@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyCancelledMoves } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
 import { useAppStore } from '../../stores/useAppStore';
@@ -58,7 +58,14 @@ const WardMap: React.FC = () => {
   // ===== ep-08 隔離拘束歴 =====
   const [isolationHistoryPatientId, setIsolationHistoryPatientId] = React.useState<string | null>(null);
 
-  const rooms = ROOMS.filter((r) => r.wardId === ward);
+  // 取消（移動済）を反映したベッド配置 → 表示中病棟で絞り込み（要件5: 取消で移動前病室へ戻す）
+  const displayedRooms = React.useMemo(
+    () => applyCancelledMoves(
+      ROOMS, [...MOVE_HISTORY_SAMPLES, ...scheduledMoves], cancelledMoveIds, new Date(),
+    ),
+    [scheduledMoves, cancelledMoveIds],
+  );
+  const rooms = displayedRooms.filter((r) => r.wardId === ward);
 
   // 病棟マップ表示順（カルテ画面の隣接ナビ用）
   const wardOrderedPatientIds = React.useMemo(

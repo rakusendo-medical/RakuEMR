@@ -1113,6 +1113,42 @@ export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [
   },
 ];
 
+/**
+ * 移動の「取消」を病棟マップに反映する（要件5/6・純粋関数）。
+ * - 取消された「移動済」（予定時刻を過ぎた）移動 → 患者を移動元病室（fromRoom）の空き枠へ戻す。
+ * - 取消された「予定」（未来）移動 → 病室は動かさない（要件6。ここでは対象外）。
+ * 移動元病室に空き枠が無い場合はスキップ（安全側）。
+ */
+export const applyCancelledMoves = (
+  rooms: Room[], moves: ScheduledMove[], cancelledIds: string[], now: Date,
+): Room[] => {
+  const due = moves.filter(
+    (m) => cancelledIds.includes(m.id) && new Date(m.scheduledAt).getTime() <= now.getTime(),
+  );
+  if (due.length === 0) return rooms;
+  const next: Room[] = rooms.map((r) => ({ ...r, beds: r.beds.map((b) => ({ ...b })) }));
+  for (const m of due) {
+    const cur = next.flatMap((r) => r.beds).find((b) => b.patientId === m.patientId);
+    if (!cur) continue;
+    const destRoom = next.find((r) => r.wardId === m.fromWardId && r.roomNumber === m.fromRoom);
+    const destBed = destRoom?.beds.find((b) => !b.disabled && !b.patientId);
+    if (!destBed) continue; // 移動元病室に空き枠なし → スキップ
+    destBed.patientId = cur.patientId;
+    destBed.patientName = cur.patientName;
+    destBed.gender = cur.gender;
+    destBed.age = cur.age;
+    destBed.status = cur.status;
+    destBed.flags = cur.flags ? [...cur.flags] : undefined;
+    cur.patientId = null;
+    cur.patientName = null;
+    cur.gender = null;
+    cur.age = null;
+    cur.status = 'empty';
+    cur.flags = undefined;
+  }
+  return next;
+};
+
 // ===== 隔離拘束 =====
 // ===== ep-05 隔離拘束指示 =====
 // IsolationOrder には ep-05 で subtype/operation/restraintParts/releaseTimes/linkedDocumentChecks
