@@ -54,8 +54,6 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const [reason, setReason] = React.useState('');
   const [postCare, setPostCare] = React.useState('');
   const [karteNote, setKarteNote] = React.useState('');
-  const [reverseReferral, setReverseReferral] = React.useState(false);
-  const [karteAccessUntil, setKarteAccessUntil] = React.useState<string>('');
   // 入院定時オーダ中止日設定（マスタ代替: モック切替）
   const [stopDayPolicy, setStopDayPolicy] = React.useState<'当日以降' | '翌日以降'>('翌日以降');
   const [printMealSheet, setPrintMealSheet] = React.useState(false);
@@ -81,8 +79,6 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       setReason('');
       setPostCare('');
       setKarteNote('');
-      setReverseReferral(false);
-      setKarteAccessUntil('');
       setStopDayPolicy('翌日以降');
       setPrintMealSheet(false);
       setPrintMoveSheet(false);
@@ -226,7 +222,6 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
               {futureDate && <Chip label="未来日時（指示のみ可）" size="small" color="warning" />}
               {isOuting && <Chip label="外出中（確定不可）" size="small" color="error" />}
               {optionalFeatures.medicalProtection && <Chip label="医療観察法 ON" size="small" />}
-              {optionalFeatures.regionalCooperation && <Chip label="地域連携 ON" size="small" />}
             </Stack>
 
             {isOuting && (
@@ -324,28 +319,7 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
               </Stack>
             </Box>
 
-            {optionalFeatures.regionalCooperation && (
-              <Box sx={{ p: 1.5, border: '1px dashed', borderColor: 'info.main', borderRadius: 1 }}>
-                <Typography variant="caption" color="info.dark" fontWeight={700} component="div" sx={{ mb: 0.5 }}>
-                  地域連携オプション
-                </Typography>
-                <FormControlLabel
-                  control={<Checkbox checked={reverseReferral} onChange={(_, v) => setReverseReferral(v)} />}
-                  label="逆紹介する"
-                />
-                {reverseReferral && (
-                  <TextField
-                    size="small"
-                    label="カルテ閲覧期限"
-                    type="date"
-                    value={karteAccessUntil}
-                    onChange={(e) => setKarteAccessUntil(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ ml: 2 }}
-                  />
-                )}
-              </Box>
-            )}
+            {/* 地域連携（逆紹介）オプションは不要のため削除 */}
 
             <TextField size="small" label="退院決定理由" multiline rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
             <TextField size="small" label="退院後の診療" multiline rows={2} value={postCare} onChange={(e) => setPostCare(e.target.value)} />
