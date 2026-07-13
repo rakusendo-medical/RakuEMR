@@ -169,6 +169,13 @@ const AdmissionOrderBadgeLegend: React.FC = () => (
 
 export const REVISIONS: Revision[] = [
   {
+    version: 'ver0.20',
+    date: '7/13',
+    fullDate: '2026-07-13',
+    context: '入院者情報「他」区分削除',
+    summary: '病棟マップ右サイドバー「入院者情報」パネルの性別内訳（患者／在院者／不在者 各列）から「他」区分を、使用しなくなったため削除し、男・女の2区分表示に変更した（gender は M/F のみで「他」は常に 0）。SPEC us-01・docs/changes にも反映。',
+  },
+  {
     version: 'ver0.17',
     date: '7/6',
     fullDate: '2026-07-06',
