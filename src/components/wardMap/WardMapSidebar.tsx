@@ -130,13 +130,10 @@ const WardMapSidebar: React.FC<Props> = ({
   );
   const males = wardPatients.filter((p) => p.gender === 'M').length;
   const females = wardPatients.filter((p) => p.gender === 'F').length;
-  const others = wardPatients.length - males - females;
   const absentMale = absent.filter((p) => p.gender === 'M').length;
   const absentFemale = absent.filter((p) => p.gender === 'F').length;
-  const absentOther = absent.length - absentMale - absentFemale;
   const stayMale = males - absentMale;
   const stayFemale = females - absentFemale;
-  const stayOther = others - absentOther;
   const total = wardPatients.length;
   const stayTotal = total - absent.length;
   const avgAge = (list: typeof wardPatients) =>
@@ -161,10 +158,10 @@ const WardMapSidebar: React.FC<Props> = ({
   const absentRows = absent.slice(0, 4);
 
   // 入院者情報 3 列（患者 / 在院者 / 不在者）
-  const infoCols: { label: string; total: number; m: number; f: number; o: number; color: string }[] = [
-    { label: '患者', total, m: males, f: females, o: others, color: '#23324d' },
-    { label: '在院者', total: stayTotal, m: stayMale, f: stayFemale, o: stayOther, color: '#23324d' },
-    { label: '不在者', total: absent.length, m: absentMale, f: absentFemale, o: absentOther, color: '#e08a00' },
+  const infoCols: { label: string; total: number; m: number; f: number; color: string }[] = [
+    { label: '患者', total, m: males, f: females, color: '#23324d' },
+    { label: '在院者', total: stayTotal, m: stayMale, f: stayFemale, color: '#23324d' },
+    { label: '不在者', total: absent.length, m: absentMale, f: absentFemale, color: '#e08a00' },
   ];
   // 状態別チップ（色＋ラベルで判別＝色覚配慮）
   const infoChips: { label: string; v: number; bg: string; fg: string; vc: string }[] = [
@@ -255,14 +252,14 @@ const WardMapSidebar: React.FC<Props> = ({
           </Box>
         </Box>
 
-        {/* 患者 / 在院者 / 不在者（男女他内訳を副次表示） */}
+        {/* 患者 / 在院者 / 不在者（男女内訳を副次表示） */}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid #edf0f4', borderBottom: '1px solid #edf0f4' }}>
           {infoCols.map((c, i) => (
             <Box key={c.label} sx={{ py: 1, px: 0.25, textAlign: 'center', borderRight: i < 2 ? '1px solid #edf0f4' : 'none' }}>
               <Typography sx={{ fontSize: '0.62rem', color: '#8a93a3' }}>{c.label}</Typography>
               <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: c.color }}>{c.total}</Typography>
               <Typography sx={{ fontSize: '0.52rem', color: '#8a93a3', whiteSpace: 'nowrap', letterSpacing: '-0.02em' }}>
-                男{c.m}・女{c.f}・他{c.o}
+                男{c.m}・女{c.f}
               </Typography>
             </Box>
           ))}
