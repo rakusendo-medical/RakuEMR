@@ -54,7 +54,7 @@
 
 ### オプション機能トグル（モック）
 
-- `optionalFeatures: { medicalProtection: boolean; regionalCooperation: boolean; psychiatricLink: boolean }` — 医療観察法／地域連携／外部精神科システム連携の有無切替
+- `optionalFeatures`（型は `OptionalFeatures` を参照）— オプション機能の有無切替。地域連携（逆紹介）＝`regionalCooperation` は削除済み（医療観察法／外部精神科システム連携などは維持）
 
 ## 画面別変更
 
@@ -75,7 +75,7 @@
 
 ### `src/components/admission/DischargeOrderDialog.tsx`
 
-- フォーム要素: 退院日 / 転帰 / 食事終了日（自動連動・編集可否） / 備考 / 退院後診療区分 / 退院時文書チェック群（区分連動） / 紹介先医療機関＋検索＋治療歴複写 / 紹介経路 / 退院決定理由 / 退院後の診療 / カルテ記載 / 逆紹介設定（オプション） / 指示箋印刷チェック
+- フォーム要素: 退院日 / 転帰 / 食事終了日（自動連動・編集可否） / 備考 / 退院後診療区分 / 退院時文書チェック群（区分連動） / 紹介先医療機関＋検索＋治療歴複写 / 紹介経路 / 退院決定理由 / 退院後の診療 / カルテ記載 / 指示箋印刷チェック
 - 操作ボタン: 指示 / 退院確定 / 変更 / 中止 / キャンセル
 - 退院確定 → OrderConfirmDialog (kind=discharge) → 状態反映、入院専用オーダ自動削除通知
 - 外出中の患者: 退院確定不可（無効化 + 警告 Alert）
@@ -97,7 +97,7 @@
 3. MedicalInstitutionSearchDialog
 4. DeleteReasonDialog
 5. AdmissionOrderDialog（フォーム + 指示/確定/変更/中止）
-6. DischargeOrderDialog（食事終了日連動 + 外出中判定 + 逆紹介）
+6. DischargeOrderDialog（食事終了日連動 + 外出中判定）
 7. OrderConfirmDialog 改修（リハビリ「継続」disable）
 8. カルテ画面のエントリーボタン追加
 9. AdmissionDischarge タブ 3 の差し替え
@@ -111,13 +111,13 @@
 ### 追加・変更ファイル
 
 - `src/data/mockData.ts` — `MEDICAL_INSTITUTIONS`, `REFERRAL_ROUTES_*`, `ADMIT_FORM_TYPES`, `ADMIT_DOCS_BY_FORM`, `DISCHARGE_DOCS_BY_CATEGORY`, `DELETE_REASON_CATEGORIES`, `REHAB_OUTCOME_OPTIONS`, `THERAPY_HISTORY_SAMPLES` を追加
-- `src/stores/useAppStore.ts` — `optionalFeatures`（医療観察法/地域連携/精神科連携）と `pendingOrders` ストア（「指示」段階の登録結果）を追加
+- `src/stores/useAppStore.ts` — `optionalFeatures`（医療観察法/精神科連携）と `pendingOrders` ストア（「指示」段階の登録結果）を追加
 - `src/components/admission/AdmissionOrderDialog.tsx` — 新規（us-08）
 - `src/components/admission/DischargeOrderDialog.tsx` — 新規（us-09）
 - `src/components/admission/MedicalInstitutionSearchDialog.tsx` — 新規（共通）
 - `src/components/admission/DeleteReasonDialog.tsx` — 新規（共通、入院/退院でラベルとオプション項目切替）
 - `src/components/admission/OrderConfirmDialog.tsx` — リハビリ転帰区分に「継続（選択不可）」を表示、必須化＋未入力で確定不可に変更
-- `src/components/admission/AdmissionDischarge.tsx` — タブ 3 を「カルテ画面誘導 + カレンダーへの戻り口」に置換、ヘッダーにオプション機能トグル（医療観察法/地域連携/精神科連携）を追加
+- `src/components/admission/AdmissionDischarge.tsx` — タブ 3 を「カルテ画面誘導 + カレンダーへの戻り口」に置換、ヘッダーにオプション機能トグル（医療観察法/精神科連携）を追加
 - `src/components/admission/AdmissionScheduleCalendar.tsx` — `pendingOrders` ストアを参照し、「指示」段階で登録された患者をカレンダー（赤字）と日付未定者パネルに反映
 - `src/components/karteAlpha/KarteAlphaPage.tsx` — クイック操作バーに「入院指示」「退院指示（入院患者のみ）」ボタンを追加。両ダイアログを起動
 
@@ -127,7 +127,7 @@
 - **食事時間帯マスタの代替**: `MEAL_SLOTS = [朝食 08:00, 昼食 12:00, 夕食 18:00]` をハードコード。AC-2/AC-4 は当日入院時の現在時刻直前以前を選択不可としマスタ依存挙動を再現
 - **「食無し／臨時欠食」自動生成**: モックでは Alert 通知のみ。実際の指示生成は対応エピックで実装
 - **入院定時オーダの中止日設定**: 退院指示ダイアログ内のセレクト（当日以降 / 翌日以降）でモック切替。退院確定スナックバーに反映文言を含めた
-- **逆紹介・地域連携・医療観察法・精神科連携**: いずれもオプション機能トグル（AdmissionDischarge ヘッダー）でセッション切替可
+- **医療観察法・精神科連携**: いずれもオプション機能トグル（AdmissionDischarge ヘッダー）でセッション切替可
 - **入退院歴・治療歴への書込**: 確定スナックバーで文言通知のみ。データ反映は ep-04 にて
 
 ### 残課題（次イテレーションで検討）

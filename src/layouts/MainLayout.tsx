@@ -511,11 +511,15 @@ const MainLayout: React.FC = () => {
                 sx={{
                   fontSize: '0.75rem',
                   color: 'text.disabled',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
                   '&:hover': { color: 'text.secondary' },
                   cursor: 'pointer',
                 }}
               >
-                {latestRevision.fullDate}　{latestRevision.context}
+                <History sx={{ fontSize: '0.95rem' }} />
+                更新履歴　{latestRevision.fullDate}　{latestRevision.context}
               </Link>
             </Stack>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
