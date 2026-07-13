@@ -247,8 +247,8 @@ const BedMoveDialog: React.FC<Props> = ({
                   </Box>
                 ) : (
                   <Stack spacing={0.5}>
-                    {/* 見出し行: 移動日 / 病室 / 状態 / 種別 / 操作 */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, color: 'text.secondary' }}>
+                    {/* 見出し行: 移動日 / 病室 / 状態 / 種別 / 操作（データ行と同じ箱幾何にして列を揃える） */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.25, border: '1px solid transparent', color: 'text.secondary' }}>
                       <Typography variant="caption" sx={{ minWidth: 120 }}>移動日</Typography>
                       <Typography variant="caption" sx={{ flex: 1, minWidth: 120 }}>病室</Typography>
                       <Typography variant="caption" sx={{ minWidth: 48, textAlign: 'center' }}>状態</Typography>
@@ -267,7 +267,7 @@ const BedMoveDialog: React.FC<Props> = ({
                         <Box
                           key={m.id}
                           sx={{
-                            display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
+                            display: 'flex', alignItems: 'center', gap: 1,
                             px: 1, py: 0.75, border: '1px solid', borderColor: 'divider', borderRadius: 1,
                             opacity: cancelled ? 0.6 : 1,
                           }}
