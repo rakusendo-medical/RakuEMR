@@ -156,12 +156,15 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   //  1) PATIENTS（入院マスタ）に同 ID があればそれ
   //  2) useAppStore.selectedPatient（OutpatientList 等が `setSelectedPatient` で渡した合成 Patient）
   //     -> 外来 visit（`OUTPATIENT_VISITS`）の patientId は PATIENTS に居ないため、ここで受ける
+  const outpatientDischarges = useAppStore((s) => s.outpatientDischarges);
   const patient = useMemo(() => {
-    const fromMaster = PATIENTS.find((p) => p.id === patientId);
-    if (fromMaster) return fromMaster;
-    if (selectedPatient && selectedPatient.id === patientId) return selectedPatient;
-    return undefined;
-  }, [patientId, selectedPatient]);
+    const base = PATIENTS.find((p) => p.id === patientId)
+      ?? (selectedPatient && selectedPatient.id === patientId ? selectedPatient : undefined);
+    if (!base) return undefined;
+    // 退院確定（区分=通院）で外来化した患者は実効 admissionState を 'outpatient' に上書き（セッション限定）
+    if (outpatientDischarges[base.id]) return { ...base, admissionState: 'outpatient' as const };
+    return base;
+  }, [patientId, selectedPatient, outpatientDischarges]);
 
   const mode = useMemo(
     () => determineMode({ override: modeOverride, navState, storeNavSource, patient }),
