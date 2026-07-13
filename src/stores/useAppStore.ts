@@ -12,8 +12,7 @@ export type UserRole = 'doctor' | 'staff';
 export interface OptionalFeatures {
   /** 医療観察法（紹介経路に「医療観察入院処遇中の転院」を追加） */
   medicalProtection: boolean;
-  /** 地域連携（退院指示時に逆紹介設定を表示） */
-  regionalCooperation: boolean;
+  // 地域連携（逆紹介）オプションは不要のため削除
   /** 外部精神科システム連携（入院指示に「精神科入院有無」項目を追加） */
   psychiatricLink: boolean;
   /** ep-05 隔離拘束変更（マスタ「隔離拘束変更=する」相当。継続/変更指示リンクの表示制御） */
@@ -232,7 +231,6 @@ export const useAppStore = create<AppState>()(
 
       optionalFeatures: {
         medicalProtection: false,
-        regionalCooperation: false,
         psychiatricLink: false,
         restraintChange: false,
         observationFutureBlock: false,

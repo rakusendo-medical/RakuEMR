@@ -272,7 +272,7 @@ worktree 分離後も、論理的には複数 us から書く可能性のある�
 - **`useAppStore.pendingOrders`** — 「指示」段階の入退院指示（カレンダー反映用、localStorage 永続化）
 - **`useAppStore.scheduledMoves`** — 病床移動の予定一覧（移動アイコン動的計算）
 - **`useAppStore.dynamicMedicalRecords`** — カルテ記事の動的追加（入退院確定時など）
-- **`useAppStore.optionalFeatures`** — 医療観察法／地域連携／精神科連携のトグル
+- **`useAppStore.optionalFeatures`** — 医療観察法／精神科連携のトグル
 - **`useAppStore.currentUserRole`** — 操作者ロール（医師／事務）
 
 ### 共通 UI
