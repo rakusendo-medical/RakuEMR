@@ -1100,10 +1100,16 @@ export const ADMISSION_HISTORY: AdmissionHistory[] = [
 // 履歴欄・取消の動作確認用サンプル。P001（山田 太郎）に「移動済」1件・「予定」1件。
 // 状態は scheduledAt と現在時刻で判定（過去=移動済 / 未来=予定）、取消は cancelledMoveIds で表現。
 export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [
-  // P001（山田 太郎）は第2病棟 202号室。過去に 203→202 へ移動済、今後 202→205 の予定。
+  // P001（山田 太郎）第2病棟。入院時 203号室 → 202へ移動済 → 202→205 の予定。
+  // 入院（最初の病室）は from===to で表現し、履歴に「入院」種別として表示（取消不可）。
+  {
+    id: 'MH-P001-0', patientId: 'P001', scheduledAt: '2026-01-10T10:00',
+    fromWardId: 'ward2', fromRoom: '203', fromBed: 'B',
+    toWardId: 'ward2', toRoom: '203', toBed: 'B',
+  },
   {
     id: 'MH-P001-1', patientId: 'P001', scheduledAt: '2026-06-01T10:00',
-    fromWardId: 'ward2', fromRoom: '203', fromBed: 'A',
+    fromWardId: 'ward2', fromRoom: '203', fromBed: 'B',
     toWardId: 'ward2', toRoom: '202', toBed: 'A',
   },
   {

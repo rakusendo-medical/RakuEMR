@@ -247,20 +247,22 @@ const BedMoveDialog: React.FC<Props> = ({
                   </Box>
                 ) : (
                   <Stack spacing={0.5}>
-                    {/* 見出し行: 移動日 / 種別 / 移動先（移動元→移動先） / 状態 */}
+                    {/* 見出し行: 移動日 / 種別 / 病室 / 状態 */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, color: 'text.secondary' }}>
                       <Typography variant="caption" sx={{ minWidth: 120 }}>移動日</Typography>
                       <Typography variant="caption" sx={{ minWidth: 72 }}>種別</Typography>
-                      <Typography variant="caption" sx={{ flex: 1, minWidth: 160 }}>移動先（移動元 → 移動先）</Typography>
+                      <Typography variant="caption" sx={{ flex: 1, minWidth: 130 }}>病室</Typography>
                       <Typography variant="caption" sx={{ minWidth: 56, textAlign: 'center' }}>状態</Typography>
                       <Box sx={{ minWidth: 52 }} />
                     </Box>
                     {[...moves].sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1)).map((m) => {
                       const cancelled = cancelledMoveIds.includes(m.id);
+                      const sameWard = m.fromWardId === m.toWardId;
+                      const isAdmission = sameWard && m.fromRoom === m.toRoom; // 入院（最初の病室）
                       const status = cancelled ? '取消' : (new Date(m.scheduledAt) > new Date() ? '予定' : '移動済');
                       const statusColor = cancelled ? 'default' : status === '予定' ? 'warning' : 'info';
-                      const sameWard = m.fromWardId === m.toWardId;
-                      const kind = sameWard ? '病室移動' : '転棟';
+                      const kind = isAdmission ? '入院' : sameWard ? '病室移動' : '転棟';
+                      const kindColor = isAdmission ? 'primary' : sameWard ? 'default' : 'secondary';
                       return (
                         <Box
                           key={m.id}
@@ -274,30 +276,26 @@ const BedMoveDialog: React.FC<Props> = ({
                             {m.scheduledAt.replace('T', ' ')}
                           </Typography>
                           <Box sx={{ minWidth: 72 }}>
-                            <Chip
-                              label={kind}
-                              size="small"
-                              color={sameWard ? 'default' : 'secondary'}
-                              variant="outlined"
-                              sx={{ height: 20 }}
-                            />
+                            <Chip label={kind} size="small" color={kindColor} variant="outlined" sx={{ height: 20 }} />
                           </Box>
-                          <Typography variant="caption" sx={{ flex: 1, minWidth: 160 }}>
-                            {sameWard
-                              ? <>{m.fromRoom}号室 → <Box component="strong">{m.toRoom}号室</Box></>
-                              : <>{WARD_LABELS[m.fromWardId]} {m.fromRoom}号室 → <Box component="strong">{WARD_LABELS[m.toWardId]} {m.toRoom}号室</Box></>}
+                          <Typography variant="caption" sx={{ flex: 1, minWidth: 130 }}>
+                            <Box component="strong">
+                              {sameWard ? '' : `${WARD_LABELS[m.toWardId]} `}{m.toRoom}号室
+                            </Box>
                           </Typography>
                           <Box sx={{ minWidth: 56, textAlign: 'center' }}>
-                            <Chip
-                              label={status}
-                              size="small"
-                              color={statusColor}
-                              variant={cancelled ? 'outlined' : 'filled'}
-                              sx={{ height: 20 }}
-                            />
+                            {!isAdmission && (
+                              <Chip
+                                label={status}
+                                size="small"
+                                color={statusColor}
+                                variant={cancelled ? 'outlined' : 'filled'}
+                                sx={{ height: 20 }}
+                              />
+                            )}
                           </Box>
                           <Box sx={{ minWidth: 52, textAlign: 'right' }}>
-                            {!cancelled && onCancelMove && (
+                            {!cancelled && !isAdmission && onCancelMove && (
                               <Button size="small" color="error" onClick={() => setCancelTargetId(m.id)}>
                                 取消
                               </Button>
