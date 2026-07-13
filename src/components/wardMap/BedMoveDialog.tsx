@@ -61,11 +61,9 @@ const BedMoveDialog: React.FC<Props> = ({
     ?? (target?.unassigned?.designatedWardId !== 'tentative' ? target?.unassigned?.designatedWardId as WardId : undefined)
     ?? 'ward1') as WardId;
   const initialRoom = (target?.unassigned?.designatedRoomNumber !== 'tentative' ? target?.unassigned?.designatedRoomNumber as string : '') ?? '';
-  const initialBed = (target?.unassigned?.designatedBedLabel !== 'tentative' ? target?.unassigned?.designatedBedLabel as string : '') ?? '';
 
   const [toWard, setToWard] = React.useState<WardId>(initialWard);
   const [toRoom, setToRoom] = React.useState<string>(initialRoom);
-  const [toBed, setToBed] = React.useState<string>(initialBed);
   const [moveAt, setMoveAt] = React.useState<string>(formatNow());
   const [mealAt, setMealAt] = React.useState<string>(formatNow());
   const [isolation, setIsolation] = React.useState(false);
@@ -79,7 +77,6 @@ const BedMoveDialog: React.FC<Props> = ({
     if (open) {
       setToWard(initialWard);
       setToRoom(initialRoom);
-      setToBed(initialBed);
       setMoveAt(formatNow());
       setMealAt(formatNow());
       setIsolation(false);
@@ -103,6 +100,9 @@ const BedMoveDialog: React.FC<Props> = ({
   const wardRooms = ROOMS.filter((r) => r.wardId === toWard);
   const room = wardRooms.find((r) => r.roomNumber === toRoom);
   const availableBeds = room ? room.beds.filter((b: Bed) => !b.disabled && !b.patientId) : [];
+  // ベッドは廃止（布団運用）。移動先病室の空き枠の先頭を自動割当する。
+  const autoBed = availableBeds[0]?.bed ?? '';
+  const roomFull = !!toRoom && availableBeds.length === 0;
 
   // 食事締め時間判定（モック簡易版）
   const moveTime = moveAt.split('T')[1] ?? '00:00';
@@ -112,7 +112,7 @@ const BedMoveDialog: React.FC<Props> = ({
   const u = target.unassigned;
   const wardOutOfRange = u && u.designatedWardId !== 'tentative' && u.designatedWardId !== toWard;
   const roomOutOfRange = u && u.designatedRoomNumber !== 'tentative' && u.designatedRoomNumber !== toRoom;
-  const showOutOfRange = (wardOutOfRange || roomOutOfRange) && !!toRoom && !!toBed;
+  const showOutOfRange = (wardOutOfRange || roomOutOfRange) && !!toRoom;
 
   const handleSubmit = () => {
     if (cutoffExceeded && !confirmCutoff) {
@@ -128,7 +128,7 @@ const BedMoveDialog: React.FC<Props> = ({
       patientId: target.patient?.id ?? target.unassigned?.id ?? '',
       toWard,
       toRoom,
-      toBed,
+      toBed: autoBed,
       moveAt,
       mealAt,
       isolation: orderingMode ? isolation : undefined,
@@ -159,31 +159,25 @@ const BedMoveDialog: React.FC<Props> = ({
           <Stack direction="row" spacing={1.5}>
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>移動先 病棟</InputLabel>
-              <Select label="移動先 病棟" value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}>
+              <Select label="移動先 病棟" value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); }}>
                 <MenuItem value="ward1">第１病棟</MenuItem>
                 <MenuItem value="ward2">第２病棟</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>移動先 病室</InputLabel>
-              <Select label="移動先 病室" value={toRoom} onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}>
+              <Select label="移動先 病室" value={toRoom} onChange={(e) => setToRoom(e.target.value)}>
                 {wardRooms.map((r) => (
                   <MenuItem key={r.roomNumber} value={r.roomNumber}>{r.roomNumber}号室</MenuItem>
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }} disabled={!room}>
-              <InputLabel>移動先 ベッド</InputLabel>
-              <Select label="移動先 ベッド" value={toBed} onChange={(e) => setToBed(e.target.value)}>
-                {availableBeds.map((b) => (
-                  <MenuItem key={b.bed} value={b.bed}>{b.bed}</MenuItem>
-                ))}
-                {availableBeds.length === 0 && (
-                  <MenuItem value="" disabled>空きベッドなし</MenuItem>
-                )}
-              </Select>
-            </FormControl>
           </Stack>
+          {roomFull && (
+            <Typography variant="caption" color="error">
+              選択した病室に空きがありません。別の病室を選択してください。
+            </Typography>
+          )}
 
           <Stack direction="row" spacing={1.5}>
             <TextField
@@ -261,7 +255,7 @@ const BedMoveDialog: React.FC<Props> = ({
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!toRoom || !toBed}
+          disabled={!toRoom || availableBeds.length === 0}
         >
           {(cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn) ? '確認' : submitLabel}
         </Button>
