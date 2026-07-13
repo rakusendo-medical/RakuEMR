@@ -281,15 +281,13 @@ const BedMoveDialog: React.FC<Props> = ({
                             </Box>
                           </Typography>
                           <Box sx={{ minWidth: 48, textAlign: 'center' }}>
-                            {!isAdmission && (
-                              <Chip
-                                label={status}
-                                size="small"
-                                color={statusColor}
-                                variant={cancelled ? 'outlined' : 'filled'}
-                                sx={{ height: 20 }}
-                              />
-                            )}
+                            <Chip
+                              label={status}
+                              size="small"
+                              color={statusColor}
+                              variant={cancelled ? 'outlined' : 'filled'}
+                              sx={{ height: 20 }}
+                            />
                           </Box>
                           <Box sx={{ minWidth: 64, textAlign: 'center' }}>
                             <Chip label={kind} size="small" color={kindColor} variant="outlined" sx={{ height: 20 }} />
