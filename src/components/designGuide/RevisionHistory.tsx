@@ -169,6 +169,13 @@ const AdmissionOrderBadgeLegend: React.FC = () => (
 
 export const REVISIONS: Revision[] = [
   {
+    version: 'ver0.21',
+    date: '7/13',
+    fullDate: '2026-07-13',
+    context: '通院退院で外来化・退院区分反映',
+    summary: '退院指示で退院後診療区分＝通院を選んで退院確定した時、① 対象患者を外来化（実効 admissionState を outpatient に上書き＝カルテ表示の外来化・入院患者一覧から除外）、② 入院歴の当該入院を退院済・退院区分「退院後通院」に反映する（いずれもモックのためセッション限定＝リロードで戻る）。物理病床整合・不要／転院区分・通院精神の指示発行は対象外。あわせて退院指示 SPEC（us-09）の完了通知から、実在しない「医師指示簿への書込」記述を削除。',
+  },
+  {
     version: 'ver0.17',
     date: '7/6',
     fullDate: '2026-07-06',

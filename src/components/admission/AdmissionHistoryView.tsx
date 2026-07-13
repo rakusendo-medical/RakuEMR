@@ -44,15 +44,30 @@ const AdmissionHistoryView: React.FC = () => {
   const removeAdmissionHistory = useAppStore((s) => s.removeAdmissionHistory);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
   const storeSelectedPatient = useAppStore((s) => s.selectedPatient);
+  const outpatientDischarges = useAppStore((s) => s.outpatientDischarges);
 
   // 入院歴の合成（マスタ + 編集差分 + 追加 - 削除）
   const allHistories: AdmissionHistory[] = React.useMemo(() => {
     const base = ADMISSION_HISTORY
       .filter((r) => !removedAdmissionHistoryIds.includes(r.id))
-      .map((r) => ({ ...r, ...admissionHistoryEdits[r.id] } as AdmissionHistory));
+      .map((r) => {
+        const merged = { ...r, ...admissionHistoryEdits[r.id] } as AdmissionHistory;
+        // 退院確定（区分=通院）で外来化した患者の「進行中（退院日なし）」入院を
+        // 退院済・退院区分「退院後通院」として反映（セッション限定・リロードで戻る）
+        const od = outpatientDischarges[r.patientId];
+        if (od && !r.dischargeDate) {
+          return {
+            ...merged,
+            dischargeDate: od.dischargeDate,
+            status: '退院済',
+            dischargeCategory: '退院後通院',
+          } as AdmissionHistory;
+        }
+        return merged;
+      });
     const added = addedAdmissionHistory.filter((r) => !removedAdmissionHistoryIds.includes(r.id));
     return [...base, ...added];
-  }, [admissionHistoryEdits, addedAdmissionHistory, removedAdmissionHistoryIds]);
+  }, [admissionHistoryEdits, addedAdmissionHistory, removedAdmissionHistoryIds, outpatientDischarges]);
 
   // 履歴を持つ患者のみ
   const patientsWithHistory: Patient[] = React.useMemo(() => {

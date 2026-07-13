@@ -62,6 +62,7 @@ const PatientList: React.FC = () => {
   const consultationFinishedMap = useAppStore((s) => s.consultationFinishedMap);
   const toggleConsultationFinished = useAppStore((s) => s.toggleConsultationFinished);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
+  const outpatientDischarges = useAppStore((s) => s.outpatientDischarges);
 
   // baseDate の永続化値が空文字なら今日を使う
   const baseDate = condition.baseDate || todayISO();
@@ -103,6 +104,8 @@ const PatientList: React.FC = () => {
     let list = PATIENTS.slice();
     list = list.filter((p) => {
       if (p.admissionState === 'discharged') return false;
+      // 退院確定（区分=通院）で外来化した患者は入院患者一覧から除外（セッション限定）
+      if (outpatientDischarges[p.id]) return false;
       return p.admitDate <= baseDate;
     });
     if (condition.wardFilter !== 'all') list = list.filter((p) => p.wardId === condition.wardFilter);
@@ -121,7 +124,7 @@ const PatientList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     baseDate, condition.wardFilter, condition.doctorFilter, condition.includeExaminer,
-    condition.staffIds, condition.staffMatchMode, condition.query,
+    condition.staffIds, condition.staffMatchMode, condition.query, outpatientDischarges,
   ]);
 
   const sorted = useMemo(() => {
