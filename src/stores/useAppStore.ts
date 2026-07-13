@@ -123,6 +123,12 @@ interface AppState {
   addAdmissionHistory: (record: AdmissionHistory) => void;
   removeAdmissionHistory: (id: string) => void;
 
+  // 退院確定（退院後診療区分=通院）による外来化。モックのためセッション限定（非永続化・リロードで戻る）。
+  //   ① 対象患者の実効 admissionState を 'outpatient' に上書き（カルテ表示・患者一覧で参照）
+  //   ② 入院歴の当該入院（進行中レコード）の退院区分を「退院後通院」に反映
+  outpatientDischarges: Record<string, { dischargeDate: string }>;
+  setOutpatientDischarge: (patientId: string, dischargeDate: string) => void;
+
   // ===== ep-05 隔離拘束指示 =====
   // 動的に追加・更新された隔離拘束指示（永続化対象）。
   // 既存の ISOLATION_ORDERS（マスタサンプル）と合成して表示する想定。
@@ -270,6 +276,11 @@ export const useAppStore = create<AppState>()(
         })),
       addAdmissionHistory: (record) =>
         set((state) => ({ addedAdmissionHistory: [...state.addedAdmissionHistory, record] })),
+      outpatientDischarges: {},
+      setOutpatientDischarge: (patientId, dischargeDate) =>
+        set((state) => ({
+          outpatientDischarges: { ...state.outpatientDischarges, [patientId]: { dischargeDate } },
+        })),
       removeAdmissionHistory: (id) =>
         set((state) => ({
           removedAdmissionHistoryIds: state.removedAdmissionHistoryIds.includes(id)
