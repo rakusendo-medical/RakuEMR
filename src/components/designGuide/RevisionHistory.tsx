@@ -169,6 +169,13 @@ const AdmissionOrderBadgeLegend: React.FC = () => (
 
 export const REVISIONS: Revision[] = [
   {
+    version: 'ver0.19',
+    date: '7/13',
+    fullDate: '2026-07-13',
+    context: '入退院情報ボタン SPEC 削除',
+    summary: 'ver0.16 で廃止済みの病棟マップ「入退院情報」ボタンについて、SPEC 記述に削除漏れがあったため、ep-01（us-01 病床表示／_epic）・ep-02（_epic）の要素ツリー・入口・AC から関連記述を削除。画面「入退院情報画面 (/admission)」の月次カレンダーとは別物のため保持する。',
+  },
+  {
     version: 'ver0.17',
     date: '7/6',
     fullDate: '2026-07-06',
