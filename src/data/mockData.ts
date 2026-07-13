@@ -18,6 +18,7 @@ import {
   OutpatientVisit, NursingPlan, PeriodicEvaluationRecord,
   BedFlag, BedFlagConfig, UnassignedPatient,
 } from '../types';
+import type { ScheduledMove } from '../stores/useAppStore';
 
 // ===== カルテ画面用データ =====
 
@@ -1092,6 +1093,23 @@ export const ADMISSION_HISTORY: AdmissionHistory[] = [
     doctorName: '森田 医師', status: '入院中',
     admitForm: '医療保護入院',
     admitReason: '抑うつ症状重度。家族同意のもと医療保護入院。',
+  },
+];
+
+// ===== 病床移動履歴（us-02 要件4 デモ用） =====
+// 履歴欄・取消の動作確認用サンプル。P001（山田 太郎）に「移動済」1件・「予定」1件。
+// 状態は scheduledAt と現在時刻で判定（過去=移動済 / 未来=予定）、取消は cancelledMoveIds で表現。
+export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [
+  // P001（山田 太郎）は第2病棟 202号室。過去に 203→202 へ移動済、今後 202→205 の予定。
+  {
+    id: 'MH-P001-1', patientId: 'P001', scheduledAt: '2026-06-01T10:00',
+    fromWardId: 'ward2', fromRoom: '203', fromBed: 'A',
+    toWardId: 'ward2', toRoom: '202', toBed: 'A',
+  },
+  {
+    id: 'MH-P001-2', patientId: 'P001', scheduledAt: '2027-03-01T10:00',
+    fromWardId: 'ward2', fromRoom: '202', fromBed: 'A',
+    toWardId: 'ward2', toRoom: '205', toBed: 'F',
   },
 ];
 

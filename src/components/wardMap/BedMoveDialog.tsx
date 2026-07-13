@@ -7,6 +7,7 @@ import {
 import type { Bed, Patient, UnassignedPatient, WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
 import { ROOMS } from '../../data/mockData';
+import type { ScheduledMove } from '../../stores/useAppStore';
 
 export type BedMoveMode = 'move' | 'assign';
 
@@ -30,6 +31,12 @@ interface Props {
   orderingMode?: boolean;
   /** 食事締め時間（モック: HH:mm 文字列） */
   mealCutoff?: string;
+  /** この患者の移動履歴（seed＋登録分）。移動モードの履歴欄に表示 */
+  moves?: ScheduledMove[];
+  /** 取消済みの移動 ID 集合 */
+  cancelledMoveIds?: string[];
+  /** 履歴の「取消」実行 */
+  onCancelMove?: (id: string) => void;
   onClose: () => void;
   onSubmit: (params: BedMoveSubmitParams) => void;
 }
@@ -55,7 +62,8 @@ const formatNow = () => {
 };
 
 const BedMoveDialog: React.FC<Props> = ({
-  open, mode, target, orderingMode = false, mealCutoff = '17:00', onClose, onSubmit,
+  open, mode, target, orderingMode = false, mealCutoff = '17:00',
+  moves = [], cancelledMoveIds = [], onCancelMove, onClose, onSubmit,
 }) => {
   const initialWard: WardId = (target?.currentWard
     ?? (target?.unassigned?.designatedWardId !== 'tentative' ? target?.unassigned?.designatedWardId as WardId : undefined)
@@ -72,6 +80,8 @@ const BedMoveDialog: React.FC<Props> = ({
   const [printMealSheet, setPrintMealSheet] = React.useState(false);
   const [confirmCutoff, setConfirmCutoff] = React.useState(false);
   const [outOfRangeWarn, setOutOfRangeWarn] = React.useState(false);
+  // 履歴の取消確認対象（要件4）
+  const [cancelTargetId, setCancelTargetId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -85,6 +95,7 @@ const BedMoveDialog: React.FC<Props> = ({
       setPrintMealSheet(false);
       setConfirmCutoff(false);
       setOutOfRangeWarn(false);
+      setCancelTargetId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target?.patient?.id, target?.unassigned?.id]);
@@ -228,13 +239,73 @@ const BedMoveDialog: React.FC<Props> = ({
               <Divider />
               <Box>
                 <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-                  履歴（モック表示）
+                  移動履歴
                 </Typography>
-                <Box sx={{ p: 1, border: '1px dashed', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>
-                  <Typography variant="caption">この患者の登録済み移動はありません。</Typography>
-                </Box>
+                {moves.length === 0 ? (
+                  <Box sx={{ p: 1, border: '1px dashed', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>
+                    <Typography variant="caption">この患者の登録済み移動はありません。</Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={0.5}>
+                    {[...moves].sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1)).map((m) => {
+                      const cancelled = cancelledMoveIds.includes(m.id);
+                      const status = cancelled ? '取消' : (new Date(m.scheduledAt) > new Date() ? '予定' : '移動済');
+                      const statusColor = cancelled ? 'default' : status === '予定' ? 'warning' : 'info';
+                      return (
+                        <Box
+                          key={m.id}
+                          sx={{
+                            display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
+                            px: 1, py: 0.75, border: '1px solid', borderColor: 'divider', borderRadius: 1,
+                            opacity: cancelled ? 0.6 : 1,
+                          }}
+                        >
+                          <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums', minWidth: 118 }}>
+                            {m.scheduledAt.replace('T', ' ')}
+                          </Typography>
+                          <Typography variant="caption" sx={{ flex: 1, minWidth: 180 }}>
+                            {WARD_LABELS[m.fromWardId]} {m.fromRoom}号室 → {WARD_LABELS[m.toWardId]} {m.toRoom}号室
+                          </Typography>
+                          <Chip
+                            label={status}
+                            size="small"
+                            color={statusColor}
+                            variant={cancelled ? 'outlined' : 'filled'}
+                            sx={{ height: 20 }}
+                          />
+                          {!cancelled && onCancelMove && (
+                            <Button size="small" color="error" onClick={() => setCancelTargetId(m.id)}>
+                              取消
+                            </Button>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                )}
               </Box>
             </>
+          )}
+
+          {cancelTargetId && (
+            <Alert
+              severity="warning"
+              action={
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" onClick={() => setCancelTargetId(null)}>やめる</Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="contained"
+                    onClick={() => { onCancelMove?.(cancelTargetId); setCancelTargetId(null); }}
+                  >
+                    取消を実行
+                  </Button>
+                </Stack>
+              }
+            >
+              この移動を取消します（履歴には取消として残ります。削除はされません）。
+            </Alert>
           )}
 
           {cutoffExceeded && confirmCutoff && (

@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
 import { useAppStore } from '../../stores/useAppStore';
@@ -34,6 +34,7 @@ const WardMap: React.FC = () => {
     setSelectedPatient, bedMenuPatientId, setBedMenuPatientId,
     setWardMapNavigation, showSnackbar,
     scheduledMoves, addScheduledMove,
+    cancelledMoveIds, cancelMove,
     pendingOrders, confirmedAdmissionIds,
     sidebarOpen,
   } = useAppStore();
@@ -130,8 +131,16 @@ const WardMap: React.FC = () => {
    *  現在時刻より未来の予定が 1 件でもあればアイコン表示。 */
   const hasScheduledMoveFor = React.useCallback((patientId: string) => {
     const now = new Date();
-    return scheduledMoves.some((m) => m.patientId === patientId && new Date(m.scheduledAt) > now);
-  }, [scheduledMoves]);
+    return scheduledMoves.some((m) =>
+      m.patientId === patientId && !cancelledMoveIds.includes(m.id) && new Date(m.scheduledAt) > now);
+  }, [scheduledMoves, cancelledMoveIds]);
+
+  // 転棟・転室ダイアログの履歴欄用: 対象患者の移動（seed＋登録分）。
+  const movesForDialog = React.useMemo(() => {
+    const pid = moveDialog.target?.patient?.id;
+    if (!pid) return [];
+    return [...MOVE_HISTORY_SAMPLES, ...scheduledMoves].filter((m) => m.patientId === pid);
+  }, [moveDialog.target, scheduledMoves]);
 
   /** 退院手続きダイアログを起動。対象患者の退院指示（ADMISSION_ORDERS + pendingOrders、未確定）を引き当てる。 */
   const handleOpenDischargeConfirm = (patient: Patient) => {
@@ -480,6 +489,9 @@ const WardMap: React.FC = () => {
         open={moveDialog.open}
         mode={moveDialog.mode}
         target={moveDialog.target}
+        moves={movesForDialog}
+        cancelledMoveIds={cancelledMoveIds}
+        onCancelMove={(id) => { cancelMove(id); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}
         onClose={closeMoveDialog}
         onSubmit={handleMoveSubmit}
       />

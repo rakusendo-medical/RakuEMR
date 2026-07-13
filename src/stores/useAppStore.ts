@@ -107,6 +107,10 @@ interface AppState {
   scheduledMoves: ScheduledMove[];
   addScheduledMove: (m: ScheduledMove) => void;
   removeScheduledMove: (id: string) => void;
+  // us-02 要件4: 移動履歴の「取消」。削除の代わりに取消 ID を保持し、履歴は取消状態で残す
+  //   （モックのためセッション限定・非永続化）。移動元病室への戻し等の振る舞いは要件5/6 で対応。
+  cancelledMoveIds: string[];
+  cancelMove: (id: string) => void;
 
   // ep-02/ep-03: カルテ記事への動的書込（永続化対象）
   // patientId をキーに、確定時に追記された MedicalRecord 配列を保持。
@@ -253,6 +257,10 @@ export const useAppStore = create<AppState>()(
       scheduledMoves: [],
       addScheduledMove: (m) => set((state) => ({ scheduledMoves: [...state.scheduledMoves, m] })),
       removeScheduledMove: (id) => set((state) => ({ scheduledMoves: state.scheduledMoves.filter((x) => x.id !== id) })),
+      cancelledMoveIds: [],
+      cancelMove: (id) => set((state) => (
+        state.cancelledMoveIds.includes(id) ? state : { cancelledMoveIds: [...state.cancelledMoveIds, id] }
+      )),
 
       dynamicMedicalRecords: {},
       // カルテ記事追加: 入退院確定や指示登録時に呼び出される。新カルテ画面（KartePage）が表示時にマージする。
