@@ -247,13 +247,13 @@ const BedMoveDialog: React.FC<Props> = ({
                   </Box>
                 ) : (
                   <Stack spacing={0.5}>
-                    {/* 見出し行: 移動日 / 病室 / 状態 / 種別 / 操作（データ行と同じ箱幾何にして列を揃える） */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.25, border: '1px solid transparent', color: 'text.secondary' }}>
-                      <Typography variant="caption" sx={{ minWidth: 120 }}>移動日</Typography>
-                      <Typography variant="caption" sx={{ flex: 1, minWidth: 120 }}>病室</Typography>
-                      <Typography variant="caption" sx={{ minWidth: 48, textAlign: 'center' }}>状態</Typography>
-                      <Typography variant="caption" sx={{ minWidth: 64, textAlign: 'center' }}>種別</Typography>
-                      <Typography variant="caption" sx={{ minWidth: 52, textAlign: 'right' }}>操作</Typography>
+                    {/* 見出し・データ行を同一の grid テンプレートで揃える（列ズレ防止） */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '120px 1fr 52px 64px 56px', columnGap: 1, alignItems: 'center', px: 1, py: 0.25, border: '1px solid transparent', color: 'text.secondary' }}>
+                      <Typography variant="caption">移動日</Typography>
+                      <Typography variant="caption">病室</Typography>
+                      <Typography variant="caption" sx={{ textAlign: 'center' }}>状態</Typography>
+                      <Typography variant="caption" sx={{ textAlign: 'center' }}>種別</Typography>
+                      <Typography variant="caption" sx={{ textAlign: 'right' }}>操作</Typography>
                     </Box>
                     {[...moves].sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1)).map((m) => {
                       const cancelled = cancelledMoveIds.includes(m.id);
@@ -267,20 +267,18 @@ const BedMoveDialog: React.FC<Props> = ({
                         <Box
                           key={m.id}
                           sx={{
-                            display: 'flex', alignItems: 'center', gap: 1,
+                            display: 'grid', gridTemplateColumns: '120px 1fr 52px 64px 56px', columnGap: 1, alignItems: 'center',
                             px: 1, py: 0.75, border: '1px solid', borderColor: 'divider', borderRadius: 1,
                             opacity: cancelled ? 0.6 : 1,
                           }}
                         >
-                          <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums', minWidth: 120 }}>
+                          <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums' }}>
                             {m.scheduledAt.replace('T', ' ')}
                           </Typography>
-                          <Typography variant="caption" sx={{ flex: 1, minWidth: 120 }}>
-                            <Box component="strong">
-                              {sameWard ? '' : `${WARD_LABELS[m.toWardId]} `}{m.toRoom}号室
-                            </Box>
+                          <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                            {sameWard ? '' : `${WARD_LABELS[m.toWardId]} `}{m.toRoom}号室
                           </Typography>
-                          <Box sx={{ minWidth: 48, textAlign: 'center' }}>
+                          <Box sx={{ textAlign: 'center' }}>
                             <Chip
                               label={status}
                               size="small"
@@ -289,12 +287,12 @@ const BedMoveDialog: React.FC<Props> = ({
                               sx={{ height: 20 }}
                             />
                           </Box>
-                          <Box sx={{ minWidth: 64, textAlign: 'center' }}>
+                          <Box sx={{ textAlign: 'center' }}>
                             <Chip label={kind} size="small" color={kindColor} variant="outlined" sx={{ height: 20 }} />
                           </Box>
-                          <Box sx={{ minWidth: 52, textAlign: 'right' }}>
+                          <Box sx={{ textAlign: 'right' }}>
                             {!cancelled && !isAdmission && onCancelMove && (
-                              <Button size="small" color="error" onClick={() => setCancelTargetId(m.id)}>
+                              <Button size="small" color="error" sx={{ minWidth: 0, px: 0.5 }} onClick={() => setCancelTargetId(m.id)}>
                                 取消
                               </Button>
                             )}
