@@ -169,6 +169,13 @@ const AdmissionOrderBadgeLegend: React.FC = () => (
 
 export const REVISIONS: Revision[] = [
   {
+    version: 'ver0.18',
+    date: '7/13',
+    fullDate: '2026-07-13',
+    context: '退院指示 地域連携削除',
+    summary: '退院指示の「地域連携（逆紹介）オプション」を機能として必要なくなったため削除。逆紹介設定（逆紹介するチェック＋カルテ閲覧期限）・地域連携トグル・optionalFeatures.regionalCooperation を撤去した（医療観察法・外部精神科システム連携は維持）。SPEC（us-09／ep-03）・関連ドキュメント（changes／HANDOVER／screen-mapping／issues）からも該当記述を削除し、削除理由（機能不要）を明記。',
+  },
+  {
     version: 'ver0.17',
     date: '7/6',
     fullDate: '2026-07-06',

@@ -100,7 +100,7 @@ export const MASTER_INTERVIEW_FORMS = ['標準（精神科）', '措置入院告
 
 ### `src/stores/useAppStore.ts`
 
-> **MASTER 指摘:** 既存 `dynamicMedicalRecords` と prefix 揃えるため `dynamicIsolationOrders`、optionalFeatures は他 3 トグル（`medicalProtection` / `regionalCooperation` / `psychiatricLink`）と揃えて Enabled suffix を付けず `restraintChange` とする。
+> **MASTER 指摘:** 既存 `dynamicMedicalRecords` と prefix 揃えるため `dynamicIsolationOrders`、optionalFeatures は他トグル（`medicalProtection` / `psychiatricLink`）と揃えて Enabled suffix を付けず `restraintChange` とする。（`regionalCooperation` は ver0.18 で削除）
 
 ```ts
 // ep-05 隔離拘束指示
