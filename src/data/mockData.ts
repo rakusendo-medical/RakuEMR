@@ -1117,6 +1117,12 @@ export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [
     fromWardId: 'ward2', fromRoom: '202', fromBed: 'A',
     toWardId: 'ward2', toRoom: '205', toBed: 'F',
   },
+  // 転棟（病棟間）の予定。病棟が変わる＝種別「転棟」として表示される（デモ用）。
+  {
+    id: 'MH-P001-3', patientId: 'P001', scheduledAt: '2027-09-01T10:00',
+    fromWardId: 'ward2', fromRoom: '202', fromBed: 'A',
+    toWardId: 'ward1', toRoom: '101', toBed: 'A',
+  },
 ];
 
 /**
