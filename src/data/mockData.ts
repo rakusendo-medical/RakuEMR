@@ -1,4 +1,5 @@
 import type {
+  WardId,
   Patient,
   InsuranceInfo,
   DiagnosisInfo,
@@ -1141,40 +1142,69 @@ const ADMISSION_MOVE_SAMPLES: ScheduledMove[] = PATIENTS
 // 履歴欄・取消の動作確認用サンプル。全入院患者に「入院」1件、P001 には転室・転棟の例も付与。
 export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [...P001_MOVE_SAMPLES, ...ADMISSION_MOVE_SAMPLES];
 
+const cloneRooms = (rooms: Room[]): Room[] => rooms.map((r) => ({ ...r, beds: r.beds.map((b) => ({ ...b })) }));
+
+// 患者を現在の在床から、指定病棟・病室の空き枠先頭へ移す（rooms を直接変更）。
+// 既に指定病室に在室・移動先が満床・患者が見つからない場合は何もしない（安全側）。
+const relocatePatient = (rooms: Room[], patientId: string, toWardId: WardId, toRoom: string): void => {
+  const cur = rooms.flatMap((r) => r.beds).find((b) => b.patientId === patientId);
+  if (!cur) return;
+  const curRoom = rooms.find((r) => r.beds.includes(cur));
+  if (curRoom && curRoom.wardId === toWardId && curRoom.roomNumber === toRoom) return; // 既に在室
+  const destRoom = rooms.find((r) => r.wardId === toWardId && r.roomNumber === toRoom);
+  const destBed = destRoom?.beds.find((b) => !b.disabled && !b.patientId);
+  if (!destBed) return; // 満床 → スキップ
+  destBed.patientId = cur.patientId;
+  destBed.patientName = cur.patientName;
+  destBed.gender = cur.gender;
+  destBed.age = cur.age;
+  destBed.status = cur.status;
+  destBed.flags = cur.flags ? [...cur.flags] : undefined;
+  cur.patientId = null;
+  cur.patientName = null;
+  cur.gender = null;
+  cur.age = null;
+  cur.status = 'empty';
+  cur.flags = undefined;
+};
+
+/**
+ * 登録済みの移動を病棟マップに反映する（純粋関数）。
+ * - 実施日時が現在以下（過去・現在）の移動 → 患者を移動先病室（toRoom）の空き枠へ移す（即時反映）。
+ * - 未来の移動 → 反映しない（移動予定アイコンのみ。時刻経過後の再描画で反映）。
+ * - 取消済み・入院行（from===to）は対象外。既に移動先に在室・満床はスキップ。
+ * 古い移動から順に適用し、複数移動が正しく積み上がるようにする。モックのためセッション限定。
+ */
+export const applyDueMoves = (
+  rooms: Room[], moves: ScheduledMove[], cancelledIds: string[], now: Date,
+): Room[] => {
+  const due = moves
+    .filter((m) => !cancelledIds.includes(m.id)
+      && new Date(m.scheduledAt).getTime() <= now.getTime()
+      && !(m.fromWardId === m.toWardId && m.fromRoom === m.toRoom))
+    .sort((a, b) => (a.scheduledAt < b.scheduledAt ? -1 : 1));
+  if (due.length === 0) return rooms;
+  const next = cloneRooms(rooms);
+  for (const m of due) relocatePatient(next, m.patientId, m.toWardId, m.toRoom);
+  return next;
+};
+
 /**
  * 移動の「取消」を病棟マップに反映する（要件5/6・純粋関数）。
- * - 取消された「移動済」（予定時刻を過ぎた）移動 → 患者を移動元病室（fromRoom）の空き枠へ戻す。
+ * - 取消された「移動済」（予定時刻を過ぎた）移動 → 患者を移動元病室（fromRoom）へ戻す。
  * - 取消された「予定」（未来）移動 → 病室は動かさない（要件6。ここでは対象外）。
- * 移動元病室に空き枠が無い場合はスキップ（安全側）。
+ * 移動元病室に空き枠が無い/既に在室の場合はスキップ（安全側）。
+ * 新しい移動から順に戻すと、複数取消でも正しく元の病室へ戻る。
  */
 export const applyCancelledMoves = (
   rooms: Room[], moves: ScheduledMove[], cancelledIds: string[], now: Date,
 ): Room[] => {
   const due = moves
     .filter((m) => cancelledIds.includes(m.id) && new Date(m.scheduledAt).getTime() <= now.getTime())
-    // 同一患者に複数の取消（移動済）がある場合、新しい移動から順に戻すと正しく元の病室へ戻る
     .sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1));
   if (due.length === 0) return rooms;
-  const next: Room[] = rooms.map((r) => ({ ...r, beds: r.beds.map((b) => ({ ...b })) }));
-  for (const m of due) {
-    const cur = next.flatMap((r) => r.beds).find((b) => b.patientId === m.patientId);
-    if (!cur) continue;
-    const destRoom = next.find((r) => r.wardId === m.fromWardId && r.roomNumber === m.fromRoom);
-    const destBed = destRoom?.beds.find((b) => !b.disabled && !b.patientId);
-    if (!destBed) continue; // 移動元病室に空き枠なし → スキップ
-    destBed.patientId = cur.patientId;
-    destBed.patientName = cur.patientName;
-    destBed.gender = cur.gender;
-    destBed.age = cur.age;
-    destBed.status = cur.status;
-    destBed.flags = cur.flags ? [...cur.flags] : undefined;
-    cur.patientId = null;
-    cur.patientName = null;
-    cur.gender = null;
-    cur.age = null;
-    cur.status = 'empty';
-    cur.flags = undefined;
-  }
+  const next = cloneRooms(rooms);
+  for (const m of due) relocatePatient(next, m.patientId, m.fromWardId, m.fromRoom);
   return next;
 };
 

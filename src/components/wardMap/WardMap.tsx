@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyCancelledMoves } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
 import { useAppStore } from '../../stores/useAppStore';
@@ -63,11 +63,13 @@ const WardMap: React.FC = () => {
     () => [...MOVE_HISTORY_SAMPLES, ...scheduledMoves].map((m) => (moveEdits[m.id] ? { ...m, ...moveEdits[m.id] } : m)),
     [scheduledMoves, moveEdits],
   );
-  // 取消（移動済）を反映したベッド配置 → 表示中病棟で絞り込み（要件5: 取消で移動前病室へ戻す）
-  const displayedRooms = React.useMemo(
-    () => applyCancelledMoves(ROOMS, allMoves, cancelledMoveIds, new Date()),
-    [allMoves, cancelledMoveIds],
-  );
+  // ベッド配置に「登録済み移動（実施日時が現在以下）」を反映（applyDueMoves）→ さらに「取消」を反映（applyCancelledMoves）。
+  //   過去・現在の移動は即時ベッド反映、未来の移動は移動予定アイコンのみ（時刻経過で反映）。いずれもモックのためリロードで元に戻る。
+  const displayedRooms = React.useMemo(() => {
+    const now = new Date();
+    const afterDue = applyDueMoves(ROOMS, allMoves, cancelledMoveIds, now);
+    return applyCancelledMoves(afterDue, allMoves, cancelledMoveIds, now);
+  }, [allMoves, cancelledMoveIds]);
   const rooms = displayedRooms.filter((r) => r.wardId === ward);
 
   // 病棟マップ表示順（カルテ画面の隣接ナビ用）
@@ -115,8 +117,10 @@ const WardMap: React.FC = () => {
   const closeMoveDialog = () => setMoveDialog((s) => ({ ...s, open: false }));
 
   const handleMoveSubmit = (params: BedMoveSubmitParams) => {
-    // 移動日時が未来の場合は scheduledMoves に登録 → ベッド表示の「移動予定」アイコン動的計算に使う
-    if (params.mode === 'move' && new Date(params.moveAt) > new Date()) {
+    // 移動（転棟・転室）は即時／未来を問わず scheduledMoves に登録する。
+    //   過去・現在の移動 → applyDueMoves で即ベッド反映／未来の移動 → 移動予定アイコン表示（時刻経過で反映）。
+    //   いずれもモックのためセッション限定（リロードで元に戻る）。
+    if (params.mode === 'move') {
       const t = moveDialog.target;
       addScheduledMove({
         id: `SM-${Date.now()}`,

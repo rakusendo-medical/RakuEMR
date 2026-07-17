@@ -459,11 +459,11 @@ export const useAppStore = create<AppState>()(
       name: 'rakuemr-app-store',
       storage: createJSONStorage(() => localStorage),
       // セッション UI（選択状態・スナックバーなど）は永続化しない。
-      // 永続化対象: pendingOrders / scheduledMoves / dynamicMedicalRecords / confirmedAdmissionIds /
+      // 病床移動（scheduledMoves / cancelledMoveIds / moveEdits）はモックのためセッション限定＝リロードで元に戻す。
+      // 永続化対象: pendingOrders / dynamicMedicalRecords / confirmedAdmissionIds /
       //            currentUserRole / optionalFeatures
       partialize: (state) => ({
         pendingOrders: state.pendingOrders,
-        scheduledMoves: state.scheduledMoves,
         dynamicMedicalRecords: state.dynamicMedicalRecords,
         confirmedAdmissionIds: state.confirmedAdmissionIds,
         currentUserRole: state.currentUserRole,
@@ -477,7 +477,14 @@ export const useAppStore = create<AppState>()(
         consultationFinishedMap: state.consultationFinishedMap,
         patientListSearchCondition: state.patientListSearchCondition,
       }),
-      version: 1,
+      version: 2,
+      // v2: scheduledMoves を永続化対象から除外（移動はセッション限定）。既存 localStorage から掃除する。
+      migrate: (persisted: unknown, version: number) => {
+        if (persisted && typeof persisted === 'object' && version < 2) {
+          delete (persisted as Record<string, unknown>).scheduledMoves;
+        }
+        return persisted as AppState;
+      },
     },
   ),
 );
