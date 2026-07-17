@@ -150,37 +150,33 @@ test.describe('病棟マップ', () => {
     await bedItems.first().click();
     await expect(page.locator('text=メニュー:')).toBeVisible();
 
-    // ② 「移動」をクリックして転棟・転室ダイアログを開く
-    await page.getByRole('button', { name: '移動' }).click();
+    // ② 「移動」をクリックして転棟・転室ダイアログを開く（フッターの [移動] を厳密指定。
+    //    改定履歴リンク「…病床移動（転棟・転室）改修」と部分一致で衝突するため exact 指定）
+    await page.getByRole('button', { name: '[移動]', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.locator('text=転棟・転室ダイアログ')).toBeVisible();
 
-    // ③ 移動先病室を順に試し、空きベッドのある病室を選んでベッドまで確定する
-    // ダイアログ内のセレクトは 病棟(0)・病室(1)・ベッド(2) の順
+    // ③ 移動先病室を順に試し、空きのある病室を選ぶ（ベッド指定は布団運用で廃止）
+    // ダイアログ内のセレクトは 病棟(0)・病室(1) の 2 つ。空きのある病室を選ぶと登録が活性化する
     const combos = page.getByRole('dialog').getByRole('combobox');
     const roomCombo = combos.nth(1);
-    const bedCombo = combos.nth(2);
-    let bedSelected = false;
+    const submitBtn = page.getByRole('button', { name: '登録' });
+    let roomSelected = false;
     await roomCombo.click();
     const roomCount = await page.getByRole('option').count();
     for (let i = 0; i < roomCount; i++) {
       await page.getByRole('option').nth(i).click();
-      // ベッド選択肢を開く
-      await bedCombo.click();
-      const realBeds = page.getByRole('option').filter({ hasNotText: '空きベッドなし' });
-      if (await realBeds.count() > 0) {
-        await realBeds.first().click();
-        bedSelected = true;
+      // 空きのある病室なら登録ボタンが活性化（満床なら非活性＋「空きがありません」警告）
+      if (await submitBtn.isEnabled()) {
+        roomSelected = true;
         break;
       }
-      // 空きが無ければベッドドロップダウンを閉じて次の病室へ
-      await page.keyboard.press('Escape');
+      // 満床なら次の病室へ
       await roomCombo.click();
     }
-    expect(bedSelected).toBe(true);
+    expect(roomSelected).toBe(true);
 
     // ④ 登録ボタンが活性化してクリックできる
-    const submitBtn = page.getByRole('button', { name: '登録' });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 

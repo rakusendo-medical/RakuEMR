@@ -122,13 +122,21 @@ const WardMap: React.FC = () => {
     //   いずれもモックのためセッション限定（リロードで元に戻る）。
     if (params.mode === 'move') {
       const t = moveDialog.target;
+      // 移動元は「登録時点の現況（displayedRooms）」から引き直す。
+      //   静的な PATIENTS 現在位置（target）だと、連続移動・取消で在床表示が動いた後に
+      //   履歴の移動元／取消の戻し先が実際の在床とズレるため。見つからなければ target をフォールバック。
+      let cur: { wardId: WardId; room: string; bed: string } | null = null;
+      for (const r of displayedRooms) {
+        const b = r.beds.find((bd) => bd.patientId === params.patientId);
+        if (b) { cur = { wardId: r.wardId, room: r.roomNumber, bed: b.bed }; break; }
+      }
       addScheduledMove({
         id: `SM-${Date.now()}`,
         patientId: params.patientId,
         scheduledAt: params.moveAt,
-        fromWardId: t?.currentWard ?? params.toWard,
-        fromRoom: t?.currentRoom ?? '',
-        fromBed: t?.currentBed ?? '',
+        fromWardId: cur?.wardId ?? t?.currentWard ?? params.toWard,
+        fromRoom: cur?.room ?? t?.currentRoom ?? '',
+        fromBed: cur?.bed ?? t?.currentBed ?? '',
         toWardId: params.toWard,
         toRoom: params.toRoom,
         toBed: params.toBed,
@@ -505,6 +513,7 @@ const WardMap: React.FC = () => {
         open={moveDialog.open}
         mode={moveDialog.mode}
         target={moveDialog.target}
+        rooms={displayedRooms}
         moves={movesForDialog}
         cancelledMoveIds={cancelledMoveIds}
         onCancelMove={(id) => { cancelMove(id); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}

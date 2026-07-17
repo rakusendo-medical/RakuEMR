@@ -4,7 +4,7 @@ import {
   Button, Box, Typography, Stack, FormControl, InputLabel, Select, MenuItem,
   TextField, FormControlLabel, Checkbox, Divider, Chip, Alert,
 } from '@mui/material';
-import type { Bed, Patient, UnassignedPatient, WardId } from '../../types';
+import type { Bed, Patient, Room, UnassignedPatient, WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
 import { ROOMS } from '../../data/mockData';
 import type { ScheduledMove } from '../../stores/useAppStore';
@@ -31,6 +31,9 @@ interface Props {
   orderingMode?: boolean;
   /** 食事締め時間（モック: HH:mm 文字列） */
   mealCutoff?: string;
+  /** 病室・在床の現況（病棟マップの表示反映＝applyDueMoves/applyCancelledMoves 適用済み）。
+   *  空き枠判定・満床判定はこの動的在床を基準にする。未指定時は静的 ROOMS。 */
+  rooms?: Room[];
   /** この患者の移動履歴（seed＋登録分）。移動モードの履歴欄に表示 */
   moves?: ScheduledMove[];
   /** 取消済みの移動 ID 集合 */
@@ -65,7 +68,7 @@ const formatNow = () => {
 
 const BedMoveDialog: React.FC<Props> = ({
   open, mode, target, orderingMode = false, mealCutoff = '17:00',
-  moves = [], cancelledMoveIds = [], onCancelMove, onUpdateMove, onClose, onSubmit,
+  rooms = ROOMS, moves = [], cancelledMoveIds = [], onCancelMove, onUpdateMove, onClose, onSubmit,
 }) => {
   const initialWard: WardId = (target?.currentWard
     ?? (target?.unassigned?.designatedWardId !== 'tentative' ? target?.unassigned?.designatedWardId as WardId : undefined)
@@ -116,9 +119,15 @@ const BedMoveDialog: React.FC<Props> = ({
       ? `${target.unassigned.age}歳${target.unassigned.gender === 'M' ? '男性' : '女性'} / ${target.unassigned.doctorName}`
       : '';
 
-  const wardRooms = ROOMS.filter((r) => r.wardId === toWard);
+  // 空き枠・満床は「病棟マップの現況（動的在床 rooms）」で判定する。
+  //   静的 ROOMS だと、登録済み移動で表示上は埋まった枠を空き扱いしてしまい、表示と登録可否がズレる。
+  const subjectPatientId = target?.patient?.id;
+  const wardRooms = rooms.filter((r) => r.wardId === toWard);
   const room = wardRooms.find((r) => r.roomNumber === toRoom);
-  const availableBeds = room ? room.beds.filter((b: Bed) => !b.disabled && !b.patientId) : [];
+  // 対象患者自身が占めるベッドは「空き」とみなす（自己ブロック防止）。他患者が居る枠のみ満床扱い。
+  const availableBeds = room
+    ? room.beds.filter((b: Bed) => !b.disabled && (!b.patientId || b.patientId === subjectPatientId))
+    : [];
   // ベッドは廃止（布団運用）。移動先病室の空き枠の先頭を自動割当する。
   const autoBed = availableBeds[0]?.bed ?? '';
   const roomFull = !!toRoom && availableBeds.length === 0;
@@ -173,9 +182,20 @@ const BedMoveDialog: React.FC<Props> = ({
   };
   const handleUpdate = () => {
     if (!editingMoveId || !toRoom || availableBeds.length === 0) return;
+    // 登録（handleSubmit）と同じ確認フローを経由させる（食事締め超過・範囲外の確認ダイアログ）。
+    if (cutoffExceeded && !confirmCutoff) {
+      setConfirmCutoff(true);
+      return;
+    }
+    if (showOutOfRange && !outOfRangeWarn) {
+      setOutOfRangeWarn(true);
+      return;
+    }
     onUpdateMove?.(editingMoveId, { toWardId: toWard, toRoom, scheduledAt: moveAt });
     onClose(); // AC-5: 更新後はダイアログを閉じて病棟マップに反映
   };
+  // 更新ボタンも「確認未了なら『確認』表示」に統一
+  const updatePending = (cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn);
 
   const submitLabel = mode === 'assign' ? '割当登録' : '登録';
   const headerLabel = mode === 'assign' ? '転棟・転室ダイアログ（割当）' : '転棟・転室ダイアログ（移動）';
@@ -324,6 +344,12 @@ const BedMoveDialog: React.FC<Props> = ({
                         <Box
                           key={m.id}
                           onClick={editable ? () => startEdit(m) : undefined}
+                          role={editable ? 'button' : undefined}
+                          tabIndex={editable ? 0 : undefined}
+                          aria-label={editable ? `${m.scheduledAt.replace('T', ' ')} ${WARD_LABELS[m.toWardId]} ${m.toRoom}号室への${kind}を更新` : undefined}
+                          onKeyDown={editable ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEdit(m); }
+                          } : undefined}
                           sx={{
                             display: 'grid', gridTemplateColumns: '116px 68px 1fr 48px 60px 52px', columnGap: 1, alignItems: 'center',
                             px: 1, py: 0.75, border: '1px solid',
@@ -332,6 +358,7 @@ const BedMoveDialog: React.FC<Props> = ({
                             borderRadius: 1, opacity: cancelled ? 0.6 : 1,
                             cursor: editable ? 'pointer' : 'default',
                             '&:hover': editable ? { bgcolor: editing ? 'action.selected' : 'action.hover' } : undefined,
+                            '&:focus-visible': editable ? { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px' } : undefined,
                           }}
                         >
                           <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -421,7 +448,7 @@ const BedMoveDialog: React.FC<Props> = ({
             onClick={handleUpdate}
             disabled={!toRoom || availableBeds.length === 0}
           >
-            更新
+            {updatePending ? '確認' : '更新'}
           </Button>
         ) : (
           <Button

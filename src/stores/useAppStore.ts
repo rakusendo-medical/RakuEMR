@@ -103,7 +103,7 @@ interface AppState {
   addPendingOrder: (o: PendingOrderEntry) => void;
   removePendingOrder: (id: string) => void;
 
-  // ep-01 us-02: 病床移動の予定（永続化対象）
+  // ep-01 us-02: 病床移動の予定（モックのためセッション限定・非永続化。partialize から除外・リロードで復帰）
   scheduledMoves: ScheduledMove[];
   addScheduledMove: (m: ScheduledMove) => void;
   removeScheduledMove: (id: string) => void;
