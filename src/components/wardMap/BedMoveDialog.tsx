@@ -224,6 +224,18 @@ const BedMoveDialog: React.FC<Props> = ({
           )}
 
           <Stack spacing={0.75}>
+            {/* 「移動日時と同じ」チェックは日時欄の上に配置（既定 ON） */}
+            <FormControlLabel
+              sx={{ m: 0 }}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={mealSameAsMove}
+                  onChange={(_, v) => setMealSameAsMove(v)}
+                />
+              }
+              label={<Typography variant="body2">配膳先変更日時は移動日時と同じ</Typography>}
+            />
             {/* 移動日時 と 配膳先変更日時 は同じ行で左右に揃える（配膳側は非表示時は空欄で高さ維持しない） */}
             <Stack direction="row" spacing={1.5}>
               <TextField
@@ -249,18 +261,6 @@ const BedMoveDialog: React.FC<Props> = ({
                 <Box sx={{ flex: 1 }} />
               )}
             </Stack>
-            {/* 「移動日時と同じ」チェックは日時欄の下の行に配置（既定 ON） */}
-            <FormControlLabel
-              sx={{ m: 0 }}
-              control={
-                <Checkbox
-                  size="small"
-                  checked={mealSameAsMove}
-                  onChange={(_, v) => setMealSameAsMove(v)}
-                />
-              }
-              label={<Typography variant="body2">配膳先変更日時は移動日時と同じ</Typography>}
-            />
           </Stack>
 
           {orderingMode && (
