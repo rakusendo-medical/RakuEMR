@@ -302,7 +302,7 @@ const BedMoveDialog: React.FC<Props> = ({
                     {/* 見出し・データ行を同一の grid テンプレートで揃える（列ズレ防止） */}
                     <Box sx={{ display: 'grid', gridTemplateColumns: '120px 1fr 52px 64px 56px', columnGap: 1, alignItems: 'center', px: 1, py: 0.25, border: '1px solid transparent', color: 'text.secondary' }}>
                       <Typography variant="caption">移動日</Typography>
-                      <Typography variant="caption">病室</Typography>
+                      <Typography variant="caption">病棟・病室</Typography>
                       <Typography variant="caption" sx={{ textAlign: 'center' }}>状態</Typography>
                       <Typography variant="caption" sx={{ textAlign: 'center' }}>種別</Typography>
                       <Typography variant="caption" sx={{ textAlign: 'right' }}>操作</Typography>
@@ -337,7 +337,7 @@ const BedMoveDialog: React.FC<Props> = ({
                             {m.scheduledAt.replace('T', ' ')}
                           </Typography>
                           <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                            {sameWard ? '' : `${WARD_LABELS[m.toWardId]} `}{m.toRoom}号室
+                            {WARD_LABELS[m.toWardId]} {m.toRoom}号室
                           </Typography>
                           <Box sx={{ textAlign: 'center' }}>
                             <Chip
