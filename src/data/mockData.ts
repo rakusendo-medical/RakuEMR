@@ -1099,8 +1099,9 @@ export const ADMISSION_HISTORY: AdmissionHistory[] = [
 // ===== 病床移動履歴（us-02 要件4 デモ用） =====
 // 履歴欄・取消の動作確認用サンプル。P001（山田 太郎）に「移動済」1件・「予定」1件。
 // 状態は scheduledAt と現在時刻で判定（過去=移動済 / 未来=予定）、取消は cancelledMoveIds で表現。
-export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [
-  // P001（山田 太郎）第2病棟。入院時 203号室 → 202へ移動済 → 202→205 の予定。
+// P001（山田 太郎）は入院・転室・転棟の全種別を確認できる詳細サンプル。
+const P001_MOVE_SAMPLES: ScheduledMove[] = [
+  // 第2病棟。入院時 203号室 → 202へ移動済 → 202→205 の予定。
   // 入院（最初の病室）は from===to で表現し、履歴に「入院」種別として表示（取消不可）。
   {
     id: 'MH-P001-0', patientId: 'P001', scheduledAt: '2026-01-10T10:00',
@@ -1124,6 +1125,21 @@ export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [
     toWardId: 'ward1', toRoom: '101', toBed: 'A',
   },
 ];
+
+// P001 以外の全入院患者へ「入院（現在の病室＝最初の病室）」の履歴を自動生成。
+// from===to（現在の病棟・病室）で入院行として表示される。モックのため静的生成＝リロードで元に戻る。
+const ADMISSION_MOVE_SAMPLES: ScheduledMove[] = PATIENTS
+  .filter((p) => p.id !== 'P001' && !!p.roomNumber && p.roomNumber !== 'tentative')
+  .map((p) => ({
+    id: `MH-${p.id}-0`,
+    patientId: p.id,
+    scheduledAt: `${p.admitDate}T10:00`,
+    fromWardId: p.wardId, fromRoom: p.roomNumber, fromBed: p.bedLabel,
+    toWardId: p.wardId, toRoom: p.roomNumber, toBed: p.bedLabel,
+  }));
+
+// 履歴欄・取消の動作確認用サンプル。全入院患者に「入院」1件、P001 には転室・転棟の例も付与。
+export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [...P001_MOVE_SAMPLES, ...ADMISSION_MOVE_SAMPLES];
 
 /**
  * 移動の「取消」を病棟マップに反映する（要件5/6・純粋関数）。
