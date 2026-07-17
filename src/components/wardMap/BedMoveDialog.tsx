@@ -76,6 +76,8 @@ const BedMoveDialog: React.FC<Props> = ({
   const [toRoom, setToRoom] = React.useState<string>(initialRoom);
   const [moveAt, setMoveAt] = React.useState<string>(formatNow());
   const [mealAt, setMealAt] = React.useState<string>(formatNow());
+  // 配膳先変更日時は基本、移動日時と同じ。ON=移動日時と同値・入力欄非表示／OFF=個別入力
+  const [mealSameAsMove, setMealSameAsMove] = React.useState(true);
   const [isolation, setIsolation] = React.useState(false);
   const [restraint, setRestraint] = React.useState(false);
   const [printMoveSheet, setPrintMoveSheet] = React.useState(false);
@@ -93,6 +95,7 @@ const BedMoveDialog: React.FC<Props> = ({
       setToRoom(initialRoom);
       setMoveAt(formatNow());
       setMealAt(formatNow());
+      setMealSameAsMove(true);
       setIsolation(false);
       setRestraint(false);
       setPrintMoveSheet(false);
@@ -146,7 +149,8 @@ const BedMoveDialog: React.FC<Props> = ({
       toRoom,
       toBed: autoBed,
       moveAt,
-      mealAt,
+      // 「移動日時と同じ」ON のときは移動日時を配膳先変更日時として送る
+      mealAt: mealSameAsMove ? moveAt : mealAt,
       isolation: orderingMode ? isolation : undefined,
       restraint: orderingMode ? restraint : undefined,
       printMoveSheet,
@@ -219,7 +223,7 @@ const BedMoveDialog: React.FC<Props> = ({
             </Typography>
           )}
 
-          <Stack direction="row" spacing={1.5}>
+          <Stack direction="row" spacing={1.5} alignItems="flex-start">
             <TextField
               size="small"
               label="移動日時"
@@ -229,15 +233,30 @@ const BedMoveDialog: React.FC<Props> = ({
               InputLabelProps={{ shrink: true }}
               sx={{ flex: 1 }}
             />
-            <TextField
-              size="small"
-              label="配膳先変更日時"
-              type="datetime-local"
-              value={mealAt}
-              onChange={(e) => setMealAt(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ flex: 1 }}
-            />
+            <Box sx={{ flex: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={mealSameAsMove}
+                    onChange={(_, v) => setMealSameAsMove(v)}
+                  />
+                }
+                label={<Typography variant="body2">配膳先変更日時は移動日時と同じ</Typography>}
+              />
+              {!mealSameAsMove && (
+                <TextField
+                  size="small"
+                  fullWidth
+                  label="配膳先変更日時"
+                  type="datetime-local"
+                  value={mealAt}
+                  onChange={(e) => setMealAt(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ mt: 0.5 }}
+                />
+              )}
+            </Box>
           </Stack>
 
           {orderingMode && (
