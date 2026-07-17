@@ -131,6 +131,13 @@ const BedMoveDialog: React.FC<Props> = ({
   // ベッドは廃止（布団運用）。移動先病室の空き枠の先頭を自動割当する。
   const autoBed = availableBeds[0]?.bed ?? '';
   const roomFull = !!toRoom && availableBeds.length === 0;
+  // 移動先が移動元（新規＝現在の病室／更新＝その移動の移動元）と同一なら実質「移動なし」。
+  //   fromRoom===toRoom の退化レコードは履歴で入院扱いになり、病棟マップ反映側でも no-op となるため、
+  //   履歴だけが不整合に増える。同一先への登録／更新は禁止する。
+  const editingMove = editingMoveId ? moves.find((m) => m.id === editingMoveId) : undefined;
+  const sourceWard = editingMove ? editingMove.fromWardId : target.currentWard;
+  const sourceRoom = editingMove ? editingMove.fromRoom : target.currentRoom;
+  const sameAsSource = !!toRoom && toWard === sourceWard && toRoom === sourceRoom;
 
   // 食事締め時間判定（モック簡易版）
   const moveTime = moveAt.split('T')[1] ?? '00:00';
@@ -143,6 +150,7 @@ const BedMoveDialog: React.FC<Props> = ({
   const showOutOfRange = (wardOutOfRange || roomOutOfRange) && !!toRoom;
 
   const handleSubmit = () => {
+    if (sameAsSource) return;
     if (cutoffExceeded && !confirmCutoff) {
       setConfirmCutoff(true);
       return;
@@ -181,7 +189,7 @@ const BedMoveDialog: React.FC<Props> = ({
     setMoveAt(formatNow());
   };
   const handleUpdate = () => {
-    if (!editingMoveId || !toRoom || availableBeds.length === 0) return;
+    if (!editingMoveId || !toRoom || availableBeds.length === 0 || sameAsSource) return;
     // 登録（handleSubmit）と同じ確認フローを経由させる（食事締め超過・範囲外の確認ダイアログ）。
     if (cutoffExceeded && !confirmCutoff) {
       setConfirmCutoff(true);
@@ -240,6 +248,11 @@ const BedMoveDialog: React.FC<Props> = ({
           {roomFull && (
             <Typography variant="caption" color="error">
               選択した病室に空きがありません。別の病室を選択してください。
+            </Typography>
+          )}
+          {sameAsSource && !roomFull && (
+            <Typography variant="caption" color="error">
+              移動先が移動元と同じ病室です。別の病室を選択してください。
             </Typography>
           )}
 
@@ -446,7 +459,7 @@ const BedMoveDialog: React.FC<Props> = ({
           <Button
             variant="contained"
             onClick={handleUpdate}
-            disabled={!toRoom || availableBeds.length === 0}
+            disabled={!toRoom || availableBeds.length === 0 || sameAsSource}
           >
             {updatePending ? '確認' : '更新'}
           </Button>
@@ -454,7 +467,7 @@ const BedMoveDialog: React.FC<Props> = ({
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={!toRoom || availableBeds.length === 0}
+            disabled={!toRoom || availableBeds.length === 0 || sameAsSource}
           >
             {(cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn) ? '確認' : submitLabel}
           </Button>

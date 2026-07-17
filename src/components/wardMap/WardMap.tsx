@@ -40,6 +40,13 @@ const WardMap: React.FC = () => {
   } = useAppStore();
   const sidebarWidth = sidebarOpen ? 220 : 60;
   const [ward, setWard] = React.useState<WardId>('ward1');
+  // 「時刻経過で反映」を満たすため、一定間隔で現在時刻を更新して displayedRooms／移動予定アイコンを再計算させる。
+  //   （useMemo 内で new Date() を作るだけだと、他の再レンダーが起きるまで未来→現在の切替が反映されない）
+  const [now, setNow] = React.useState<Date>(() => new Date());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   const [activeFeature, setActiveFeature] = React.useState<RelatedFeatureKey | null>(null);
   const [moveDialog, setMoveDialog] = React.useState<{ open: boolean; mode: BedMoveMode; target: BedMoveTarget | null }>({
@@ -66,11 +73,19 @@ const WardMap: React.FC = () => {
   // ベッド配置に「登録済み移動（実施日時が現在以下）」を反映（applyDueMoves）→ さらに「取消」を反映（applyCancelledMoves）。
   //   過去・現在の移動は即時ベッド反映、未来の移動は移動予定アイコンのみ（時刻経過で反映）。いずれもモックのためリロードで元に戻る。
   const displayedRooms = React.useMemo(() => {
-    const now = new Date();
     const afterDue = applyDueMoves(ROOMS, allMoves, cancelledMoveIds, now);
     return applyCancelledMoves(afterDue, allMoves, cancelledMoveIds, now);
-  }, [allMoves, cancelledMoveIds]);
+  }, [allMoves, cancelledMoveIds, now]);
   const rooms = displayedRooms.filter((r) => r.wardId === ward);
+
+  /** 患者の現在位置を病棟マップの現況（displayedRooms＝反映後）から引く。見つからなければ null。 */
+  const findCurrentLocation = React.useCallback((patientId: string): { wardId: WardId; room: string; bed: string } | null => {
+    for (const r of displayedRooms) {
+      const b = r.beds.find((bd) => bd.patientId === patientId);
+      if (b) return { wardId: r.wardId, room: r.roomNumber, bed: b.bed };
+    }
+    return null;
+  }, [displayedRooms]);
 
   // 病棟マップ表示順（カルテ画面の隣接ナビ用）
   const wardOrderedPatientIds = React.useMemo(
@@ -102,14 +117,16 @@ const WardMap: React.FC = () => {
   };
 
   const handleMove = (patient: Patient) => {
+    // 現在位置は静的な PATIENTS ではなく現況（displayedRooms）から引く（登録済み移動の反映後に追従）。
+    const cur = findCurrentLocation(patient.id);
     setMoveDialog({
       open: true,
       mode: 'move',
       target: {
         patient,
-        currentWard: patient.wardId,
-        currentRoom: patient.roomNumber,
-        currentBed: patient.bedLabel,
+        currentWard: cur?.wardId ?? patient.wardId,
+        currentRoom: cur?.room ?? patient.roomNumber,
+        currentBed: cur?.bed ?? patient.bedLabel,
       },
     });
   };
@@ -125,11 +142,7 @@ const WardMap: React.FC = () => {
       // 移動元は「登録時点の現況（displayedRooms）」から引き直す。
       //   静的な PATIENTS 現在位置（target）だと、連続移動・取消で在床表示が動いた後に
       //   履歴の移動元／取消の戻し先が実際の在床とズレるため。見つからなければ target をフォールバック。
-      let cur: { wardId: WardId; room: string; bed: string } | null = null;
-      for (const r of displayedRooms) {
-        const b = r.beds.find((bd) => bd.patientId === params.patientId);
-        if (b) { cur = { wardId: r.wardId, room: r.roomNumber, bed: b.bed }; break; }
-      }
+      const cur = findCurrentLocation(params.patientId);
       addScheduledMove({
         id: `SM-${Date.now()}`,
         patientId: params.patientId,
@@ -152,12 +165,11 @@ const WardMap: React.FC = () => {
   /** 患者ID から「移動予定」かどうかを判定。scheduledMoves と未確定 pending orders を見て、
    *  現在時刻より未来の予定が 1 件でもあればアイコン表示。 */
   const hasScheduledMoveFor = React.useCallback((patientId: string) => {
-    const now = new Date();
     // seed（MOVE_HISTORY_SAMPLES）＋登録分に更新差分（moveEdits）を適用した allMoves で判定。
-    // 履歴欄の「未（予定）」表示とアイコンのデータソースを一致させる。
+    // 履歴欄の「未（予定）」表示とアイコンのデータソースを一致させる。now は定期更新され時刻経過で切り替わる。
     return allMoves.some((m) =>
       m.patientId === patientId && !cancelledMoveIds.includes(m.id) && new Date(m.scheduledAt) > now);
-  }, [allMoves, cancelledMoveIds]);
+  }, [allMoves, cancelledMoveIds, now]);
 
   // 転棟・転室ダイアログの履歴欄用: 対象患者の移動（seed＋登録分・更新差分適用済み）。
   const movesForDialog = React.useMemo(() => {
