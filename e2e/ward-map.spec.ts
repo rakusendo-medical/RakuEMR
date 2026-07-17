@@ -157,28 +157,39 @@ test.describe('病棟マップ', () => {
     await expect(page.locator('text=転棟・転室ダイアログ')).toBeVisible();
 
     // ③ 移動先病室を順に試し、空きのある病室を選ぶ（ベッド指定は布団運用で廃止）
-    // ダイアログ内のセレクトは 病棟(0)・病室(1) の 2 つ。空きのある病室を選ぶと登録が活性化する
-    const combos = page.getByRole('dialog').getByRole('combobox');
+    // ダイアログ内のセレクトは 病棟(0)・病室(1) の 2 つ。空きのある病室を選ぶと登録が活性化する。
+    // 送信ボタンは通常「登録」だが、移動日時が食事締め時間（既定 17:00）を過ぎていると
+    // 一段目が「確認」表示になる（実行時刻依存）。どちらでも拾えるよう /登録|確認/ で特定する。
+    const dialog = page.getByRole('dialog');
+    const combos = dialog.getByRole('combobox');
     const roomCombo = combos.nth(1);
-    const submitBtn = page.getByRole('button', { name: '登録' });
+    const submitBtn = dialog.getByRole('button', { name: /^(登録|確認)$/ });
     let roomSelected = false;
     await roomCombo.click();
     const roomCount = await page.getByRole('option').count();
     for (let i = 0; i < roomCount; i++) {
       await page.getByRole('option').nth(i).click();
-      // 空きのある病室なら登録ボタンが活性化（満床なら非活性＋「空きがありません」警告）
+      // 空きがあり かつ 移動元と別の病室なら送信ボタンが活性化
+      //   （満床＝空きなし警告 / 移動元と同一＝同一病室警告 のときは非活性）
       if (await submitBtn.isEnabled()) {
         roomSelected = true;
         break;
       }
-      // 満床なら次の病室へ
+      // 非活性なら次の病室へ
       await roomCombo.click();
     }
     expect(roomSelected).toBe(true);
 
-    // ④ 登録ボタンが活性化してクリックできる
+    // ④ 送信。食事締め超過時は「確認」→（アラート表示）→「登録」の 2 段階になる。
     await expect(submitBtn).toBeEnabled();
+    const needsConfirm = ((await submitBtn.textContent()) ?? '').includes('確認');
     await submitBtn.click();
+    if (needsConfirm) {
+      // 食事締め確認アラートが出てボタンが「登録」に切り替わるのを待ってから本登録
+      await expect(page.getByText(/食事締め時間/)).toBeVisible();
+      await expect(submitBtn).toHaveText('登録');
+      await submitBtn.click();
+    }
 
     // ⑤ 「移動を登録しました」スナックバーが表示されること
     await expect(page.locator('text=/移動を登録しました/')).toBeVisible();
