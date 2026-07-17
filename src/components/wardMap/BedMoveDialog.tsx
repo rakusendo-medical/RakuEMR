@@ -314,7 +314,8 @@ const BedMoveDialog: React.FC<Props> = ({
                       const isAdmission = sameWard && m.fromRoom === m.toRoom; // 入院（最初の病室）
                       const status = cancelled ? '取消' : (new Date(m.scheduledAt) > new Date() ? '未' : '済');
                       const statusColor = cancelled ? 'default' : status === '未' ? 'warning' : 'info';
-                      const kind = isAdmission ? '入院' : sameWard ? '移動' : '転棟';
+                      // 種別: 入院（最初の病室）／転室（同一病棟の病室移動）／転棟（病棟間）
+                      const kind = isAdmission ? '入院' : sameWard ? '転室' : '転棟';
                       const kindColor = isAdmission ? 'primary' : sameWard ? 'default' : 'secondary';
                       const editable = !isAdmission && !cancelled && !!onUpdateMove; // 予定・移動済のみ更新可
                       const editing = editingMoveId === m.id;
