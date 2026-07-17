@@ -198,9 +198,29 @@ export const RevisionList: React.FC = () => (
             </Box>
           </AccordionSummary>
           <AccordionDetails sx={{ pt: 0 }}>
-            <Typography variant="body2" sx={{ mb: (rev.commits || designCompare) ? 1.5 : 0 }}>
+            <Typography variant="body2" sx={{ mb: (rev.items || rev.commits || designCompare) ? 1.5 : 0 }}>
               {rev.summary}
             </Typography>
+
+            {rev.items && (
+              <Stack spacing={0.75} sx={{ mb: (rev.commits || designCompare) ? 1.5 : 0 }}>
+                {rev.items.map((it) => (
+                  <Box key={it.title} sx={{ display: 'flex', gap: 0.75 }}>
+                    <Box component="span" sx={{ flexShrink: 0, color: 'text.secondary', lineHeight: 1.5 }}>
+                      ・
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography component="span" variant="body2" sx={{ fontWeight: 700 }}>
+                        {it.title}
+                      </Typography>
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        {' — '}{it.detail}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Stack>
+            )}
 
             {designCompare && (
               <Box sx={{ mb: rev.commits ? 1.5 : 0 }}>

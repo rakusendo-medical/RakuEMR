@@ -4,9 +4,10 @@ import {
   Button, Box, Typography, Stack, FormControl, InputLabel, Select, MenuItem,
   TextField, FormControlLabel, Checkbox, Divider, Chip, Alert,
 } from '@mui/material';
-import type { Bed, Patient, UnassignedPatient, WardId } from '../../types';
+import type { Bed, Patient, Room, UnassignedPatient, WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
 import { ROOMS } from '../../data/mockData';
+import type { ScheduledMove } from '../../stores/useAppStore';
 
 export type BedMoveMode = 'move' | 'assign';
 
@@ -30,6 +31,17 @@ interface Props {
   orderingMode?: boolean;
   /** 食事締め時間（モック: HH:mm 文字列） */
   mealCutoff?: string;
+  /** 病室・在床の現況（病棟マップの表示反映＝applyDueMoves/applyCancelledMoves 適用済み）。
+   *  空き枠判定・満床判定はこの動的在床を基準にする。未指定時は静的 ROOMS。 */
+  rooms?: Room[];
+  /** この患者の移動履歴（seed＋登録分）。移動モードの履歴欄に表示 */
+  moves?: ScheduledMove[];
+  /** 取消済みの移動 ID 集合 */
+  cancelledMoveIds?: string[];
+  /** 履歴の「取消」実行 */
+  onCancelMove?: (id: string) => void;
+  /** 履歴の「更新」実行（移動先・移動日時の変更。ベッドは布団運用のため持たない） */
+  onUpdateMove?: (id: string, patch: { toWardId: WardId; toRoom: string; scheduledAt: string }) => void;
   onClose: () => void;
   onSubmit: (params: BedMoveSubmitParams) => void;
 }
@@ -55,39 +67,46 @@ const formatNow = () => {
 };
 
 const BedMoveDialog: React.FC<Props> = ({
-  open, mode, target, orderingMode = false, mealCutoff = '17:00', onClose, onSubmit,
+  open, mode, target, orderingMode = false, mealCutoff = '17:00',
+  rooms = ROOMS, moves = [], cancelledMoveIds = [], onCancelMove, onUpdateMove, onClose, onSubmit,
 }) => {
   const initialWard: WardId = (target?.currentWard
     ?? (target?.unassigned?.designatedWardId !== 'tentative' ? target?.unassigned?.designatedWardId as WardId : undefined)
     ?? 'ward1') as WardId;
   const initialRoom = (target?.unassigned?.designatedRoomNumber !== 'tentative' ? target?.unassigned?.designatedRoomNumber as string : '') ?? '';
-  const initialBed = (target?.unassigned?.designatedBedLabel !== 'tentative' ? target?.unassigned?.designatedBedLabel as string : '') ?? '';
 
   const [toWard, setToWard] = React.useState<WardId>(initialWard);
   const [toRoom, setToRoom] = React.useState<string>(initialRoom);
-  const [toBed, setToBed] = React.useState<string>(initialBed);
   const [moveAt, setMoveAt] = React.useState<string>(formatNow());
   const [mealAt, setMealAt] = React.useState<string>(formatNow());
+  // 配膳先変更日時は基本、移動日時と同じ。ON=移動日時と同値・入力欄非表示／OFF=個別入力
+  const [mealSameAsMove, setMealSameAsMove] = React.useState(true);
   const [isolation, setIsolation] = React.useState(false);
   const [restraint, setRestraint] = React.useState(false);
   const [printMoveSheet, setPrintMoveSheet] = React.useState(false);
   const [printMealSheet, setPrintMealSheet] = React.useState(false);
   const [confirmCutoff, setConfirmCutoff] = React.useState(false);
   const [outOfRangeWarn, setOutOfRangeWarn] = React.useState(false);
+  // 履歴の取消確認対象（要件4）
+  const [cancelTargetId, setCancelTargetId] = React.useState<string | null>(null);
+  // 更新モード（履歴行を選択して編集中の移動 ID）。null=新規登録モード
+  const [editingMoveId, setEditingMoveId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (open) {
       setToWard(initialWard);
       setToRoom(initialRoom);
-      setToBed(initialBed);
       setMoveAt(formatNow());
       setMealAt(formatNow());
+      setMealSameAsMove(true);
       setIsolation(false);
       setRestraint(false);
       setPrintMoveSheet(false);
       setPrintMealSheet(false);
       setConfirmCutoff(false);
       setOutOfRangeWarn(false);
+      setCancelTargetId(null);
+      setEditingMoveId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target?.patient?.id, target?.unassigned?.id]);
@@ -100,9 +119,25 @@ const BedMoveDialog: React.FC<Props> = ({
       ? `${target.unassigned.age}歳${target.unassigned.gender === 'M' ? '男性' : '女性'} / ${target.unassigned.doctorName}`
       : '';
 
-  const wardRooms = ROOMS.filter((r) => r.wardId === toWard);
+  // 空き枠・満床は「病棟マップの現況（動的在床 rooms）」で判定する。
+  //   静的 ROOMS だと、登録済み移動で表示上は埋まった枠を空き扱いしてしまい、表示と登録可否がズレる。
+  const subjectPatientId = target?.patient?.id;
+  const wardRooms = rooms.filter((r) => r.wardId === toWard);
   const room = wardRooms.find((r) => r.roomNumber === toRoom);
-  const availableBeds = room ? room.beds.filter((b: Bed) => !b.disabled && !b.patientId) : [];
+  // 対象患者自身が占めるベッドは「空き」とみなす（自己ブロック防止）。他患者が居る枠のみ満床扱い。
+  const availableBeds = room
+    ? room.beds.filter((b: Bed) => !b.disabled && (!b.patientId || b.patientId === subjectPatientId))
+    : [];
+  // ベッドは廃止（布団運用）。移動先病室の空き枠の先頭を自動割当する。
+  const autoBed = availableBeds[0]?.bed ?? '';
+  const roomFull = !!toRoom && availableBeds.length === 0;
+  // 移動先が移動元（新規＝現在の病室／更新＝その移動の移動元）と同一なら実質「移動なし」。
+  //   fromRoom===toRoom の退化レコードは履歴で入院扱いになり、病棟マップ反映側でも no-op となるため、
+  //   履歴だけが不整合に増える。同一先への登録／更新は禁止する。
+  const editingMove = editingMoveId ? moves.find((m) => m.id === editingMoveId) : undefined;
+  const sourceWard = editingMove ? editingMove.fromWardId : target.currentWard;
+  const sourceRoom = editingMove ? editingMove.fromRoom : target.currentRoom;
+  const sameAsSource = !!toRoom && toWard === sourceWard && toRoom === sourceRoom;
 
   // 食事締め時間判定（モック簡易版）
   const moveTime = moveAt.split('T')[1] ?? '00:00';
@@ -112,9 +147,10 @@ const BedMoveDialog: React.FC<Props> = ({
   const u = target.unassigned;
   const wardOutOfRange = u && u.designatedWardId !== 'tentative' && u.designatedWardId !== toWard;
   const roomOutOfRange = u && u.designatedRoomNumber !== 'tentative' && u.designatedRoomNumber !== toRoom;
-  const showOutOfRange = (wardOutOfRange || roomOutOfRange) && !!toRoom && !!toBed;
+  const showOutOfRange = (wardOutOfRange || roomOutOfRange) && !!toRoom;
 
   const handleSubmit = () => {
+    if (sameAsSource) return;
     if (cutoffExceeded && !confirmCutoff) {
       setConfirmCutoff(true);
       return;
@@ -128,15 +164,46 @@ const BedMoveDialog: React.FC<Props> = ({
       patientId: target.patient?.id ?? target.unassigned?.id ?? '',
       toWard,
       toRoom,
-      toBed,
+      toBed: autoBed,
       moveAt,
-      mealAt,
+      // 「移動日時と同じ」ON のときは移動日時を配膳先変更日時として送る
+      mealAt: mealSameAsMove ? moveAt : mealAt,
       isolation: orderingMode ? isolation : undefined,
       restraint: orderingMode ? restraint : undefined,
       printMoveSheet,
       printMealSheet,
     });
   };
+
+  // 履歴行を選択 → フォームに値を読み込み、更新モードへ（削除は不可）
+  const startEdit = (mv: ScheduledMove) => {
+    setToWard(mv.toWardId);
+    setToRoom(mv.toRoom);
+    setMoveAt(mv.scheduledAt);
+    setEditingMoveId(mv.id);
+  };
+  const exitEdit = () => {
+    setEditingMoveId(null);
+    setToWard(initialWard);
+    setToRoom(initialRoom);
+    setMoveAt(formatNow());
+  };
+  const handleUpdate = () => {
+    if (!editingMoveId || !toRoom || availableBeds.length === 0 || sameAsSource) return;
+    // 登録（handleSubmit）と同じ確認フローを経由させる（食事締め超過・範囲外の確認ダイアログ）。
+    if (cutoffExceeded && !confirmCutoff) {
+      setConfirmCutoff(true);
+      return;
+    }
+    if (showOutOfRange && !outOfRangeWarn) {
+      setOutOfRangeWarn(true);
+      return;
+    }
+    onUpdateMove?.(editingMoveId, { toWardId: toWard, toRoom, scheduledAt: moveAt });
+    onClose(); // AC-5: 更新後はダイアログを閉じて病棟マップに反映
+  };
+  // 更新ボタンも「確認未了なら『確認』表示」に統一
+  const updatePending = (cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn);
 
   const submitLabel = mode === 'assign' ? '割当登録' : '登録';
   const headerLabel = mode === 'assign' ? '転棟・転室ダイアログ（割当）' : '転棟・転室ダイアログ（移動）';
@@ -152,58 +219,81 @@ const BedMoveDialog: React.FC<Props> = ({
       <DialogContent dividers>
         <Stack spacing={2}>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <Chip label={mode === 'assign' ? '割当' : '移動'} size="small" color="primary" />
+            <Chip label={mode === 'assign' ? '割当' : editingMoveId ? '移動（更新）' : '移動'} size="small" color={editingMoveId ? 'warning' : 'primary'} />
             {orderingMode && <Chip label="オーダリング運用" size="small" color="warning" />}
+            {editingMoveId && (
+              <Typography variant="caption" color="text.secondary">
+                履歴の移動を更新中（下部の履歴から選択。[新規登録に戻る] で解除）
+              </Typography>
+            )}
           </Stack>
 
           <Stack direction="row" spacing={1.5}>
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>移動先 病棟</InputLabel>
-              <Select label="移動先 病棟" value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}>
+              <Select label="移動先 病棟" value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); }}>
                 <MenuItem value="ward1">第１病棟</MenuItem>
                 <MenuItem value="ward2">第２病棟</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>移動先 病室</InputLabel>
-              <Select label="移動先 病室" value={toRoom} onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}>
+              <Select label="移動先 病室" value={toRoom} onChange={(e) => setToRoom(e.target.value)}>
                 {wardRooms.map((r) => (
                   <MenuItem key={r.roomNumber} value={r.roomNumber}>{r.roomNumber}号室</MenuItem>
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }} disabled={!room}>
-              <InputLabel>移動先 ベッド</InputLabel>
-              <Select label="移動先 ベッド" value={toBed} onChange={(e) => setToBed(e.target.value)}>
-                {availableBeds.map((b) => (
-                  <MenuItem key={b.bed} value={b.bed}>{b.bed}</MenuItem>
-                ))}
-                {availableBeds.length === 0 && (
-                  <MenuItem value="" disabled>空きベッドなし</MenuItem>
-                )}
-              </Select>
-            </FormControl>
           </Stack>
+          {roomFull && (
+            <Typography variant="caption" color="error">
+              選択した病室に空きがありません。別の病室を選択してください。
+            </Typography>
+          )}
+          {sameAsSource && !roomFull && (
+            <Typography variant="caption" color="error">
+              移動先が移動元と同じ病室です。別の病室を選択してください。
+            </Typography>
+          )}
 
-          <Stack direction="row" spacing={1.5}>
-            <TextField
-              size="small"
-              label="移動日時"
-              type="datetime-local"
-              value={moveAt}
-              onChange={(e) => setMoveAt(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ flex: 1 }}
+          <Stack spacing={0.75}>
+            {/* 「移動日時と同じ」チェックは日時欄の上に配置（既定 ON） */}
+            <FormControlLabel
+              sx={{ m: 0 }}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={mealSameAsMove}
+                  onChange={(_, v) => setMealSameAsMove(v)}
+                />
+              }
+              label={<Typography variant="body2">配膳先変更日時は移動日時と同じ</Typography>}
             />
-            <TextField
-              size="small"
-              label="配膳先変更日時"
-              type="datetime-local"
-              value={mealAt}
-              onChange={(e) => setMealAt(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ flex: 1 }}
-            />
+            {/* 移動日時 と 配膳先変更日時 は同じ行で左右に揃える（配膳側は非表示時は空欄で高さ維持しない） */}
+            <Stack direction="row" spacing={1.5}>
+              <TextField
+                size="small"
+                label="移動日時"
+                type="datetime-local"
+                value={moveAt}
+                onChange={(e) => setMoveAt(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1 }}
+              />
+              {!mealSameAsMove ? (
+                <TextField
+                  size="small"
+                  label="配膳先変更日時"
+                  type="datetime-local"
+                  value={mealAt}
+                  onChange={(e) => setMealAt(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ flex: 1 }}
+                />
+              ) : (
+                <Box sx={{ flex: 1 }} />
+              )}
+            </Stack>
           </Stack>
 
           {orderingMode && (
@@ -234,13 +324,117 @@ const BedMoveDialog: React.FC<Props> = ({
               <Divider />
               <Box>
                 <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-                  履歴（モック表示）
+                  移動履歴
                 </Typography>
-                <Box sx={{ p: 1, border: '1px dashed', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>
-                  <Typography variant="caption">この患者の登録済み移動はありません。</Typography>
-                </Box>
+                {moves.length === 0 ? (
+                  <Box sx={{ p: 1, border: '1px dashed', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>
+                    <Typography variant="caption">この患者の登録済み移動はありません。</Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={0.5}>
+                    {/* 見出し・データ行を同一の grid テンプレートで揃える（列ズレ防止） */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '116px 68px 1fr 48px 60px 52px', columnGap: 1, alignItems: 'center', px: 1, py: 0.25, border: '1px solid transparent', color: 'text.secondary' }}>
+                      <Typography variant="caption">移動日</Typography>
+                      <Typography variant="caption">病棟</Typography>
+                      <Typography variant="caption">病室</Typography>
+                      <Typography variant="caption" sx={{ textAlign: 'center' }}>状態</Typography>
+                      <Typography variant="caption" sx={{ textAlign: 'center' }}>種別</Typography>
+                      <Typography variant="caption" sx={{ textAlign: 'right' }}>操作</Typography>
+                    </Box>
+                    {/* 入院（最古）を先頭に、以降は移動履歴（時系列・昇順） */}
+                    {[...moves].sort((a, b) => (a.scheduledAt < b.scheduledAt ? -1 : 1)).map((m) => {
+                      const cancelled = cancelledMoveIds.includes(m.id);
+                      const sameWard = m.fromWardId === m.toWardId;
+                      const isAdmission = sameWard && m.fromRoom === m.toRoom; // 入院（最初の病室）
+                      const status = cancelled ? '取消' : (new Date(m.scheduledAt) > new Date() ? '未' : '済');
+                      const statusColor = cancelled ? 'default' : status === '未' ? 'warning' : 'info';
+                      // 種別: 入院（最初の病室）／転室（同一病棟の病室移動）／転棟（病棟間）
+                      const kind = isAdmission ? '入院' : sameWard ? '転室' : '転棟';
+                      const kindColor = isAdmission ? 'primary' : sameWard ? 'default' : 'secondary';
+                      const editable = !isAdmission && !cancelled && !!onUpdateMove; // 予定・移動済のみ更新可
+                      const editing = editingMoveId === m.id;
+                      return (
+                        <Box
+                          key={m.id}
+                          onClick={editable ? () => startEdit(m) : undefined}
+                          role={editable ? 'button' : undefined}
+                          tabIndex={editable ? 0 : undefined}
+                          aria-label={editable ? `${m.scheduledAt.replace('T', ' ')} ${WARD_LABELS[m.toWardId]} ${m.toRoom}号室への${kind}を更新` : undefined}
+                          onKeyDown={editable ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEdit(m); }
+                          } : undefined}
+                          sx={{
+                            display: 'grid', gridTemplateColumns: '116px 68px 1fr 48px 60px 52px', columnGap: 1, alignItems: 'center',
+                            px: 1, py: 0.75, border: '1px solid',
+                            borderColor: editing ? 'primary.main' : 'divider',
+                            bgcolor: editing ? 'action.selected' : 'transparent',
+                            borderRadius: 1, opacity: cancelled ? 0.6 : 1,
+                            cursor: editable ? 'pointer' : 'default',
+                            '&:hover': editable ? { bgcolor: editing ? 'action.selected' : 'action.hover' } : undefined,
+                            '&:focus-visible': editable ? { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px' } : undefined,
+                          }}
+                        >
+                          <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {m.scheduledAt.replace('T', ' ')}
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                            {WARD_LABELS[m.toWardId]}
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                            {m.toRoom}号室
+                          </Typography>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Chip
+                              label={status}
+                              size="small"
+                              color={statusColor}
+                              variant={cancelled ? 'outlined' : 'filled'}
+                              sx={{ height: 20 }}
+                            />
+                          </Box>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Chip label={kind} size="small" color={kindColor} variant="outlined" sx={{ height: 20 }} />
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            {!cancelled && !isAdmission && onCancelMove && (
+                              <Button
+                                size="small"
+                                color="error"
+                                sx={{ minWidth: 0, px: 0.5 }}
+                                onClick={(e) => { e.stopPropagation(); setCancelTargetId(m.id); }}
+                              >
+                                取消
+                              </Button>
+                            )}
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                )}
               </Box>
             </>
+          )}
+
+          {cancelTargetId && (
+            <Alert
+              severity="warning"
+              action={
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" onClick={() => setCancelTargetId(null)}>やめる</Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="contained"
+                    onClick={() => { onCancelMove?.(cancelTargetId); setCancelTargetId(null); }}
+                  >
+                    取消を実行
+                  </Button>
+                </Stack>
+              }
+            >
+              この移動を取消します（履歴には取消として残ります。削除はされません）。
+            </Alert>
           )}
 
           {cutoffExceeded && confirmCutoff && (
@@ -257,14 +451,27 @@ const BedMoveDialog: React.FC<Props> = ({
         </Stack>
       </DialogContent>
       <DialogActions>
+        {editingMoveId && (
+          <Button onClick={exitEdit} sx={{ mr: 'auto' }}>新規登録に戻る</Button>
+        )}
         <Button onClick={onClose}>キャンセル</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={!toRoom || !toBed}
-        >
-          {(cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn) ? '確認' : submitLabel}
-        </Button>
+        {editingMoveId ? (
+          <Button
+            variant="contained"
+            onClick={handleUpdate}
+            disabled={!toRoom || availableBeds.length === 0 || sameAsSource}
+          >
+            {updatePending ? '確認' : '更新'}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={!toRoom || availableBeds.length === 0 || sameAsSource}
+          >
+            {(cutoffExceeded && !confirmCutoff) || (showOutOfRange && !outOfRangeWarn) ? '確認' : submitLabel}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

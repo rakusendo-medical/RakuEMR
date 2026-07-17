@@ -103,10 +103,19 @@ interface AppState {
   addPendingOrder: (o: PendingOrderEntry) => void;
   removePendingOrder: (id: string) => void;
 
-  // ep-01 us-02: 病床移動の予定（永続化対象）
+  // ep-01 us-02: 病床移動の予定（モックのためセッション限定・非永続化。partialize から除外・リロードで復帰）
   scheduledMoves: ScheduledMove[];
   addScheduledMove: (m: ScheduledMove) => void;
   removeScheduledMove: (id: string) => void;
+  // us-02 要件4: 移動履歴の「取消」。削除の代わりに取消 ID を保持し、履歴は取消状態で残す
+  //   （モックのためセッション限定・非永続化）。移動元病室への戻し等の振る舞いは要件5/6 で対応。
+  cancelledMoveIds: string[];
+  cancelMove: (id: string) => void;
+  // us-02: 移動履歴の「更新」。移動先（病棟／病室）・移動日時の変更差分を id 単位で保持
+  //   （seed／登録分の両方に適用。モックのためセッション限定・非永続化）。
+  //   ベッドは布団運用で廃止のため保持しない（表示は病棟・病室のみ）。
+  moveEdits: Record<string, { toWardId: WardId; toRoom: string; scheduledAt: string }>;
+  updateMove: (id: string, patch: { toWardId: WardId; toRoom: string; scheduledAt: string }) => void;
 
   // ep-02/ep-03: カルテ記事への動的書込（永続化対象）
   // patientId をキーに、確定時に追記された MedicalRecord 配列を保持。
@@ -253,6 +262,12 @@ export const useAppStore = create<AppState>()(
       scheduledMoves: [],
       addScheduledMove: (m) => set((state) => ({ scheduledMoves: [...state.scheduledMoves, m] })),
       removeScheduledMove: (id) => set((state) => ({ scheduledMoves: state.scheduledMoves.filter((x) => x.id !== id) })),
+      cancelledMoveIds: [],
+      cancelMove: (id) => set((state) => (
+        state.cancelledMoveIds.includes(id) ? state : { cancelledMoveIds: [...state.cancelledMoveIds, id] }
+      )),
+      moveEdits: {},
+      updateMove: (id, patch) => set((state) => ({ moveEdits: { ...state.moveEdits, [id]: patch } })),
 
       dynamicMedicalRecords: {},
       // カルテ記事追加: 入退院確定や指示登録時に呼び出される。新カルテ画面（KartePage）が表示時にマージする。
@@ -444,11 +459,11 @@ export const useAppStore = create<AppState>()(
       name: 'rakuemr-app-store',
       storage: createJSONStorage(() => localStorage),
       // セッション UI（選択状態・スナックバーなど）は永続化しない。
-      // 永続化対象: pendingOrders / scheduledMoves / dynamicMedicalRecords / confirmedAdmissionIds /
+      // 病床移動（scheduledMoves / cancelledMoveIds / moveEdits）はモックのためセッション限定＝リロードで元に戻す。
+      // 永続化対象: pendingOrders / dynamicMedicalRecords / confirmedAdmissionIds /
       //            currentUserRole / optionalFeatures
       partialize: (state) => ({
         pendingOrders: state.pendingOrders,
-        scheduledMoves: state.scheduledMoves,
         dynamicMedicalRecords: state.dynamicMedicalRecords,
         confirmedAdmissionIds: state.confirmedAdmissionIds,
         currentUserRole: state.currentUserRole,
@@ -462,7 +477,14 @@ export const useAppStore = create<AppState>()(
         consultationFinishedMap: state.consultationFinishedMap,
         patientListSearchCondition: state.patientListSearchCondition,
       }),
-      version: 1,
+      version: 2,
+      // v2: scheduledMoves を永続化対象から除外（移動はセッション限定）。既存 localStorage から掃除する。
+      migrate: (persisted: unknown, version: number) => {
+        if (persisted && typeof persisted === 'object' && version < 2) {
+          delete (persisted as Record<string, unknown>).scheduledMoves;
+        }
+        return persisted as AppState;
+      },
     },
   ),
 );
