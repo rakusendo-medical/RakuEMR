@@ -1150,9 +1150,10 @@ export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [...P001_MOVE_SAMPLES, ...A
 export const applyCancelledMoves = (
   rooms: Room[], moves: ScheduledMove[], cancelledIds: string[], now: Date,
 ): Room[] => {
-  const due = moves.filter(
-    (m) => cancelledIds.includes(m.id) && new Date(m.scheduledAt).getTime() <= now.getTime(),
-  );
+  const due = moves
+    .filter((m) => cancelledIds.includes(m.id) && new Date(m.scheduledAt).getTime() <= now.getTime())
+    // 同一患者に複数の取消（移動済）がある場合、新しい移動から順に戻すと正しく元の病室へ戻る
+    .sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1));
   if (due.length === 0) return rooms;
   const next: Room[] = rooms.map((r) => ({ ...r, beds: r.beds.map((b) => ({ ...b })) }));
   for (const m of due) {

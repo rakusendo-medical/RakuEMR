@@ -37,8 +37,8 @@ interface Props {
   cancelledMoveIds?: string[];
   /** 履歴の「取消」実行 */
   onCancelMove?: (id: string) => void;
-  /** 履歴の「更新」実行（移動先・移動日時の変更） */
-  onUpdateMove?: (id: string, patch: { toWardId: WardId; toRoom: string; toBed: string; scheduledAt: string }) => void;
+  /** 履歴の「更新」実行（移動先・移動日時の変更。ベッドは布団運用のため持たない） */
+  onUpdateMove?: (id: string, patch: { toWardId: WardId; toRoom: string; scheduledAt: string }) => void;
   onClose: () => void;
   onSubmit: (params: BedMoveSubmitParams) => void;
 }
@@ -173,7 +173,7 @@ const BedMoveDialog: React.FC<Props> = ({
   };
   const handleUpdate = () => {
     if (!editingMoveId || !toRoom || availableBeds.length === 0) return;
-    onUpdateMove?.(editingMoveId, { toWardId: toWard, toRoom, toBed: autoBed, scheduledAt: moveAt });
+    onUpdateMove?.(editingMoveId, { toWardId: toWard, toRoom, scheduledAt: moveAt });
     onClose(); // AC-5: 更新後はダイアログを閉じて病棟マップに反映
   };
 

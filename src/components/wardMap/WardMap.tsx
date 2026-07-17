@@ -141,9 +141,11 @@ const WardMap: React.FC = () => {
    *  現在時刻より未来の予定が 1 件でもあればアイコン表示。 */
   const hasScheduledMoveFor = React.useCallback((patientId: string) => {
     const now = new Date();
-    return scheduledMoves.some((m) =>
+    // seed（MOVE_HISTORY_SAMPLES）＋登録分に更新差分（moveEdits）を適用した allMoves で判定。
+    // 履歴欄の「未（予定）」表示とアイコンのデータソースを一致させる。
+    return allMoves.some((m) =>
       m.patientId === patientId && !cancelledMoveIds.includes(m.id) && new Date(m.scheduledAt) > now);
-  }, [scheduledMoves, cancelledMoveIds]);
+  }, [allMoves, cancelledMoveIds]);
 
   // 転棟・転室ダイアログの履歴欄用: 対象患者の移動（seed＋登録分・更新差分適用済み）。
   const movesForDialog = React.useMemo(() => {

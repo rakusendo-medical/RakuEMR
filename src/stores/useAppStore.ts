@@ -113,8 +113,9 @@ interface AppState {
   cancelMove: (id: string) => void;
   // us-02: 移動履歴の「更新」。移動先（病棟／病室）・移動日時の変更差分を id 単位で保持
   //   （seed／登録分の両方に適用。モックのためセッション限定・非永続化）。
-  moveEdits: Record<string, { toWardId: WardId; toRoom: string; toBed: string; scheduledAt: string }>;
-  updateMove: (id: string, patch: { toWardId: WardId; toRoom: string; toBed: string; scheduledAt: string }) => void;
+  //   ベッドは布団運用で廃止のため保持しない（表示は病棟・病室のみ）。
+  moveEdits: Record<string, { toWardId: WardId; toRoom: string; scheduledAt: string }>;
+  updateMove: (id: string, patch: { toWardId: WardId; toRoom: string; scheduledAt: string }) => void;
 
   // ep-02/ep-03: カルテ記事への動的書込（永続化対象）
   // patientId をキーに、確定時に追記された MedicalRecord 配列を保持。
