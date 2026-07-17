@@ -332,7 +332,7 @@ const WardMap: React.FC = () => {
                           </Box>
                         </Stack>
                         <Stack direction="row" spacing={0.5} alignItems="center">
-                          {bed.patientId && (hasScheduledMoveFor(bed.patientId) || bed.hasScheduledMove) && (
+                          {bed.patientId && hasScheduledMoveFor(bed.patientId) && (
                             <Chip icon={<MoveDownIcon sx={{ fontSize: 12 }} />} label="移動予定" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ecfeff', color: '#0e7490' }} />
                           )}
                           <BedFlagIcons flags={bed.flags} />

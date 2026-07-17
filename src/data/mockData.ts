@@ -363,7 +363,7 @@ export const ROOMS: Room[] = [
   ]},
   { roomNumber: '203', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P025', patientName: '石川 裕二', status: 'stable', gender: 'M', age: 28 },
-    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔', status: 'stable', gender: 'M', age: 44, flags: ['overnight'], hasScheduledMove: true },
+    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔', status: 'stable', gender: 'M', age: 44, flags: ['overnight'] },
     { bed: 'C', patientId: 'P028', patientName: '西川 雅之', status: 'stable', gender: 'M', age: 51 },
     { bed: 'D', patientId: 'P009', patientName: '小林 誠', status: 'stable', gender: 'M', age: 38 },
     { bed: 'E', patientId: 'P030', patientName: '安田 正人', status: 'stable', gender: 'M', age: 57 },
