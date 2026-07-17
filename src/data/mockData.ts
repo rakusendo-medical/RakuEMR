@@ -1,4 +1,5 @@
 import type {
+  WardId,
   Patient,
   InsuranceInfo,
   DiagnosisInfo,
@@ -18,6 +19,7 @@ import {
   OutpatientVisit, NursingPlan, PeriodicEvaluationRecord,
   BedFlag, BedFlagConfig, UnassignedPatient,
 } from '../types';
+import type { ScheduledMove } from '../stores/useAppStore';
 
 // ===== カルテ画面用データ =====
 
@@ -362,7 +364,7 @@ export const ROOMS: Room[] = [
   ]},
   { roomNumber: '203', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P025', patientName: '石川 裕二', status: 'stable', gender: 'M', age: 28 },
-    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔', status: 'stable', gender: 'M', age: 44, flags: ['overnight'], hasScheduledMove: true },
+    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔', status: 'stable', gender: 'M', age: 44, flags: ['overnight'] },
     { bed: 'C', patientId: 'P028', patientName: '西川 雅之', status: 'stable', gender: 'M', age: 51 },
     { bed: 'D', patientId: 'P009', patientName: '小林 誠', status: 'stable', gender: 'M', age: 38 },
     { bed: 'E', patientId: 'P030', patientName: '安田 正人', status: 'stable', gender: 'M', age: 57 },
@@ -1094,6 +1096,117 @@ export const ADMISSION_HISTORY: AdmissionHistory[] = [
     admitReason: '抑うつ症状重度。家族同意のもと医療保護入院。',
   },
 ];
+
+// ===== 病床移動履歴（us-02 要件4 デモ用） =====
+// 履歴欄・取消の動作確認用サンプル。P001（山田 太郎）に「移動済」1件・「予定」1件。
+// 状態は scheduledAt と現在時刻で判定（過去=移動済 / 未来=予定）、取消は cancelledMoveIds で表現。
+// P001（山田 太郎）は入院・転室・転棟の全種別を確認できる詳細サンプル。
+const P001_MOVE_SAMPLES: ScheduledMove[] = [
+  // 第2病棟。入院時 203号室 → 202へ移動済 → 202→205 の予定。
+  // 入院（最初の病室）は from===to で表現し、履歴に「入院」種別として表示（取消不可）。
+  {
+    id: 'MH-P001-0', patientId: 'P001', scheduledAt: '2026-01-10T10:00',
+    fromWardId: 'ward2', fromRoom: '203', fromBed: 'B',
+    toWardId: 'ward2', toRoom: '203', toBed: 'B',
+  },
+  {
+    id: 'MH-P001-1', patientId: 'P001', scheduledAt: '2026-06-01T10:00',
+    fromWardId: 'ward2', fromRoom: '203', fromBed: 'B',
+    toWardId: 'ward2', toRoom: '202', toBed: 'A',
+  },
+  {
+    id: 'MH-P001-2', patientId: 'P001', scheduledAt: '2027-03-01T10:00',
+    fromWardId: 'ward2', fromRoom: '202', fromBed: 'A',
+    toWardId: 'ward2', toRoom: '205', toBed: 'F',
+  },
+  // 転棟（病棟間）の予定。病棟が変わる＝種別「転棟」として表示される（デモ用）。
+  {
+    id: 'MH-P001-3', patientId: 'P001', scheduledAt: '2027-09-01T10:00',
+    fromWardId: 'ward2', fromRoom: '202', fromBed: 'A',
+    toWardId: 'ward1', toRoom: '101', toBed: 'A',
+  },
+];
+
+// P001 以外の全入院患者へ「入院（現在の病室＝最初の病室）」の履歴を自動生成。
+// from===to（現在の病棟・病室）で入院行として表示される。モックのため静的生成＝リロードで元に戻る。
+const ADMISSION_MOVE_SAMPLES: ScheduledMove[] = PATIENTS
+  .filter((p) => p.id !== 'P001' && !!p.roomNumber && p.roomNumber !== 'tentative')
+  .map((p) => ({
+    id: `MH-${p.id}-0`,
+    patientId: p.id,
+    scheduledAt: `${p.admitDate}T10:00`,
+    fromWardId: p.wardId, fromRoom: p.roomNumber, fromBed: p.bedLabel,
+    toWardId: p.wardId, toRoom: p.roomNumber, toBed: p.bedLabel,
+  }));
+
+// 履歴欄・取消の動作確認用サンプル。全入院患者に「入院」1件、P001 には転室・転棟の例も付与。
+export const MOVE_HISTORY_SAMPLES: ScheduledMove[] = [...P001_MOVE_SAMPLES, ...ADMISSION_MOVE_SAMPLES];
+
+const cloneRooms = (rooms: Room[]): Room[] => rooms.map((r) => ({ ...r, beds: r.beds.map((b) => ({ ...b })) }));
+
+// 患者を現在の在床から、指定病棟・病室の空き枠先頭へ移す（rooms を直接変更）。
+// 既に指定病室に在室・移動先が満床・患者が見つからない場合は何もしない（安全側）。
+const relocatePatient = (rooms: Room[], patientId: string, toWardId: WardId, toRoom: string): void => {
+  const cur = rooms.flatMap((r) => r.beds).find((b) => b.patientId === patientId);
+  if (!cur) return;
+  const curRoom = rooms.find((r) => r.beds.includes(cur));
+  if (curRoom && curRoom.wardId === toWardId && curRoom.roomNumber === toRoom) return; // 既に在室
+  const destRoom = rooms.find((r) => r.wardId === toWardId && r.roomNumber === toRoom);
+  const destBed = destRoom?.beds.find((b) => !b.disabled && !b.patientId);
+  if (!destBed) return; // 満床 → スキップ
+  destBed.patientId = cur.patientId;
+  destBed.patientName = cur.patientName;
+  destBed.gender = cur.gender;
+  destBed.age = cur.age;
+  destBed.status = cur.status;
+  destBed.flags = cur.flags ? [...cur.flags] : undefined;
+  cur.patientId = null;
+  cur.patientName = null;
+  cur.gender = null;
+  cur.age = null;
+  cur.status = 'empty';
+  cur.flags = undefined;
+};
+
+/**
+ * 登録済みの移動を病棟マップに反映する（純粋関数）。
+ * - 実施日時が現在以下（過去・現在）の移動 → 患者を移動先病室（toRoom）の空き枠へ移す（即時反映）。
+ * - 未来の移動 → 反映しない（移動予定アイコンのみ。時刻経過後の再描画で反映）。
+ * - 取消済み・入院行（from===to）は対象外。既に移動先に在室・満床はスキップ。
+ * 古い移動から順に適用し、複数移動が正しく積み上がるようにする。モックのためセッション限定。
+ */
+export const applyDueMoves = (
+  rooms: Room[], moves: ScheduledMove[], cancelledIds: string[], now: Date,
+): Room[] => {
+  const due = moves
+    .filter((m) => !cancelledIds.includes(m.id)
+      && new Date(m.scheduledAt).getTime() <= now.getTime()
+      && !(m.fromWardId === m.toWardId && m.fromRoom === m.toRoom))
+    .sort((a, b) => (a.scheduledAt < b.scheduledAt ? -1 : 1));
+  if (due.length === 0) return rooms;
+  const next = cloneRooms(rooms);
+  for (const m of due) relocatePatient(next, m.patientId, m.toWardId, m.toRoom);
+  return next;
+};
+
+/**
+ * 移動の「取消」を病棟マップに反映する（要件5/6・純粋関数）。
+ * - 取消された「移動済」（予定時刻を過ぎた）移動 → 患者を移動元病室（fromRoom）へ戻す。
+ * - 取消された「予定」（未来）移動 → 病室は動かさない（要件6。ここでは対象外）。
+ * 移動元病室に空き枠が無い/既に在室の場合はスキップ（安全側）。
+ * 新しい移動から順に戻すと、複数取消でも正しく元の病室へ戻る。
+ */
+export const applyCancelledMoves = (
+  rooms: Room[], moves: ScheduledMove[], cancelledIds: string[], now: Date,
+): Room[] => {
+  const due = moves
+    .filter((m) => cancelledIds.includes(m.id) && new Date(m.scheduledAt).getTime() <= now.getTime())
+    .sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1));
+  if (due.length === 0) return rooms;
+  const next = cloneRooms(rooms);
+  for (const m of due) relocatePatient(next, m.patientId, m.fromWardId, m.fromRoom);
+  return next;
+};
 
 // ===== 隔離拘束 =====
 // ===== ep-05 隔離拘束指示 =====
