@@ -378,7 +378,7 @@ const NursingRecordDialog: React.FC<Props> = ({
               {tags.map((t) => (
                 <Chip
                   key={t} label={t} size="small"
-                  onDelete={isViewMode ? undefined : () => setTags(tags.filter((x) => x !== t))}
+                  onDelete={isViewMode ? undefined : () => setTags((prev) => prev.filter((x) => x !== t))}
                 />
               ))}
               {!isViewMode && (
@@ -386,10 +386,12 @@ const NursingRecordDialog: React.FC<Props> = ({
                   size="small" placeholder="タグを追加 (Enter)"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
+                  inputProps={{ 'aria-label': 'タグを追加' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && tagInput.trim()) {
                       e.preventDefault();
-                      if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
+                      const v = tagInput.trim();
+                      setTags((prev) => (prev.includes(v) ? prev : [...prev, v]));
                       setTagInput('');
                     }
                   }}
