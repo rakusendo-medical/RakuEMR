@@ -165,12 +165,15 @@ const BedMoveDialog: React.FC<Props> = ({
   const roomOutOfRange = u && u.designatedRoomNumber !== 'tentative' && u.designatedRoomNumber !== toRoom;
   const showOutOfRange = (wardOutOfRange || roomOutOfRange) && !!toRoom;
 
-  // us-02: 取消できるのは未実施（未）の予定のみ。実施済（済）は取消ボタン自体を出さないため
-  //   ここでは実行のみ行う（済の修正は新しい移動の登録で対応する運用）。
+  // us-02: 取消できるのは未実施（未）の予定のみ（済の修正は新しい移動の登録で対応する運用）。
+  //   取消ボタンは未の行にのみ表示されるが、表示したまま実施時刻を跨ぐと済になった移動を
+  //   取消できてしまうため、実行時点でも未実施であることを再確認する。
   const handleCancelExecute = () => {
     if (!cancelTargetId) return;
-    onCancelMove?.(cancelTargetId);
+    const mv = moves.find((m) => m.id === cancelTargetId);
     setCancelTargetId(null);
+    if (!mv || new Date(mv.scheduledAt).getTime() <= Date.now()) return;
+    onCancelMove?.(cancelTargetId);
   };
 
   const handleSubmit = () => {
