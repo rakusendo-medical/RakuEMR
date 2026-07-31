@@ -217,6 +217,13 @@ const BedMoveDialog: React.FC<Props> = ({
   };
   const handleUpdate = () => {
     if (!editingMoveId || !toRoom || availableBeds.length === 0 || sameAsSource || conflictFull) return;
+    // us-02: 更新できるのは未実施（未）の予定のみ。編集モードのまま実施時刻を跨いだ場合に
+    //   済になった移動を書き換えられないよう、実行時点でも未実施であることを再確認する（取消と同様）。
+    const editingTarget = moves.find((m) => m.id === editingMoveId);
+    if (!editingTarget || new Date(editingTarget.scheduledAt).getTime() <= Date.now()) {
+      exitEdit();
+      return;
+    }
     // 登録（handleSubmit）と同じ確認フローを経由させる（食事締め超過・範囲外の確認ダイアログ）。
     if (cutoffExceeded && !confirmCutoff) {
       setConfirmCutoff(true);
