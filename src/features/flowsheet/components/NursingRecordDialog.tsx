@@ -371,6 +371,33 @@ const NursingRecordDialog: React.FC<Props> = ({
             </Stack>
           )}
 
+          {/* タグ（テンプレート呼出の下）: 自由入力＋Enter で複数付与できる */}
+          <Box>
+            <Typography variant="subtitle2">タグ</Typography>
+            <Stack direction="row" spacing={0.5} flexWrap="wrap" alignItems="center">
+              {tags.map((t) => (
+                <Chip
+                  key={t} label={t} size="small"
+                  onDelete={isViewMode ? undefined : () => setTags(tags.filter((x) => x !== t))}
+                />
+              ))}
+              {!isViewMode && (
+                <TextField
+                  size="small" placeholder="タグを追加 (Enter)"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tagInput.trim()) {
+                      e.preventDefault();
+                      if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
+                      setTagInput('');
+                    }
+                  }}
+                />
+              )}
+            </Stack>
+          </Box>
+
           {renderBody()}
 
           <Divider />
@@ -451,32 +478,6 @@ const NursingRecordDialog: React.FC<Props> = ({
               </Stack>
             </Box>
           )}
-
-          <Box>
-            <Typography variant="subtitle2">タグ</Typography>
-            <Stack direction="row" spacing={0.5} flexWrap="wrap" alignItems="center">
-              {tags.map((t) => (
-                <Chip
-                  key={t} label={t} size="small"
-                  onDelete={isViewMode ? undefined : () => setTags(tags.filter((x) => x !== t))}
-                />
-              ))}
-              {!isViewMode && (
-                <TextField
-                  size="small" placeholder="タグを追加 (Enter)"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && tagInput.trim()) {
-                      e.preventDefault();
-                      if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
-                      setTagInput('');
-                    }
-                  }}
-                />
-              )}
-            </Stack>
-          </Box>
 
           <FormControlLabel
             control={
