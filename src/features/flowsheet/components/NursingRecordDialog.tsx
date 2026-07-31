@@ -23,6 +23,8 @@ interface Props {
   defaultDate?: ISODate;
   initialMode?: Mode;
   onClose: () => void;
+  /** 登録／更新の完了後に呼ばれる（呼び出し元でグリッド表示へ反映する等に使う）。 */
+  onSaved?: (info: { title: string; recordedAt: ISODateTime; mode: Mode }) => void;
 }
 
 const FORM_LABELS: Record<RecordFormType, string> = {
@@ -76,7 +78,7 @@ const sanitize = (s: string, forbidden: string[]): string => {
 };
 
 const NursingRecordDialog: React.FC<Props> = ({
-  open, patientId, recordId, defaultDate, initialMode = 'new', onClose,
+  open, patientId, recordId, defaultDate, initialMode = 'new', onClose, onSaved,
 }) => {
   const property = useFlowsheetStore((s) => s.property);
   const records = useFlowsheetStore((s) => s.nursingRecords);
@@ -208,6 +210,7 @@ const NursingRecordDialog: React.FC<Props> = ({
         tags, isPublished,
       });
     }
+    onSaved?.({ title, recordedAt, mode: existing && mode === 'edit' ? 'edit' : 'new' });
     onClose();
   };
 
