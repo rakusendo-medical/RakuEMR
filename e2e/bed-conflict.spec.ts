@@ -51,7 +51,7 @@ test.describe('病床競合（後負け）', () => {
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const pad = (n: number) => String(n).padStart(2, '0');
     const moveAt = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T09:00`;
-    await page.getByRole('dialog').getByLabel('移動日時').fill(moveAt);
+    await page.getByRole('dialog').getByRole('textbox', { name: '移動日時' }).fill(moveAt);
     await submitMove(page);
 
     // ② 患者B（101号室）が同じ 107号室 を選択 → 後負けエラーで登録不可

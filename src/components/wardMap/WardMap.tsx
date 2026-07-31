@@ -529,6 +529,7 @@ const WardMap: React.FC = () => {
         target={moveDialog.target}
         rooms={displayedRooms}
         moves={movesForDialog}
+        allMoves={allMoves}
         cancelledMoveIds={cancelledMoveIds}
         onCancelMove={(id) => { cancelMove(id); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}
         onUpdateMove={(id, patch) => { updateMove(id, patch); showSnackbar('移動を更新しました', 'info'); }}
