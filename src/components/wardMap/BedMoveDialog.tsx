@@ -92,8 +92,6 @@ const BedMoveDialog: React.FC<Props> = ({
   const [outOfRangeWarn, setOutOfRangeWarn] = React.useState(false);
   // 履歴の取消確認対象（要件4）
   const [cancelTargetId, setCancelTargetId] = React.useState<string | null>(null);
-  // us-02: 取消の戻し先が満床で取消できない場合のエラーメッセージ
-  const [cancelError, setCancelError] = React.useState<string | null>(null);
   // 更新モード（履歴行を選択して編集中の移動 ID）。null=新規登録モード
   const [editingMoveId, setEditingMoveId] = React.useState<string | null>(null);
 
@@ -111,7 +109,6 @@ const BedMoveDialog: React.FC<Props> = ({
       setConfirmCutoff(false);
       setOutOfRangeWarn(false);
       setCancelTargetId(null);
-      setCancelError(null);
       setEditingMoveId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,26 +165,10 @@ const BedMoveDialog: React.FC<Props> = ({
   const roomOutOfRange = u && u.designatedRoomNumber !== 'tentative' && u.designatedRoomNumber !== toRoom;
   const showOutOfRange = (wardOutOfRange || roomOutOfRange) && !!toRoom;
 
-  // us-02: 取消の戻し先チェック。移動済（過去）の取消は患者を移動元へ戻すため、
-  //   戻し先が満床の場合は取消をエラーとする（未来の予定の取消は病床を動かさないため対象外）。
-  const cancelReturnBlocked = (m: ScheduledMove): boolean => {
-    if (new Date(m.scheduledAt).getTime() > Date.now()) return false;
-    const fromRoom = rooms.find((r) => r.wardId === m.fromWardId && r.roomNumber === m.fromRoom);
-    if (!fromRoom) return false;
-    const free = fromRoom.beds.filter((b: Bed) => !b.disabled && (!b.patientId || b.patientId === m.patientId)).length;
-    return free <= 0;
-  };
-
+  // us-02: 取消できるのは未実施（未）の予定のみ。実施済（済）は取消ボタン自体を出さないため
+  //   ここでは実行のみ行う（済の修正は新しい移動の登録で対応する運用）。
   const handleCancelExecute = () => {
     if (!cancelTargetId) return;
-    const mv = moves.find((m) => m.id === cancelTargetId);
-    if (mv && cancelReturnBlocked(mv)) {
-      setCancelError(
-        `戻し先の病室が満床のため取消できません（${WARD_LABELS[mv.fromWardId]} ${mv.fromRoom}号室）。1つの病床に複数の患者は割り当てられません。`,
-      );
-      setCancelTargetId(null);
-      return;
-    }
     onCancelMove?.(cancelTargetId);
     setCancelTargetId(null);
   };
@@ -372,7 +353,7 @@ const BedMoveDialog: React.FC<Props> = ({
               <Divider />
               <Box>
                 <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-                  移動履歴
+                  移動履歴　※取消・更新できるのは未実施（状態: 未）の予定のみ。実施済（済）の修正は新しい移動を登録してください
                 </Typography>
                 {moves.length === 0 ? (
                   <Box sx={{ p: 1, border: '1px dashed', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>
@@ -399,7 +380,10 @@ const BedMoveDialog: React.FC<Props> = ({
                       // 種別: 入院（最初の病室）／転室（同一病棟の病室移動）／転棟（病棟間）
                       const kind = isAdmission ? '入院' : sameWard ? '転室' : '転棟';
                       const kindColor = isAdmission ? 'primary' : sameWard ? 'default' : 'secondary';
-                      const editable = !isAdmission && !cancelled && !!onUpdateMove; // 予定・移動済のみ更新可
+                      // us-02: 取消・更新できるのは未実施（未）の予定のみ。
+                      //   実施済（済）は事実の記録のため不可（修正は新しい移動の登録で対応）。
+                      const isPending = status === '未';
+                      const editable = isPending && !isAdmission && !cancelled && !!onUpdateMove;
                       const editing = editingMoveId === m.id;
                       return (
                         <Box
@@ -444,12 +428,12 @@ const BedMoveDialog: React.FC<Props> = ({
                             <Chip label={kind} size="small" color={kindColor} variant="outlined" sx={{ height: 20 }} />
                           </Box>
                           <Box sx={{ textAlign: 'right' }}>
-                            {!cancelled && !isAdmission && onCancelMove && (
+                            {isPending && !cancelled && !isAdmission && onCancelMove && (
                               <Button
                                 size="small"
                                 color="error"
                                 sx={{ minWidth: 0, px: 0.5 }}
-                                onClick={(e) => { e.stopPropagation(); setCancelError(null); setCancelTargetId(m.id); }}
+                                onClick={(e) => { e.stopPropagation(); setCancelTargetId(m.id); }}
                               >
                                 取消
                               </Button>
@@ -482,12 +466,6 @@ const BedMoveDialog: React.FC<Props> = ({
               }
             >
               この移動を取消します（履歴には取消として残ります。削除はされません）。
-            </Alert>
-          )}
-
-          {cancelError && (
-            <Alert severity="error" onClose={() => setCancelError(null)}>
-              {cancelError}
             </Alert>
           )}
 
