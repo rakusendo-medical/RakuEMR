@@ -103,7 +103,8 @@ interface AppState {
   // ep-03: 「指示」段階で登録された入退院指示（永続化対象、確定で自動除去）
   pendingOrders: PendingOrderEntry[];
   addPendingOrder: (o: PendingOrderEntry) => void;
-  updatePendingOrder: (id: string, patch: Partial<PendingOrderEntry>) => void;
+  // id は参照整合性維持のため更新不可（Omit で型レベルで禁止）
+  updatePendingOrder: (id: string, patch: Partial<Omit<PendingOrderEntry, 'id'>>) => void;
   removePendingOrder: (id: string) => void;
 
   // ep-01 us-02: 病床移動の予定（モックのためセッション限定・非永続化。partialize から除外・リロードで復帰）
@@ -266,7 +267,7 @@ export const useAppStore = create<AppState>()(
       addPendingOrder: (o) => set((state) => ({ pendingOrders: [...state.pendingOrders, o] })),
       updatePendingOrder: (id, patch) =>
         set((state) => ({
-          pendingOrders: state.pendingOrders.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+          pendingOrders: state.pendingOrders.map((x) => (x.id === id ? { ...x, ...patch, id: x.id } : x)),
         })),
       removePendingOrder: (id) => set((state) => ({ pendingOrders: state.pendingOrders.filter((x) => x.id !== id) })),
 

@@ -274,7 +274,14 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     finalizeDischarge();
   };
 
-  const handleDeleteConfirmed = (params: { category: string; reason: string }) => {
+  // 引数型は DeleteReasonDialog の onConfirm 定義に合わせる（印刷フラグはモックのため未使用）
+  const handleDeleteConfirmed = (params: {
+    category: string;
+    reason: string;
+    printDeleteOrderSheet: boolean;
+    printMoveDeleteSheet?: boolean;
+    printMealDeleteSheet?: boolean;
+  }) => {
     setDeleteReasonOpen(false);
     if (editingOrderId) {
       // us-09: 中止時はカルテ記事を削除せず、中止内容を追記した上で取消表示にする
