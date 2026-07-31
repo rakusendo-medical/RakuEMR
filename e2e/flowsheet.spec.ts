@@ -43,6 +43,17 @@ test.describe('フローシート', () => {
     await expect(page.getByText('看護記録 新規登録')).toHaveCount(0);
   });
 
+  test('看護記録: フローシートで作成すると当該日の看護記録行にリンク表示される', async ({ page }) => {
+    await page.getByRole('button', { name: '新規作成' }).first().click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('タイトル').fill('熱発対応');
+    await dialog.getByRole('button', { name: '登録', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    // 記載日に対応する列の看護記録行に作成した記録のリンクが表示される
+    await expect(page.getByText('看護記録(熱発対応)')).toBeVisible();
+  });
+
   test('バイタルグラフ行が表示される', async ({ page }) => {
     await expect(page.locator('text=/体温|バイタル|T\\.P\\.R/').first()).toBeVisible();
   });

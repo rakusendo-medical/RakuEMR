@@ -1304,6 +1304,19 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
         defaultDate={nrDate}
         initialMode="new"
         onClose={() => setNrOpen(false)}
+        onSaved={(info) => {
+          // 作成した看護記録を、記載日に対応する列の「看護記録」行へリンク表示する（従来挙動）。
+          // ローカル state のみ更新するためリロードで消える。
+          if (info.mode !== 'new') return;
+          const iso = info.recordedAt.slice(0, 10);
+          setRows((rs) => rs.map((r) => {
+            const [y, m, d] = r.date.split('/');
+            const rIso = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            return rIso === iso
+              ? { ...r, nursingLinks: [...r.nursingLinks, `看護記録(${info.title})`] }
+              : r;
+          }));
+        }}
       />
 
       {/* 隔離拘束 観察記録ダイアログ（セルクリックで起動・既存 ep-07 ダイアログを流用） */}
