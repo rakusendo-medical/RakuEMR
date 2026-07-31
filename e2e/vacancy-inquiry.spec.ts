@@ -77,6 +77,10 @@ test.describe('空床照会（入退院指示の反映）', () => {
   });
 
   test('退院指示は予定日の翌日から空床になる（ケースB）', async ({ page }) => {
+    // カルテ（退院指示）と病棟マップ（空床照会）の 2 画面を跨ぐため goto が 2 回必要で、
+    // アプリの初期表示だけで 28 秒前後かかる。既定の 30 秒では並列実行時に超えるため延長する。
+    test.slow();
+
     // ① 在床患者（第１病棟 107号室 ベッド1 の渡部 千佳）に 7 日後の退院指示を登録
     await page.goto('/karte/P063');
     await expect(page.getByRole('tab', { name: '診療録' })).toHaveAttribute('aria-selected', 'true');
