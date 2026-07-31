@@ -76,9 +76,8 @@ test.describe('病床競合（後負け）', () => {
     await expect(dialog.getByText('107号室', { exact: true })).toBeVisible();
     await expect(dialog.getByRole('button', { name: '取消', exact: true })).toHaveCount(0);
 
-    // ③ 済の行をクリックしても更新モードにならない
-    await dialog.getByText('107号室', { exact: true }).click();
-    await expect(dialog.getByText('移動（更新）')).toHaveCount(0);
+    // ③ 済の行は更新可能な行にならない（更新可能な履歴行にのみ付く aria-label が存在しない）
+    await expect(dialog.getByRole('button', { name: /107号室への転室を更新/ })).toHaveCount(0);
   });
 
   test('未実施（未）の移動は更新でき、取消は履歴に取消として残る', async ({ page }) => {
@@ -97,7 +96,9 @@ test.describe('病床競合（後負け）', () => {
     await page.getByRole('button', { name: '[移動]', exact: true }).click();
     await expect(page.locator('text=転棟・転室ダイアログ')).toBeVisible();
     const dialog = page.getByRole('dialog');
-    await dialog.getByText('108号室', { exact: true }).click();
+    //   履歴行は更新可能なときだけ role="button" + aria-label を持つ。病室番号の文字列は
+    //   移動先セレクトの現在値等とも重複しうるため、aria-label で行を特定する。
+    await dialog.getByRole('button', { name: /108号室への転室を更新/ }).click();
     await expect(dialog.getByText('移動（更新）')).toBeVisible();
     await dialog.getByRole('button', { name: '新規登録に戻る' }).click();
 
