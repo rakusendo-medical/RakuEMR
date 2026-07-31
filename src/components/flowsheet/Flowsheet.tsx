@@ -195,6 +195,70 @@ function toIso(display: string): string {
   return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }
 
+// ===== 日付送り（ページめくり）用ユーティリティ =====
+// 7 日列は「基準日（右端）から遡る 7 日」で組み立てる。モックデータ（DAILY）は
+// 元の日付（2026/5/13〜19）に紐付けたまま扱い、範囲外の日は空列で表示する。
+const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+
+/** ISO（"2026-05-13"）→ 表示用（"2026/5/13"） */
+function fromIso(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${y}/${Number(m)}/${Number(d)}`;
+}
+/** ISO 日付を days 日ずらす */
+function shiftIso(iso: string, days: number): string {
+  const dt = new Date(`${iso}T00:00:00`);
+  dt.setDate(dt.getDate() + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+/** ISO 日付の曜日ラベル */
+function weekdayOf(iso: string): string {
+  return WEEKDAY_LABELS[new Date(`${iso}T00:00:00`).getDay()];
+}
+/** 2 つの ISO 日付の差（日数。b - a） */
+function diffDays(a: string, b: string): number {
+  const ms = new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime();
+  return Math.round(ms / 86400000);
+}
+/** 実際の当日（ISO） */
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** モックデータの日付（ISO・昇順）と、その右端＝初期表示の基準日 */
+const ANCHOR_ISO: string[] = DAILY.map((d) => toIso(d.date));
+const ANCHOR_END_ISO = ANCHOR_ISO[ANCHOR_ISO.length - 1];
+const ANCHOR_END_ADMIT_DAY = DAILY[DAILY.length - 1].admitDay;
+const DAILY_BY_ISO = new Map<string, DailyRow>(DAILY.map((d) => [toIso(d.date), d]));
+
+/** モックデータを持たない日の空列テンプレート */
+const EMPTY_DAY: Omit<DailyRow, 'date' | 'weekday' | 'admitDay' | 'isToday'> = {
+  room: 'E102号室',
+  orderKinds: [], labLinks: [],
+  meal: { morning: '通常指示', lunch: '通常指示', dinner: '通常指示' },
+  height: 167.8, weightBmi: '—', stool: 0, urine: '—',
+  intake: { morning: '—', lunch: '—', dinner: '—' },
+  sleep: '—',
+  med: { morning: '—', lunch: '—', dinner: '—', night: '—' },
+  karteLinks: [], deptLinks: [], transferLinks: [], nursingLinks: [],
+  stoolDetail: '—', laxative: '—', bath: '—', sign: '—',
+};
+
+/** 指定 ISO 日付の 1 列分を組み立てる（モックデータがあれば流用、無ければ空列） */
+function buildDay(iso: string): DailyRow {
+  const base = DAILY_BY_ISO.get(iso);
+  return {
+    ...(base ?? EMPTY_DAY),
+    date: fromIso(iso),
+    weekday: weekdayOf(iso),
+    // 在院日数は基準日（モック右端 = 34 日目）からの相対で算出
+    admitDay: Math.max(1, ANCHOR_END_ADMIT_DAY + diffDays(ANCHOR_END_ISO, iso)),
+    // 実際の当日に加え、モックが「当日」と定義している日（2026/5/19）も当日扱いで色付けする
+    isToday: iso === todayIso() || (base?.isToday ?? false),
+  };
+}
+
 // 以下 2 つは RestraintObservationMatrix.tsx:31-46 と同等の純関数（結合回避のためローカル複製）
 function getSubtype(o: IsolationOrder): IsolationSubtype {
   return o.subtype ?? (o.type === '隔離' ? '隔離' : '拘束');
@@ -210,26 +274,29 @@ function isActiveAt(o: IsolationOrder, dateStr: string, hour: number): boolean {
   return true;
 }
 
-// チャート用データ(7日分)
-const CHART_DATA = DAILY.map((d) => {
+// チャート用データ(7日分)。モックデータを持つ日のみ値を入れ、それ以外は null（線を引かない）
+function buildChartData(dayIso: string[]) {
   // モック値:画像のグラフ形状にざっくり合わせる
-  const i = d.admitDay - 28;
   const tempPattern = [36.4, 37.2, 36.8, 37.4, 36.5, 37.2, 36.6];
   const bpHighPattern = [115, 122, 128, 135, 110, 118, 125];
   const bpLowPattern = [70, 75, 78, 82, 68, 72, 76];
   const pulsePattern = [88, 102, 80, 95, 70, 105, 82];
   const spo2Pattern = [98, 97, 98, 97, 98, 98, 97];
   const respPattern = [16, 18, 17, 19, 16, 18, 17];
-  return {
-    date: d.date.slice(5),
-    体温: tempPattern[i],
-    'BP(上)': bpHighPattern[i],
-    'BP(下)': bpLowPattern[i],
-    脈拍: pulsePattern[i],
-    SpO2: spo2Pattern[i],
-    呼吸: respPattern[i],
-  };
-});
+  return dayIso.map((iso) => {
+    const i = ANCHOR_ISO.indexOf(iso);
+    const at = (arr: number[]) => (i < 0 ? null : arr[i]);
+    return {
+      date: fromIso(iso).slice(5),
+      体温: at(tempPattern),
+      'BP(上)': at(bpHighPattern),
+      'BP(下)': at(bpLowPattern),
+      脈拍: at(pulsePattern),
+      SpO2: at(spo2Pattern),
+      呼吸: at(respPattern),
+    };
+  });
+}
 
 const ORDER_COLOR: Record<OrderKind, { fg: string; bg: string }> = {
   薬: { fg: '#dc2626', bg: 'transparent' },
@@ -318,16 +385,22 @@ function todayHeaderCellSx(isToday: boolean): any {
 // top 値の初期値はヘッダ 3 行の cumulative 高さの目安。
 const HEADER_ROW_TOP = { row1: 0, row2: 30, row3: 58 };
 
-// 行動制限・隔離・外出など、特定の日付範囲だけセルに色帯+ラベルを置く
-function RestraintRow({ label, bar }: { label: string; bar: RestraintBar }) {
+// 行動制限・隔離・外出など、特定の日付範囲だけセルに色帯+ラベルを置く。
+// バーの範囲はモックデータの日付（ANCHOR_ISO）に固定し、日付送りしても同じ日に留まる。
+function RestraintRow({ label, bar, rows, dayIso }: {
+  label: string; bar: RestraintBar; rows: DailyRow[]; dayIso: string[];
+}) {
+  const fromIsoDate = ANCHOR_ISO[bar.from];
+  const toIsoDate = ANCHOR_ISO[bar.to];
   return (
     <TableRow>
       <TableCell sx={stickyLabelCell}>{label}</TableCell>
       <TableCell sx={stickySubCell} />
-      {DAILY.map((d, i) => {
-        const inRange = i >= bar.from && i <= bar.to;
-        const isStart = i === bar.from;
-        const isEnd = i === bar.to;
+      {rows.map((d, i) => {
+        const iso = dayIso[i];
+        const inRange = iso >= fromIsoDate && iso <= toIsoDate;
+        const isStart = iso === fromIsoDate;
+        const isEnd = iso === toIsoDate;
         const single = bar.from === bar.to;
         const text = single
           ? (isStart ? bar.singleLabel : '')
@@ -365,8 +438,25 @@ function SectionHeaderRow({ title }: { title: string }) {
 }
 
 const FlowsheetView: React.FC<Props> = ({ patientId }) => {
-  // 表示データを state 化（日列クリックで当日分を編集できるようにする）
-  const [rows, setRows] = useState<DailyRow[]>(DAILY);
+  // ----- 日付送り（ページめくり）-----
+  // 右端（基準日）を state で持ち、7 日列は「基準日から遡る 7 日」を都度組み立てる。
+  // 初期値はモックデータの右端（2026/5/19）＝従来表示と同じ。
+  const [endDate, setEndDate] = useState<string>(ANCHOR_END_ISO);
+  // 7 日列の ISO 日付（昇順。共通ヘッダの日付列・観察グリッドの日付列と一致）
+  const dayIso = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => shiftIso(endDate, i - 6)),
+    [endDate],
+  );
+  const shiftEndDate = (days: number) => setEndDate((prev) => shiftIso(prev, days));
+
+  // 日列クリックで編集した内容は日付キーで保持する（日付送りしても保たれる）
+  const [rowEdits, setRowEdits] = useState<Record<string, DailyRow>>({});
+  const rows = useMemo<DailyRow[]>(
+    () => dayIso.map((iso) => rowEdits[iso] ?? buildDay(iso)),
+    [dayIso, rowEdits],
+  );
+  const chartData = useMemo(() => buildChartData(dayIso), [dayIso]);
+
   const [editDay, setEditDay] = useState<number | null>(null);
   const [draft, setDraft] = useState<DailyRow | null>(null);
 
@@ -382,8 +472,6 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   const dynamicOrders = useAppStore((s) => s.dynamicIsolationOrders);
   const dynamicObservations = useAppStore((s) => s.dynamicObservationRecords);
   const patient = useMemo(() => PATIENTS.find((p) => p.id === patientId), [patientId]);
-  // 7 日列の ISO 日付（共通ヘッダの日付列と一致）
-  const dayIso = useMemo(() => DAILY.map((d) => toIso(d.date)), []);
   // 患者の指示集合（マスタ + dynamic、同 id は dynamic 優先）
   const orders = useMemo<IsolationOrder[]>(() => {
     if (!patientId) return [];
@@ -483,7 +571,8 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   const closeEdit = () => { setEditDay(null); setDraft(null); };
   const saveEdit = () => {
     if (editDay === null || !draft) return;
-    setRows((rs) => rs.map((r, i) => (i === editDay ? draft : r)));
+    // 編集内容は日付キーで保持（日付送りしても該当日に残る）
+    setRowEdits((prev) => ({ ...prev, [dayIso[editDay]]: draft }));
     closeEdit();
   };
   const patchDraft = (patch: Partial<DailyRow>) => setDraft((d) => (d ? { ...d, ...patch } : d));
@@ -503,7 +592,9 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   const saveNursing = () => {
     if (nrDay === null) return;
     const label = `看護記録(${nrDraft.title.trim() || nrDraft.kind})`;
-    setRows((rs) => rs.map((r, i) => (i === nrDay ? { ...r, nursingLinks: [...r.nursingLinks, label] } : r)));
+    const iso = dayIso[nrDay];
+    const target = rows[nrDay];
+    setRowEdits((prev) => ({ ...prev, [iso]: { ...target, nursingLinks: [...target.nursingLinks, label] } }));
     closeNursing();
   };
 
@@ -531,8 +622,8 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
           <colgroup>
             <col style={{ width: LABEL_COL_WIDTH }} />
             <col style={{ width: SUB_COL_WIDTH }} />
-            {DAILY.map((_, i) => (
-              <col key={i} style={{ width: DAY_COL_WIDTH }} />
+            {dayIso.map((iso) => (
+              <col key={iso} style={{ width: DAY_COL_WIDTH }} />
             ))}
           </colgroup>
           <TableBody>
@@ -543,18 +634,31 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                 sx={{ ...stickyLabelCell, bgcolor: '#e3edf7' }}
                 style={{ position: 'sticky', top: HEADER_ROW_TOP.row1, left: 0, zIndex: 100 }}
               >
+                {/* 日付送り: ≪ 7日前 / ＜ 1日前 / 当日 / ＞ 1日後 / ≫ 7日後。
+                    右端（基準日）を動かし、7 日列を組み直す。 */}
                 <Stack direction="row" spacing={0.5} alignItems="center">
-                  {['≪', '＜', '当日', '＞', '≫'].map((s, i) => (
+                  {([
+                    { label: '≪', title: '7日前', onClick: () => shiftEndDate(-7) },
+                    { label: '＜', title: '1日前', onClick: () => shiftEndDate(-1) },
+                    { label: '当日', title: '当日を右端に表示', onClick: () => setEndDate(todayIso()) },
+                    { label: '＞', title: '1日後', onClick: () => shiftEndDate(1) },
+                    { label: '≫', title: '7日後', onClick: () => shiftEndDate(7) },
+                  ] as const).map((b) => (
                     <Typography
-                      key={i}
+                      key={b.label}
+                      role="button"
+                      aria-label={b.title}
+                      title={b.title}
+                      onClick={b.onClick}
                       sx={{
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                         fontWeight: 700,
-                        color: s === '当日' ? '#1e3a5f' : '#1e40af',
+                        color: b.label === '当日' ? '#1e3a5f' : '#1e40af',
+                        '&:hover': { textDecoration: 'underline' },
                       }}
                     >
-                      {s}
+                      {b.label}
                     </Typography>
                   ))}
                 </Stack>
@@ -649,10 +753,10 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                 <TableCell key={i} sx={dayCellSx(d.isToday)}>{d.room}</TableCell>
               ))}
             </TableRow>
-            <RestraintRow label="隔離" bar={RESTRAINTS.isolation} />
-            <RestraintRow label="拘束" bar={RESTRAINTS.restraint} />
-            <RestraintRow label="行動制限(その他)" bar={RESTRAINTS.behavior} />
-            <RestraintRow label="外出・外泊" bar={RESTRAINTS.outing} />
+            <RestraintRow label="隔離" bar={RESTRAINTS.isolation} rows={rows} dayIso={dayIso} />
+            <RestraintRow label="拘束" bar={RESTRAINTS.restraint} rows={rows} dayIso={dayIso} />
+            <RestraintRow label="行動制限(その他)" bar={RESTRAINTS.behavior} rows={rows} dayIso={dayIso} />
+            <RestraintRow label="外出・外泊" bar={RESTRAINTS.outing} rows={rows} dayIso={dayIso} />
 
             {/* サブタブ: ここから下を「フローシート / 隔離拘束」で切替（design-rules §2.3）。
                 横スクロールしても見えるよう左寄せ＋左 sticky で固定。 */}
@@ -818,7 +922,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                   */}
                   <Box sx={{ flex: 1, py: 1 }}>
                     <ResponsiveContainer width="100%" height={280}>
-                      <LineChart data={CHART_DATA} margin={{ top: 10, right: 0, left: 0, bottom: 5 }}>
+                      <LineChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                         {/*
                           列幅 110px の中央にデータ点を配置するため、左右に半列分（55px）の
@@ -929,7 +1033,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                     <TableCell rowSpan={3} sx={{ ...stickyLabelCell, verticalAlign: 'top' }}>食事</TableCell>
                   )}
                   <TableCell sx={stickySubCell}>{subLabel}</TableCell>
-                  {DAILY.map((d, i) => {
+                  {rows.map((d, i) => {
                     const status = d.meal[mealKey];
                     const style = MEAL_STYLE[status];
                     return (

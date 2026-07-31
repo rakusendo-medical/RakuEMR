@@ -112,6 +112,34 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
     await expect(dialog).toBeVisible();
   });
 
+  test('日付送りで当日へ移動すると、現在時刻より後の時間枠が入力不可になる', async ({ page }) => {
+    // 当日の 16:29 に固定 → 16時枠は入力可 / 17時枠以降は入力不可
+    const now = new Date();
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    await page.clock.setFixedTime(new Date(`${iso}T16:29:00`));
+    await page.goto('/karte/P001');
+    await expect(page.locator('text=診療録').first()).toBeVisible();
+    await page.getByRole('tab', { name: 'フローシート・隔離拘束', exact: true }).click();
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+
+    // 初期表示（2026/5 のモック日付）は全て過去なので入力可
+    await expect(page.getByLabel('観察 2026-05-19 23:00')).not.toHaveAttribute('aria-disabled', 'true');
+
+    // 日付ナビ「当日」で当日を右端に
+    await page.getByRole('button', { name: '当日を右端に表示' }).click();
+
+    await expect(page.getByLabel(`観察 ${iso} 16:00`)).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByLabel(`観察 ${iso} 17:00`)).toHaveAttribute('aria-disabled', 'true');
+    // 翌日列は無い（当日が右端）が、前日列は全て入力可
+    const prevIso = new Date(new Date(`${iso}T00:00:00`).getTime() - 86400000).toISOString().slice(0, 10);
+    await expect(page.getByLabel(`観察 ${prevIso} 23:00`)).not.toHaveAttribute('aria-disabled', 'true');
+
+    // 7日後へ送ると当日より後の日付列は全枠が入力不可
+    await page.getByRole('button', { name: '7日後' }).click();
+    const futureIso = new Date(new Date(`${iso}T00:00:00`).getTime() + 86400000).toISOString().slice(0, 10);
+    await expect(page.getByLabel(`観察 ${futureIso} 00:00`)).toHaveAttribute('aria-disabled', 'true');
+  });
+
   test('隔離拘束一覧／記録タブの未来の回数枠は一括入力を開けない', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-05-19T16:29:00'));
     await page.goto('/isolation');

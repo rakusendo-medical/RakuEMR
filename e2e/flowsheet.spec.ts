@@ -406,6 +406,46 @@ test.describe('フローシート', () => {
     await expect(bNight).toHaveAttribute('aria-pressed', 'false');
   });
 
+  test('日付ナビ（≪ ＜ 当日 ＞ ≫）で 7 日列が移動する', async ({ page }) => {
+    // 初期表示はモックデータの 7 日（2026/5/13〜5/19）
+    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/5/13(水)' })).toBeVisible();
+
+    // ＜（1日前）: 右端が 5/18 に、左端は 5/12 になる
+    await page.getByRole('button', { name: '1日前' }).click();
+    await expect(page.getByRole('cell', { name: '2026/5/18(月)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/5/12(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeHidden();
+
+    // ＞（1日後）で戻る
+    await page.getByRole('button', { name: '1日後' }).click();
+    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeVisible();
+
+    // ≫（7日後）: 5/20〜5/26
+    await page.getByRole('button', { name: '7日後' }).click();
+    await expect(page.getByRole('cell', { name: '2026/5/26(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/5/20(水)' })).toBeVisible();
+
+    // ≪（7日前）で戻る
+    await page.getByRole('button', { name: '7日前' }).click();
+    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeVisible();
+
+    // 当日: 実際の当日が右端に来る
+    const now = new Date();
+    const weekday = ['日', '月', '火', '水', '木', '金', '土'][now.getDay()];
+    const label = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}(${weekday})`;
+    await page.getByRole('button', { name: '当日を右端に表示' }).click();
+    await expect(page.getByRole('cell', { name: label })).toBeVisible();
+  });
+
+  test('日付送りしても在院日数が日付に追随する', async ({ page }) => {
+    // 2026/5/19 = 34 日目（モック定義）
+    await expect(page.getByRole('cell', { name: '34日目' })).toBeVisible();
+    await page.getByRole('button', { name: '1日後' }).click();
+    // 右端が 5/20 になり 35 日目が現れる
+    await expect(page.getByRole('cell', { name: '35日目' })).toBeVisible();
+  });
+
   test('フローシートサブタブに戻すとグリッドが消え既存内容が出る', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     await expect(page.getByText('23時', { exact: true })).toBeVisible();
