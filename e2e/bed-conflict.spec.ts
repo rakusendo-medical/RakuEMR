@@ -93,7 +93,9 @@ test.describe('病床競合（後負け）', () => {
     await page.keyboard.press('Escape');
 
     // ② 再度開く → 未の行はクリックで更新モードに入れる
-    await openMoveDialog(page, '後藤 幸子');
+    //   （移動予定チップでセル内の患者名が隠れるため、選択状態のまま残る下部メニューの [移動] から開く）
+    await page.getByRole('button', { name: '[移動]', exact: true }).click();
+    await expect(page.locator('text=転棟・転室ダイアログ')).toBeVisible();
     const dialog = page.getByRole('dialog');
     await dialog.getByText('108号室', { exact: true }).click();
     await expect(dialog.getByText('移動（更新）')).toBeVisible();
