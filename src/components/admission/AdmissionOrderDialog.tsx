@@ -107,10 +107,17 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       setAdmitAt(init);
       setMealSlot('0800');
       setAutoMealSlot('0800');
-      setToWard(patient.wardId);
-      setToRoom('');
-      setToBed('');
-      setRoomUndecided(false);
+      // 変更モードでは登録済み指示の病棟・病室・ベッドを復元する（'—' は病室未定として扱う）。
+      //   復元しないと [変更（更新）] 時にフォームの空値で病室情報が '—' に上書きされてしまう。
+      //   ※ 入院形態・紹介経路等は PendingOrderEntry が保持しないため復元できず既定値に戻る（モック割り切り）
+      const editWard = editing?.wardId ?? patient.wardId;
+      const editRoom = editing && editing.roomNumber !== '—' ? editing.roomNumber : '';
+      const editBed = editing && editing.bedLabel !== '—' ? editing.bedLabel : '';
+      const editRoomBeds = ROOMS.find((r) => r.wardId === editWard && r.roomNumber === editRoom)?.beds ?? [];
+      setToWard(editWard);
+      setToRoom(editRoom);
+      setToBed(editRoomBeds.some((b) => b.bed === editBed && !b.disabled && !b.patientId) ? editBed : '');
+      setRoomUndecided(editing ? editing.roomNumber === '—' : false);
       setMemo('');
       setAdmitForm('任意入院');
       setDocs(new Set(ADMIT_DOCS_BY_FORM['任意入院'].slice(0, 3)));
