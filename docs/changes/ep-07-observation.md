@@ -259,3 +259,32 @@ S3 から下記契約で承認：
 
 - screen-mapping.tsv は `IsolationRestraint.tsx` 行（ep-06）に ep-07 を追記したい（既存行更新）。MASTER 側で調整いただけると助かります
 - screen-mapping.tsv の `RestraintObservationMatrix` 行は `/flowsheet/:patientId` にしたが、KarteAlphaPage 統合完了後の正確な path 表記は MASTER 判断で OK
+
+## 仕様変更メモ（2026-07-31）: 未来日入力不可を固定
+
+観察記録の未来日記載を不可とする方針が確定したため、spec を更新した（spec のみ。実装差分は未反映）。
+
+### spec 更新内容
+
+- `docs/specs/ep-07-observation/_epic.md`
+  - 「共通ルール: 未来日入力不可（エピック横断）」を新設。判定条件と 15分枠の具体例（16時29分／16時30分／16時31分）を記載
+  - マスタ設定・オプション機能による ON/OFF 前提の記述を削除（`optionalFeatures.observationFutureBlock` トグルの記述を含む）
+- `docs/specs/ep-07-observation/us-13-individual-observation.spec.md`
+  - 観察グリッドの未来枠はグレー＋クリック不可、ダイアログの未来枠行は非活性・登録対象外として明記
+  - 「未来日抑止は未実装。マスタ仕様として後続検討」の記述を削除
+  - AC-11（未来枠のセルは入力不可）／AC-12（ダイアログ内の未来枠行は登録不可）を追加
+- `docs/specs/ep-07-observation/us-14-bulk-observation.spec.md`
+  - 未来枠の回数枠はグレー＋クリック不可、一括ダイアログの患者フィルタ条件を「未来枠でない」に変更
+  - AC-11 を設定依存の記述から固定仕様の記述へ改訂
+
+### 判定条件（要約）
+
+- 入力可: `記録枠の開始時刻 ≤ 現在日時` / 入力不可: `現在日時 < 記録枠の開始時刻`
+- 判定は枠の **開始時刻のみ**（終了時刻は使わない）。過去方向の制限はなし
+- 記録枠の粒度: 観察グリッドのセル = 1 時間枠 / 観察記録ダイアログの各行 = 観察間隔で等分した枠 / 一覧の回数枠 = 区分の観察回数で等分した枠
+
+### 実装側の残差分（次ラウンド対応）
+
+- `src/components/flowsheet/Flowsheet.tsx` の観察グリッドに未来枠判定が無い（全セルがクリック可）
+- `src/components/isolation/ObservationRecordDialog.tsx` に行単位の未来枠判定が無い
+- `optionalFeatures.observationFutureBlock`（`useAppStore.ts` / `AdmissionDischarge.tsx` のトグル / `IsolationRestraint.tsx` / `RestraintObservationMatrix.tsx` / `ObservationBulkDialog.tsx` の分岐）は仕様上不要となるため、常時 ON 相当へ置き換えて撤去する
