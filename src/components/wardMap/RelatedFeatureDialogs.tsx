@@ -11,8 +11,11 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import type { Bed, WardId } from '../../types';
-import { ROOMS, PATIENTS, ADMISSION_ORDERS } from '../../data/mockData';
+import type { Room, WardId } from '../../types';
+import {
+  ROOMS, PATIENTS, ADMISSION_ORDERS,
+  MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves,
+} from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
 // 'admission-info'（旧「入退院情報」ダイアログ）は ver0.16 で廃止し、
@@ -128,6 +131,26 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
   const daysInMonth = new Date(yearMonth.y, yearMonth.m, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  // us-01/us-02: 在床は「その日時点」で判定する。病棟マップと同じく登録済みの移動（転棟・転室）を
+  //   日付ごとに適用し、移動予定日を境に在床が入れ替わるようにする（病棟マップ・後負け判定と表示を揃える）。
+  const scheduledMoves = useAppStore((s) => s.scheduledMoves);
+  const moveEdits = useAppStore((s) => s.moveEdits);
+  const cancelledMoveIds = useAppStore((s) => s.cancelledMoveIds);
+  const allMoves = React.useMemo(
+    () => [...MOVE_HISTORY_SAMPLES, ...scheduledMoves].map((m) => (moveEdits[m.id] ? { ...m, ...moveEdits[m.id] } : m)),
+    [scheduledMoves, moveEdits],
+  );
+  /** 表示月の各日（その日の終わり時点）における在床。キーは日、値は病室配列。 */
+  const roomsByDay = React.useMemo(() => {
+    const map = new Map<number, Room[]>();
+    for (const d of days) {
+      const at = new Date(yearMonth.y, yearMonth.m - 1, d, 23, 59, 59);
+      const afterDue = applyDueMoves(ROOMS, allMoves, cancelledMoveIds, at);
+      map.set(d, applyCancelledMoves(afterDue, allMoves, cancelledMoveIds, at));
+    }
+    return map;
+  }, [days, yearMonth, allMoves, cancelledMoveIds]);
+
   // 表示色
   const OCCUPIED = '#29b6e7'; // 使用中(明るい青)
   const EMPTY_BG = '#ffffff';
@@ -156,12 +179,16 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
   }, [pendingOrders]);
 
   /** その日にベッドが使用中かどうか。day は表示月の日付。 */
-  const occupied = (roomNumber: string, bed: Bed, day: number): boolean => {
+  const occupied = (roomNumber: string, bedLabel: string, day: number): boolean => {
     const date = `${yearMonth.y}-${String(yearMonth.m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    // その日時点の在床（移動反映後）を基準にする
+    const bedOfDay = roomsByDay.get(day)
+      ?.find((r) => r.wardId === selectedWard && r.roomNumber === roomNumber)
+      ?.beds.find((b) => b.bed === bedLabel);
     // 在床患者がいる場合、退院予定日の翌日以降は空床（＝予定日当日までは使用中）
-    if (bed.patientId) {
+    if (bedOfDay?.patientId) {
       const discharge = scheduleOrders.find(
-        (o) => o.type === '退院' && o.patientId === bed.patientId,
+        (o) => o.type === '退院' && o.patientId === bedOfDay.patientId,
       );
       return !(discharge && date > discharge.scheduledDate);
     }
@@ -170,7 +197,7 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
       (o) => o.type === '入院'
         && o.wardId === selectedWard
         && o.roomNumber === roomNumber
-        && o.bedLabel === bed.bed
+        && o.bedLabel === bedLabel
         && date >= o.scheduledDate,
     );
   };
@@ -295,7 +322,7 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
                   {days.map((d) => {
                     const state = bed.disabled
                       ? '使用不可'
-                      : occupied(r.roomNumber, bed, d) ? '使用中' : '空床';
+                      : occupied(r.roomNumber, bed.bed, d) ? '使用中' : '空床';
                     const bg = state === '使用不可' ? DISABLED : state === '使用中' ? OCCUPIED : EMPTY_BG;
                     const cellDate = `${yearMonth.y}/${String(yearMonth.m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
                     return (

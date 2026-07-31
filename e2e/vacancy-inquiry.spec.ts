@@ -26,7 +26,8 @@ test.describe('空床照会（入退院指示の反映）', () => {
 
   /** 病棟マップから空床照会ダイアログを開き、対象の年月まで送る */
   const openVacancy = async (page: Page, target: Date) => {
-    await page.getByRole('button', { name: '空床照会' }).click();
+    // ヘッダーの更新履歴リンクも button のため、画面の [空床照会] は exact で特定する
+    await page.getByRole('button', { name: '空床照会', exact: true }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('空床照会')).toBeVisible();
 
@@ -94,6 +95,34 @@ test.describe('空床照会（入退院指示の反映）', () => {
     await expect(
       dialog.getByTitle(`${toCellDate(dayAfter(8))} 107号室 1 空床`),
     ).toBeVisible();
+  });
+
+  test('病棟マップの移動（転棟・転室）も反映される', async ({ page }) => {
+    await page.goto('/');
+
+    // ① 107号室 ベッド1 の患者を 108号室 へ即時移動（108号室のベッド5が空き）
+    await page.getByText('渡部 千佳', { exact: true }).first().click();
+    await expect(page.locator('text=メニュー:')).toBeVisible();
+    await page.getByRole('button', { name: '[移動]', exact: true }).click();
+    const moveDialog = page.getByRole('dialog');
+    await moveDialog.getByRole('combobox').nth(1).click();
+    await page.getByRole('option', { name: '108号室' }).click();
+    const submitBtn = moveDialog.getByRole('button', { name: /^(登録|確認)$/ });
+    const needsConfirm = ((await submitBtn.textContent()) ?? '').includes('確認');
+    await submitBtn.click();
+    if (needsConfirm) {
+      await expect(page.getByText(/食事締め時間/)).toBeVisible();
+      await expect(submitBtn).toHaveText('登録');
+      await submitBtn.click();
+    }
+    await expect(page.getByText(/移動を登録しました/)).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // ② 空床照会: 移動元（107号室 ベッド1）が空床、移動先（108号室 ベッド5）が使用中になる
+    const today = new Date();
+    const dialog = await openVacancy(page, today);
+    await expect(dialog.getByTitle(`${toCellDate(today)} 107号室 1 空床`)).toBeVisible();
+    await expect(dialog.getByTitle(`${toCellDate(today)} 108号室 5 使用中`)).toBeVisible();
   });
 
   test('在床中で退院予定のないベッドは常に使用中、使用不可床は区別表示される', async ({ page }) => {
