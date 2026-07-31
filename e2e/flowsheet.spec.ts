@@ -505,6 +505,41 @@ test.describe('部門記録簿', () => {
     await expect(page.locator('text=/記録|部門/').first()).toBeVisible();
   });
 
+  test('部門記録簿: タグチップで記事を絞り込める（複数選択はAND）', async ({ page }) => {
+    await page.goto('/nursing/records?patientId=P001');
+    // 初期は seed の2記事が見える（気分変動=[看護記録]／転倒リスク=[看護記録,リスク管理]）
+    await expect(page.getByText('気分変動')).toBeVisible();
+    await expect(page.getByText('転倒リスク')).toBeVisible();
+    // タグ「看護記録」だけ → 両方が持つので両方表示のまま
+    await page.getByRole('button', { name: 'タグ絞り込み 看護記録' }).click();
+    await expect(page.getByText('気分変動')).toBeVisible();
+    await expect(page.getByText('転倒リスク')).toBeVisible();
+    // さらに「リスク管理」も選択（AND）→ 両タグを持つ「転倒リスク」だけに絞られる
+    await page.getByRole('button', { name: 'タグ絞り込み リスク管理' }).click();
+    await expect(page.getByText('転倒リスク')).toBeVisible();
+    await expect(page.getByText('気分変動')).toHaveCount(0);
+    // クリアで両方に戻る
+    await page.getByRole('button', { name: 'クリア' }).click();
+    await expect(page.getByText('気分変動')).toBeVisible();
+  });
+
+  test('部門記録簿: 表示モード切替でタグ絞り込みがリセットされる', async ({ page }) => {
+    await page.goto('/nursing/records?patientId=P001');
+    await page.getByRole('button', { name: 'タグ絞り込み リスク管理' }).click();
+    await expect(page.getByText('気分変動')).toHaveCount(0); // 絞り込み中
+    // 表示モードを「全て」に切替 → タグ選択がリセットされ両方表示に戻る
+    await page.getByRole('button', { name: '全て', exact: true }).click();
+    await expect(page.getByText('気分変動')).toBeVisible();
+    await expect(page.getByText('転倒リスク')).toBeVisible();
+  });
+
+  test('部門記録簿: 検索ボックスでタグ名でも検索できる', async ({ page }) => {
+    await page.goto('/nursing/records?patientId=P001');
+    await page.getByPlaceholder('検索（タイトル・本文・タグ）').fill('リスク管理');
+    await expect(page.getByText('転倒リスク')).toBeVisible();
+    await expect(page.getByText('気分変動')).toHaveCount(0);
+  });
+
   test('看護経過記録: テンプレート呼出の下のタグ欄で自由入力＋Enterで複数タグを付けられる', async ({ page }) => {
     await page.getByRole('button', { name: '新規作成' }).click();
     const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });

@@ -11,11 +11,18 @@ import {
 } from '@mui/icons-material';
 import { PATIENTS } from '../../../data/mockData';
 import { useFlowsheetStore } from '../store';
-import type { NursingRecord, ShiftType } from '../types';
+import type { NursingRecord, RecordFormType, ShiftType } from '../types';
 import NursingRecordDialog from '../components/NursingRecordDialog';
 
 const SHIFT_LABEL: Record<ShiftType, string> = { night: '深夜', day: '日勤', evening: '準夜' };
 const SHIFT_COLOR: Record<ShiftType, string> = { night: '#dc2626', day: '#1e40af', evening: '#16a34a' };
+
+// 記録形式（種別）チップの配色。タグ（アウトライン）と見分けられるよう塗りチップにする。
+const FORM_CHIP_STYLE: Record<RecordFormType, { bg: string; color: string }> = {
+  focus: { bg: '#dcfce7', color: '#166534' }, // 緑
+  soap: { bg: '#dbeafe', color: '#1e40af' },  // 青
+  free: { bg: '#ede9fe', color: '#6b21a8' },  // 紫
+};
 
 const NursingRecordsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,6 +34,8 @@ const NursingRecordsPage: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<'normal' | 'all'>('normal');
   const [keyword, setKeyword] = useState('');
+  // タグ絞り込み（複数選択は AND＝すべて含む）
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
 
   const [dialog, setDialog] = useState<{ open: boolean; recordId: string | null; mode: 'view' | 'new' | 'edit' }>(
@@ -36,8 +45,36 @@ const NursingRecordsPage: React.FC = () => {
   const onChangePatient = (id: string) => {
     setPatientId(id);
     setPage(0);
+    setSelectedTags(new Set()); // 患者を変えたらタグ絞り込みはリセット
     setSearchParams({ patientId: id });
   };
+
+  // 表示モード（通常/全て）切替: 候補タグが変わるため、タグ選択とページもリセットする。
+  const onChangeViewMode = (v: 'normal' | 'all') => {
+    setViewMode(v);
+    setPage(0);
+    setSelectedTags(new Set());
+  };
+
+  const toggleTag = (t: string) => {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t); else next.add(t);
+      return next;
+    });
+    setPage(0);
+  };
+
+  // 絞り込み用の候補タグ（選択中患者の記録から集約。viewMode を反映）。
+  const availableTags = useMemo(() => {
+    const nowIso = new Date().toISOString();
+    const base = records.filter((r) =>
+      r.patientId === patientId
+      && (viewMode === 'all' || (!r.deletedAt && !r.updatedAt && r.recordedAt <= nowIso)));
+    const set = new Set<string>();
+    base.forEach((r) => r.tags.forEach((t) => set.add(t)));
+    return Array.from(set).sort();
+  }, [records, patientId, viewMode]);
 
   const filtered = useMemo(() => {
     let list = records.filter((r) => r.patientId === patientId);
@@ -48,11 +85,16 @@ const NursingRecordsPage: React.FC = () => {
       const k = keyword.toLowerCase();
       list = list.filter((r) =>
         r.title.toLowerCase().includes(k) ||
-        JSON.stringify(r.body.body).toLowerCase().includes(k),
+        JSON.stringify(r.body.body).toLowerCase().includes(k) ||
+        r.tags.some((t) => t.toLowerCase().includes(k)),
       );
     }
+    // タグ絞り込み（AND＝選択したタグをすべて含む記事のみ）
+    if (selectedTags.size > 0) {
+      list = list.filter((r) => [...selectedTags].every((t) => r.tags.includes(t)));
+    }
     return list.sort((a, b) => (a.recordedAt < b.recordedAt ? 1 : -1));
-  }, [records, patientId, viewMode, keyword]);
+  }, [records, patientId, viewMode, keyword, selectedTags]);
 
   // 月毎にグルーピング
   const grouped = useMemo(() => {
@@ -77,6 +119,7 @@ const NursingRecordsPage: React.FC = () => {
     const isDeleted = !!r.deletedAt;
     const isUpdated = !!r.updatedAt && !isDeleted;
     const time = r.recordedAt.slice(11, 16);
+    const formStyle = FORM_CHIP_STYLE[r.formType];
     return (
       <Card
         key={r.id}
@@ -104,8 +147,14 @@ const NursingRecordsPage: React.FC = () => {
             >
               {r.title}
             </Typography>
-            <Chip size="small" variant="outlined" label={r.formType.toUpperCase()} />
+            {/* 記録形式（種別）＝塗りチップで配色（タグ＝アウトラインと区別） */}
+            <Chip
+              size="small"
+              label={r.formType.toUpperCase()}
+              sx={{ bgcolor: formStyle.bg, color: formStyle.color, fontWeight: 700 }}
+            />
             {!r.isPublished && <Chip size="small" color="warning" label="非公開" />}
+            {/* タグ＝アウトラインチップ */}
             {r.tags.map((t) => (
               <Chip key={t} size="small" variant="outlined" label={t} />
             ))}
@@ -154,13 +203,13 @@ const NursingRecordsPage: React.FC = () => {
           <ToggleButtonGroup
             value={viewMode}
             exclusive size="small"
-            onChange={(_, v) => v && setViewMode(v)}
+            onChange={(_, v) => v && onChangeViewMode(v)}
           >
             <ToggleButton value="normal">通常</ToggleButton>
             <ToggleButton value="all">全て</ToggleButton>
           </ToggleButtonGroup>
           <TextField
-            size="small" placeholder="記事選択及び検索"
+            size="small" placeholder="検索（タイトル・本文・タグ）"
             value={keyword}
             onChange={(e) => { setKeyword(e.target.value); setPage(0); }}
           />
@@ -177,6 +226,32 @@ const NursingRecordsPage: React.FC = () => {
           </MuiLink>
         </Stack>
       </Paper>
+
+      {/* タグ絞り込み: 既存記録から集約したタグをチップ選択（複数選択は AND）。 */}
+      {availableTags.length > 0 && (
+        <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
+          <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>タグで絞り込み:</Typography>
+            {availableTags.map((t) => (
+              <Chip
+                key={t}
+                size="small"
+                label={t}
+                color={selectedTags.has(t) ? 'primary' : 'default'}
+                variant={selectedTags.has(t) ? 'filled' : 'outlined'}
+                onClick={() => toggleTag(t)}
+                aria-label={`タグ絞り込み ${t}`}
+                aria-pressed={selectedTags.has(t)}
+              />
+            ))}
+            {selectedTags.size > 0 && (
+              <Button size="small" onClick={() => { setSelectedTags(new Set()); setPage(0); }}>
+                クリア
+              </Button>
+            )}
+          </Stack>
+        </Paper>
+      )}
 
       {grouped.length === 0 ? (
         <Paper variant="outlined" sx={{ p: 3 }}>
