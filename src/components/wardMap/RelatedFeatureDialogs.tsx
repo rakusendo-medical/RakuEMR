@@ -11,7 +11,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import type { WardId } from '../../types';
+import type { Bed, WardId } from '../../types';
 import { ROOMS, PATIENTS, ADMISSION_ORDERS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -119,7 +119,10 @@ const RelatedFeatureDialogs: React.FC<Props> = ({ open, feature, ward, onClose }
 
 const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
   const [selectedWard, setSelectedWard] = React.useState<WardId>(ward);
-  const [yearMonth, setYearMonth] = React.useState<{ y: number; m: number }>({ y: 2026, m: 5 });
+  const today = React.useMemo(() => new Date(), []);
+  const [yearMonth, setYearMonth] = React.useState<{ y: number; m: number }>(
+    () => ({ y: today.getFullYear(), m: today.getMonth() + 1 }),
+  );
 
   const rooms = ROOMS.filter((r) => r.wardId === selectedWard);
   const daysInMonth = new Date(yearMonth.y, yearMonth.m, 0).getDate();
@@ -130,11 +133,46 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
   const EMPTY_BG = '#ffffff';
   const DISABLED = '#cbd5e1';
 
-  // モック: 各 (room/bed/day) に対し疑似乱数で空床/使用中を決定し、視覚的なまだら模様を作る
-  const occupied = (roomNumber: string, bedLabel: string, day: number): boolean => {
-    const bedNum = parseInt(bedLabel, 10) || 0;
-    const seed = (roomNumber.charCodeAt(0) * 31 + bedNum * 17 + day) % 7;
-    return seed >= 1 && seed <= 5;
+  // us-08: 空床照会は「予定が立った時点」で反映する。未確定（指示のみ）の入退院指示も対象とし、
+  //   確定済みと未確定は色で区別しない（参考システム挙動準拠）。判定は日単位で時刻は考慮しない。
+  //     入院指示（病室・ベッド指定済み）: 入院予定日「当日」から使用中
+  //     退院指示                       : 退院予定日の「翌日」から空床（当日は使用中のまま）
+  //   病室未割当（'—'）の入院指示は占有ベッドを特定できないため反映しない。
+  const pendingOrders = useAppStore((s) => s.pendingOrders);
+  const scheduleOrders = React.useMemo(() => {
+    const fromMaster = ADMISSION_ORDERS
+      .filter((o) => o.status !== 'キャンセル' && !!o.scheduledDate)
+      .map((o) => ({
+        type: o.type, patientId: o.patientId, scheduledDate: o.scheduledDate,
+        wardId: o.wardId, roomNumber: o.roomNumber, bedLabel: o.bedLabel,
+      }));
+    const fromStore = pendingOrders
+      .filter((o) => !!o.scheduledDate)
+      .map((o) => ({
+        type: o.type, patientId: o.patientId, scheduledDate: o.scheduledDate,
+        wardId: o.wardId, roomNumber: o.roomNumber, bedLabel: o.bedLabel,
+      }));
+    return [...fromMaster, ...fromStore];
+  }, [pendingOrders]);
+
+  /** その日にベッドが使用中かどうか。day は表示月の日付。 */
+  const occupied = (roomNumber: string, bed: Bed, day: number): boolean => {
+    const date = `${yearMonth.y}-${String(yearMonth.m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    // 在床患者がいる場合、退院予定日の翌日以降は空床（＝予定日当日までは使用中）
+    if (bed.patientId) {
+      const discharge = scheduleOrders.find(
+        (o) => o.type === '退院' && o.patientId === bed.patientId,
+      );
+      return !(discharge && date > discharge.scheduledDate);
+    }
+    // 空床の場合、当該ベッドを指定した入院予定日以降は使用中
+    return scheduleOrders.some(
+      (o) => o.type === '入院'
+        && o.wardId === selectedWard
+        && o.roomNumber === roomNumber
+        && o.bedLabel === bed.bed
+        && date >= o.scheduledDate,
+    );
   };
 
   const dayColor = (day: number) => {
@@ -169,13 +207,17 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
         </FormControl>
         <Box sx={{ flex: 1 }} />
         <Typography variant="body2" color="text.secondary">表示月</Typography>
-        <IconButton size="small" onClick={() => changeMonth(-1)}>
+        <IconButton size="small" aria-label="前月" onClick={() => changeMonth(-1)}>
           <ChevronLeftIcon fontSize="small" />
         </IconButton>
-        <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'center', fontWeight: 600 }}>
+        <Typography
+          variant="body2"
+          data-testid="vacancy-year-month"
+          sx={{ minWidth: 80, textAlign: 'center', fontWeight: 600 }}
+        >
           {yearMonth.y}年{yearMonth.m}月
         </Typography>
-        <IconButton size="small" onClick={() => changeMonth(1)}>
+        <IconButton size="small" aria-label="次月" onClick={() => changeMonth(1)}>
           <ChevronRightIcon fontSize="small" />
         </IconButton>
       </Stack>
@@ -251,11 +293,16 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
                     {bed.bed}
                   </Box>
                   {days.map((d) => {
-                    const bg = bed.disabled ? DISABLED : (occupied(r.roomNumber, bed.bed, d) ? OCCUPIED : EMPTY_BG);
+                    const state = bed.disabled
+                      ? '使用不可'
+                      : occupied(r.roomNumber, bed, d) ? '使用中' : '空床';
+                    const bg = state === '使用不可' ? DISABLED : state === '使用中' ? OCCUPIED : EMPTY_BG;
+                    const cellDate = `${yearMonth.y}/${String(yearMonth.m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
                     return (
                       <Box
                         key={d}
                         component="td"
+                        title={`${cellDate} ${r.roomNumber}号室 ${bed.bed} ${state}`}
                         sx={{ height: 22, bgcolor: bg }}
                       />
                     );
@@ -269,7 +316,10 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
 
       <Box sx={{ mt: 1.5, fontSize: '0.7rem', color: 'text.secondary' }}>
         <div>青色は、使用されているベッドを表します。</div>
-        <div>白色は空床状態を表します。</div>
+        <div>白色は空床状態を表します。灰色は使用不可のベッドです。</div>
+        <div>
+          未確定の入退院指示も反映します（入院指示は予定日当日から使用中、退院指示は予定日の翌日から空床。日単位で判定）。
+        </div>
         <div style={{ fontWeight: 700 }}>表示のみで、ベッドの選択はできません。</div>
       </Box>
     </Box>

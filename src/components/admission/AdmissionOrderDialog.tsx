@@ -404,24 +404,41 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
               </Alert>
             )}
 
+            {/* Select の表示部（role=combobox）は InputLabel と紐づかず読み上げ名が空になるため、
+                SelectDisplayProps で aria-label を明示する（支援技術・E2E の要素特定の双方に効く）。 */}
             <Stack direction="row" spacing={1.5} alignItems="center">
               {/* 病棟は必須（病棟未指定は不可）。空値を取れない Select で構造的に担保し、required で明示。 */}
               <FormControl size="small" required sx={{ minWidth: 140 }}>
                 <InputLabel>病棟</InputLabel>
-                <Select label="病棟" value={toWard} onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}>
+                <Select
+                  label="病棟"
+                  value={toWard}
+                  SelectDisplayProps={{ 'aria-label': '病棟' }}
+                  onChange={(e) => { setToWard(e.target.value as WardId); setToRoom(''); setToBed(''); }}
+                >
                   <MenuItem value="ward1">第１病棟</MenuItem>
                   <MenuItem value="ward2">第２病棟</MenuItem>
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: 120 }} disabled={roomUndecided}>
                 <InputLabel>病室</InputLabel>
-                <Select label="病室" value={toRoom} onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}>
+                <Select
+                  label="病室"
+                  value={toRoom}
+                  SelectDisplayProps={{ 'aria-label': '病室' }}
+                  onChange={(e) => { setToRoom(e.target.value); setToBed(''); }}
+                >
                   {wardRooms.map((r) => (<MenuItem key={r.roomNumber} value={r.roomNumber}>{r.roomNumber}号室</MenuItem>))}
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: 100 }} disabled={!room || roomUndecided}>
                 <InputLabel>ベッド</InputLabel>
-                <Select label="ベッド" value={toBed} onChange={(e) => setToBed(e.target.value)}>
+                <Select
+                  label="ベッド"
+                  value={toBed}
+                  SelectDisplayProps={{ 'aria-label': 'ベッド' }}
+                  onChange={(e) => setToBed(e.target.value)}
+                >
                   {availableBeds.map((b) => (<MenuItem key={b.bed} value={b.bed}>{b.bed}</MenuItem>))}
                   {availableBeds.length === 0 && <MenuItem value="" disabled>空きベッドなし</MenuItem>}
                 </Select>
