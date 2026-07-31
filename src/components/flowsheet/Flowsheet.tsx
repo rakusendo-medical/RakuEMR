@@ -440,7 +440,8 @@ function SectionHeaderRow({ title }: { title: string }) {
 
 // ----- フローシートパターン変更（最下部の欄 + ダイアログ）-----
 // パターン候補・入力項目はマスタ（patternMaster: ケア項目マスタ＋パターンマスタ）で管理する。
-// 未適用の患者は「共通項目時間設定」が適用される想定。PATTERN_OPTIONS / itemsOf は import 済み。
+// 未適用の患者は「共通項目時間設定」が適用される想定。パターン候補は PATTERN_OPTIONS、
+// パターンごとの入力項目は patternItems（いずれも patternMaster から import）で解決する。
 // endDate 未設定（''）は「終了日なし＝以降ずっと適用」。終了日以降は入力不可。
 interface PatternPeriod { id: string; startDate: string; endDate?: string; pattern: string; }
 // iso が適用期間内か（開始日〜終了日、終了日なしは開始日以降すべて）。
@@ -636,6 +637,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
       return [label, patternCells[`${p.id}|${label}|${iso}`] ?? ''];
     }));
   // iso 未指定時は適用開始日（開始日より前は入力不可のため）。
+  // 呼び出し側は endDate も含めた PatternPeriod を渡すこと（ダイアログの日付 max 制約に使う）。
   const openPatternEntry = (p: PatternPeriod, iso: string = p.startDate) => {
     setEntryTarget(p);
     setEntryDate(iso);
@@ -1434,7 +1436,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                             <Button
                               size="small" variant="outlined"
                               aria-label={`${g.pattern} 入力 ${iso}`}
-                              onClick={() => openPatternEntry({ id: g.id, pattern: g.pattern, startDate: g.startDate as string }, iso)}
+                              onClick={() => openPatternEntry({ id: g.id, pattern: g.pattern, startDate: g.startDate as string, endDate: g.endDate }, iso)}
                               sx={{ fontSize: '0.6rem', minWidth: 0, px: 1, py: 0, lineHeight: 1.5, color: '#475569', borderColor: '#cbd5e1', whiteSpace: 'nowrap' }}
                             >
                               入力
