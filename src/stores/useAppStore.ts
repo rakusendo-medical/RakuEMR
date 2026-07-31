@@ -17,8 +17,8 @@ export interface OptionalFeatures {
   psychiatricLink: boolean;
   /** ep-05 隔離拘束変更（マスタ「隔離拘束変更=する」相当。継続/変更指示リンクの表示制御） */
   restraintChange: boolean;
-  /** ep-07 観察記録の未来日入力抑止（マスタ validate.future 相当） */
-  observationFutureBlock: boolean;
+  // ep-07 観察記録の未来日入力不可は設定によらず常時適用のため、トグルは持たない
+  //   （spec: docs/specs/ep-07-observation/_epic.md「共通ルール: 未来日入力不可」）
 }
 
 /** 病床移動の予定（ep-01 us-02 用） */
@@ -256,7 +256,6 @@ export const useAppStore = create<AppState>()(
         medicalProtection: false,
         psychiatricLink: false,
         restraintChange: false,
-        observationFutureBlock: false,
       },
       toggleOptionalFeature: (key) =>
         set((state) => ({
@@ -507,11 +506,16 @@ export const useAppStore = create<AppState>()(
         consultationFinishedMap: state.consultationFinishedMap,
         patientListSearchCondition: state.patientListSearchCondition,
       }),
-      version: 2,
+      version: 3,
       // v2: scheduledMoves を永続化対象から除外（移動はセッション限定）。既存 localStorage から掃除する。
+      // v3: ep-07 観察記録の未来日入力不可を常時適用に固定。optionalFeatures.observationFutureBlock を掃除する。
       migrate: (persisted: unknown, version: number) => {
-        if (persisted && typeof persisted === 'object' && version < 2) {
-          delete (persisted as Record<string, unknown>).scheduledMoves;
+        if (persisted && typeof persisted === 'object') {
+          const p = persisted as Record<string, unknown>;
+          if (version < 2) delete p.scheduledMoves;
+          if (version < 3 && p.optionalFeatures && typeof p.optionalFeatures === 'object') {
+            delete (p.optionalFeatures as Record<string, unknown>).observationFutureBlock;
+          }
         }
         return persisted as AppState;
       },

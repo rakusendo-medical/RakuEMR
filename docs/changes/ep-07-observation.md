@@ -262,7 +262,7 @@ S3 から下記契約で承認：
 
 ## 仕様変更メモ（2026-07-31）: 未来日入力不可を固定
 
-観察記録の未来日記載を不可とする方針が確定したため、spec を更新した（spec のみ。実装差分は未反映）。
+観察記録の未来日記載を不可とする方針が確定したため、spec を更新し実装も追随させた。
 
 ### spec 更新内容
 
@@ -283,8 +283,22 @@ S3 から下記契約で承認：
 - 判定は枠の **開始時刻のみ**（終了時刻は使わない）。過去方向の制限はなし
 - 記録枠の粒度: 観察グリッドのセル = 1 時間枠 / 観察記録ダイアログの各行 = 観察間隔で等分した枠 / 一覧の回数枠 = 区分の観察回数で等分した枠
 
-### 実装側の残差分（次ラウンド対応）
+### 実装内容
 
-- `src/components/flowsheet/Flowsheet.tsx` の観察グリッドに未来枠判定が無い（全セルがクリック可）
-- `src/components/isolation/ObservationRecordDialog.tsx` に行単位の未来枠判定が無い
-- `optionalFeatures.observationFutureBlock`（`useAppStore.ts` / `AdmissionDischarge.tsx` のトグル / `IsolationRestraint.tsx` / `RestraintObservationMatrix.tsx` / `ObservationBulkDialog.tsx` の分岐）は仕様上不要となるため、常時 ON 相当へ置き換えて撤去する
+判定ロジックは 1 箇所に集約し、各画面はそこから判定する。
+
+- `src/components/isolation/observationFutureBlock.ts` — **新規**。共通判定（`isFutureSlot` / `isFutureTimeString` / `slotStartMinute`）と、時刻経過で未来枠を解除するための `useNowTick`、共通メッセージを提供
+- `src/components/flowsheet/Flowsheet.tsx` — 観察グリッドのセルに未来枠判定を追加（グレー＋クリック不可＋ホバー無効、凡例に「未来日入力不可」を追加）
+- `src/components/isolation/ObservationRecordDialog.tsx` — 行単位の未来枠判定を追加。未来枠の行は [選択] チェックと入力欄を非活性・未選択にし、[全選択]／[内容一括入力]／行追加の対象からも除外。時間欄を未来時刻へ手入力して [登録] した場合はエラーで登録中止（時間欄のみ活性のまま残し、修正できるようにする）
+- `src/components/isolation/ObservationBulkDialog.tsx` — 回数枠の開始時刻（1 時間を区分別観察回数で等分）で判定。未来枠なら対象 0 件表示、記録時間の既定値も回数枠の開始時刻に修正。登録時にも未来時刻を弾く
+- `src/components/isolation/IsolationRestraint.tsx`（記録タブ）— 回数枠タイトル・各セルの判定を「時のみ」から「回数枠の開始時刻」へ修正し、未来枠はグレー＋クリック不可。「未来日入力抑止 ON」チップを削除
+- `src/components/isolation/RestraintObservationMatrix.tsx` — 常時適用へ変更（ツールチップ文言も設定依存の表記を撤去）
+- `src/stores/useAppStore.ts` — `optionalFeatures.observationFutureBlock` を削除。persist を version 3 に上げ、既存 localStorage の同キーを migrate で掃除
+- `src/components/admission/AdmissionDischarge.tsx` — オプション機能トグル「観察未来日抑止」を削除
+- `e2e/observation-future-block.spec.ts` — **新規**。`page.clock.setFixedTime` で 2026-05-19 16:29／16:30／16:31 を再現し、spec の 15分枠の例をそのまま検証（6 ケース）
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン / `npm run build` クリーン
+- E2E: 新規 `observation-future-block.spec.ts` 6 件パス。既存 `flowsheet.spec.ts` / `isolation.spec.ts`（36 件）もパス（回帰なし）
+- `npm run lint` は本改修前から実行不可（ESLint 10 系に対し flat config 未整備）。今回は対応範囲外

@@ -25,6 +25,9 @@ import RestraintNursingRecordStub from './RestraintNursingRecordStub';
 import ObservationBulkDialog from './ObservationBulkDialog';
 import ObservationRecordDialog from './ObservationRecordDialog';
 import IsolationHistoryView from './IsolationHistoryView';
+import {
+  isFutureSlot, slotStartMinute, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL,
+} from './observationFutureBlock';
 import BedMoveDialog, { type BedMoveTarget } from '../wardMap/BedMoveDialog';
 import type { KartePageLocationState } from '../karte/KartePage';
 
@@ -614,7 +617,8 @@ const ObservationListTab: React.FC = () => {
   const today = new Date().toISOString().slice(0, 10);
   const dynamicIsolationOrders = useAppStore((s) => s.dynamicIsolationOrders);
   const dynamicObservationRecords = useAppStore((s) => s.dynamicObservationRecords);
-  const futureBlock = useAppStore((s) => s.optionalFeatures.observationFutureBlock);
+  // 未来日入力不可（ep-07 共通ルール）。時刻経過で未来枠が入力可へ変わるため定期的に再判定する
+  const nowTick = useNowTick();
 
   const [date, setDate] = useState(today);
   const [ward, setWard] = useState<WardId | 'all'>('all');
@@ -735,7 +739,6 @@ const ObservationListTab: React.FC = () => {
               条件設定 {admitForms.length > 0 && `(${admitForms.length})`}
             </Button>
           </Tooltip>
-          {futureBlock && <Chip label="未来日入力抑止 ON" size="small" color="warning" variant="outlined" />}
           <Box sx={{ flex: 1 }} />
           <Stack direction="row" spacing={1} alignItems="center">
             {MASTER_OBSERVATION_STATES.filter((s) => s.state !== '未記入').map((s) => (
@@ -768,21 +771,37 @@ const ObservationListTab: React.FC = () => {
               {/* 1 時間内の回数枠タイトル（区分ごとに最大回数を取り、クリックで一括起動） */}
               {Array.from({ length: 24 }, (_, h) => h).flatMap((h) => {
                 const maxFreq = Math.max(...SUB_3SEG.map((s) => MASTER_OBSERVATION_FREQUENCY[s === '隔離拘束' ? '拘束' : (s as '隔離' | '拘束' | 'その他')] ?? 1));
-                return Array.from({ length: maxFreq }, (_, occ) => (
-                  <TableCell key={`${h}-${occ}`} align="center" sx={{ p: 0, fontSize: '0.5rem', cursor: 'pointer' }}>
-                    <Tooltip title={`${h}時 ${occ + 1}回目（クリックで一括入力）`}>
-                      <Box
-                        onClick={() => {
-                          // デフォルト: 拘束区分（最も回数多い前提）。実 UX では区分タイトルを別行に分けるが、簡略化
-                          openBulk('拘束', h, occ + 1);
-                        }}
-                        sx={{ p: 0.2, '&:hover': { bgcolor: '#dbeafe' } }}
-                      >
-                        {occ + 1}
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                ));
+                return Array.from({ length: maxFreq }, (_, occ) => {
+                  // 未来日入力不可: 現在日時が当該回数枠の開始時刻に達していなければクリック不可
+                  const slotMinute = slotStartMinute(occ + 1, maxFreq);
+                  const isFuture = isFutureSlot(date, h, slotMinute, nowTick);
+                  const slotLabel = `${String(h).padStart(2, '0')}:${String(slotMinute).padStart(2, '0')}`;
+                  return (
+                    <TableCell
+                      key={`${h}-${occ}`} align="center"
+                      data-testid={`obs-slot-${h}-${occ + 1}`}
+                      aria-disabled={isFuture || undefined}
+                      sx={{
+                        p: 0, fontSize: '0.5rem',
+                        cursor: isFuture ? 'not-allowed' : 'pointer',
+                        bgcolor: isFuture ? '#e2e8f0' : undefined,
+                        color: isFuture ? 'text.disabled' : undefined,
+                      }}
+                    >
+                      <Tooltip title={isFuture ? `${slotLabel} ${OBSERVATION_FUTURE_BLOCK_LABEL}` : `${h}時 ${occ + 1}回目（クリックで一括入力）`}>
+                        <Box
+                          onClick={isFuture ? undefined : () => {
+                            // デフォルト: 拘束区分（最も回数多い前提）。実 UX では区分タイトルを別行に分けるが、簡略化
+                            openBulk('拘束', h, occ + 1);
+                          }}
+                          sx={{ p: 0.2, '&:hover': isFuture ? {} : { bgcolor: '#dbeafe' } }}
+                        >
+                          {occ + 1}
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                  );
+                });
               })}
             </TableRow>
           </TableHead>
@@ -814,8 +833,8 @@ const ObservationListTab: React.FC = () => {
                   {Array.from({ length: 24 }, (_, h) => h).flatMap((h) => {
                     const maxFreq = Math.max(...SUB_3SEG.map((s) => MASTER_OBSERVATION_FREQUENCY[s === '隔離拘束' ? '拘束' : (s as '隔離' | '拘束' | 'その他')] ?? 1));
                     return Array.from({ length: maxFreq }, (_, occ) => {
-                      const target = new Date(`${date}T${String(h).padStart(2, '0')}:00:00`).getTime();
-                      const isFuture = futureBlock && target > Date.now();
+                      // 未来日入力不可: 判定は回数枠の開始時刻（1 時間を回数で等分した開始時刻）で行う
+                      const isFuture = isFutureSlot(date, h, slotStartMinute(occ + 1, maxFreq), nowTick);
                       const key = `${row.patient.id}|${sub}|${h}|${occ + 1}`;
                       const cell = observationsByKey.get(key);
                       const stateConf = cell ? MASTER_OBSERVATION_STATES.find((s) => s.state === cell.state) : undefined;

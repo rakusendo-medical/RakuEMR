@@ -23,6 +23,9 @@ import { useAppStore } from '../../stores/useAppStore';
 import { useFlowsheetStore } from '../../features/flowsheet/store';
 import ObservationLinkSettingDialog from './ObservationLinkSettingDialog';
 import ObservationContentBulkDialog from './ObservationContentBulkDialog';
+import {
+  isFutureTimeString, useNowTick, OBSERVATION_FUTURE_BLOCK_MESSAGE, OBSERVATION_FUTURE_BLOCK_LABEL,
+} from './observationFutureBlock';
 
 const STATE_OPTIONS: ObservationState[] = ['未記入', '浅眠', '落ち着き', '不穏', '睡眠', '中途覚醒'];
 
@@ -96,11 +99,24 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
   const [contentBulkOpen, setContentBulkOpen] = React.useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState<number | null>(null);
 
-  // 既定行（指定回数の等分スロット・状態は落ち着き）
+  // 未来日入力不可（ep-07 共通ルール）: 現在日時が行の開始時刻に達していない行は入力・登録できない。
+  // 時刻経過で入力可へ変わるため、一定間隔で現在時刻を更新して再判定する。
+  const nowTick = useNowTick();
+  const isFutureRow = React.useCallback(
+    (time: string) => isFutureTimeString(date, time, nowTick),
+    [date, nowTick],
+  );
+
+  // 既定行（指定回数の等分スロット・状態は落ち着き）。未来枠の行は未選択で作る
   const buildDefaultRows = React.useCallback((freq: number): RowDraft[] =>
     buildSlots(hour, freq).map((time, i) => ({
-      occurrence: i + 1, selected: true, time, state: '落ち着き' as ObservationState, content: '', tags: [],
-    })), [hour]);
+      occurrence: i + 1,
+      selected: !isFutureTimeString(date, time),
+      time,
+      state: '落ち着き' as ObservationState,
+      content: '',
+      tags: [],
+    })), [hour, date]);
 
   // 同一時間帯の既存記録（置き換えモードでプリロード・保存時に削除する対象）
   const existingForHour = React.useMemo(() => {
@@ -143,25 +159,26 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
         content: '',
         tags: [],
       };
-      // 既存行も再計算
-      return [...prev, newRow].map((r, i) => ({
-        ...r,
-        time: `${String(hour).padStart(2, '0')}:${String(Math.min(59, interval * i)).padStart(2, '0')}`,
-        occurrence: i + 1,
-      }));
+      // 既存行も再計算（開始時刻が未来になった行は選択を外す）
+      return [...prev, newRow].map((r, i) => {
+        const time = `${String(hour).padStart(2, '0')}:${String(Math.min(59, interval * i)).padStart(2, '0')}`;
+        return { ...r, time, occurrence: i + 1, selected: r.selected && !isFutureRow(time) };
+      });
     });
   };
   const removeRow = (i: number) => {
     setRows((prev) => prev.filter((_, idx) => idx !== i).map((r, idx) => ({ ...r, occurrence: idx + 1 })));
   };
 
+  // 全選択/全解除は入力可能な行（未来枠でない行）だけを対象にする
   const toggleSelectAll = () => {
-    const allSelected = rows.every((r) => r.selected);
-    setRows((prev) => prev.map((r) => ({ ...r, selected: !allSelected })));
+    const selectable = rows.filter((r) => !isFutureRow(r.time));
+    const allSelected = selectable.length > 0 && selectable.every((r) => r.selected);
+    setRows((prev) => prev.map((r) => (isFutureRow(r.time) ? { ...r, selected: false } : { ...r, selected: !allSelected })));
   };
 
   const handleApplyContentBulk = ({ content, tags }: { content: string; tags: string[] }) => {
-    setRows((prev) => prev.map((r) => ({ ...r, content, tags })));
+    setRows((prev) => prev.map((r) => (isFutureRow(r.time) ? r : { ...r, content, tags })));
   };
 
   const insertTemplate = (i: number, tmpl: string) => {
@@ -172,6 +189,12 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
     const selected = rows.filter((r) => r.selected);
     if (selected.length === 0) {
       showSnackbar('登録対象の行が選択されていません', 'warning');
+      return;
+    }
+    // 未来日入力不可: 時間欄を未来時刻へ手入力した行があれば登録を中止する
+    const futureRows = selected.filter((r) => isFutureRow(r.time));
+    if (futureRows.length > 0) {
+      showSnackbar(`${OBSERVATION_FUTURE_BLOCK_MESSAGE}: ${futureRows.map((r) => r.time).join('、')}`, 'error');
       return;
     }
     const signedBy = currentUserRole === 'doctor' ? '田村 医師' : '山本 看護師';
@@ -283,16 +306,28 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
 
             {rows.map((row, i) => {
               const stateConf = MASTER_OBSERVATION_STATES.find((s) => s.state === row.state);
+              // 未来枠の行: [選択] チェックと入力欄を非活性（時間欄のみ修正できるよう活性のまま残す）
+              const future = isFutureRow(row.time);
               return (
                 <Box
                   key={i}
+                  data-testid={future ? 'obs-row-future' : 'obs-row'}
                   sx={{
                     display: 'flex', gap: 1, alignItems: 'flex-start',
                     p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1,
-                    bgcolor: stateConf?.bgColor ?? '#fff',
+                    bgcolor: future ? '#e2e8f0' : (stateConf?.bgColor ?? '#fff'),
+                    opacity: future ? 0.7 : 1,
                   }}
                 >
-                  <Checkbox size="small" checked={row.selected} onChange={(e) => updateRow(i, { selected: e.target.checked })} sx={{ p: 0.5 }} />
+                  <Tooltip title={future ? OBSERVATION_FUTURE_BLOCK_MESSAGE : ''} arrow>
+                    <span>
+                      <Checkbox
+                        size="small" checked={row.selected} disabled={future}
+                        inputProps={{ 'aria-label': `${row.occurrence}回目 選択` }}
+                        onChange={(e) => updateRow(i, { selected: e.target.checked })} sx={{ p: 0.5 }}
+                      />
+                    </span>
+                  </Tooltip>
                   <Box sx={{ width: 70 }}>
                     <Typography variant="caption" color="text.secondary" display="block">{row.occurrence}回目</Typography>
                     <TextField
@@ -300,9 +335,14 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
                       value={row.time}
                       onChange={(e) => updateRow(i, { time: e.target.value })}
                     />
+                    {future && (
+                      <Typography variant="caption" color="error" display="block" sx={{ fontSize: '0.6rem' }}>
+                        {OBSERVATION_FUTURE_BLOCK_LABEL}
+                      </Typography>
+                    )}
                   </Box>
                   <TextField
-                    select size="small" label="状態" sx={{ minWidth: 110 }}
+                    select size="small" label="状態" sx={{ minWidth: 110 }} disabled={future}
                     value={row.state}
                     onChange={(e) => updateRow(i, { state: e.target.value as ObservationState })}
                   >
@@ -312,7 +352,7 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
                   </TextField>
                   <Box sx={{ flex: 1 }}>
                     <TextField
-                      multiline minRows={2} fullWidth size="small" label="内容"
+                      multiline minRows={2} fullWidth size="small" label="内容" disabled={future}
                       value={row.content}
                       onChange={(e) => updateRow(i, { content: e.target.value })}
                       inputProps={{ maxLength: 3000 }}
@@ -320,17 +360,19 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
                     <Stack direction="row" spacing={0.3} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                       {MASTER_OBSERVATION_TEMPLATES.slice(0, 3).map((t, ti) => (
                         <Tooltip key={ti} title={t}>
-                          <Button size="small" variant="outlined" onClick={() => insertTemplate(i, t)}
-                            sx={{ fontSize: '0.6rem', py: 0, px: 0.5, minWidth: 0 }}>
-                            文例{ti + 1}
-                          </Button>
+                          <span>
+                            <Button size="small" variant="outlined" disabled={future} onClick={() => insertTemplate(i, t)}
+                              sx={{ fontSize: '0.6rem', py: 0, px: 0.5, minWidth: 0 }}>
+                              文例{ti + 1}
+                            </Button>
+                          </span>
                         </Tooltip>
                       ))}
                       <Box sx={{ flex: 1 }} />
                       {row.tags.map((t) => (
                         <Chip key={t} label={t} size="small" sx={{ fontSize: '0.6rem', height: 18 }} />
                       ))}
-                      <Button size="small" variant="outlined" onClick={() => setLinkDialogOpen(i)}
+                      <Button size="small" variant="outlined" disabled={future} onClick={() => setLinkDialogOpen(i)}
                         sx={{ fontSize: '0.6rem', py: 0, px: 0.5, minWidth: 0 }}>
                         {row.linkSetting?.linkToNursingRecord ? '連携あり' : '未連携'}
                       </Button>

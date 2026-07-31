@@ -16,6 +16,7 @@ import type { IsolationOrder, IsolationSubtype } from '../../types';
 import { PATIENTS, ISOLATION_ORDERS, MASTER_OBSERVATION_STATES } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import ObservationRecordDialog from '../isolation/ObservationRecordDialog';
+import { isFutureSlot, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL } from '../isolation/observationFutureBlock';
 import { NewRecordDialog } from '../karte/MedicalRecordTab';
 
 interface Props {
@@ -400,6 +401,8 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   const [obsDialog, setObsDialog] = useState<{
     date: string; hour: number; subtype: IsolationSubtype | 'その他'; isolationOrderId?: string;
   } | null>(null);
+  // 未来日入力不可（ep-07 共通ルール）の判定に使う現在時刻。時刻経過で未来枠が入力可へ変わる
+  const nowTick = useNowTick();
 
   // 診療録作成ダイアログ（[未診察] セルから起動・カルテと同一の NewRecordDialog を再利用）
   const showSnackbar = useAppStore((s) => s.showSnackbar);
@@ -415,9 +418,11 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   const setAllFilters = (v: boolean) =>
     setFilterChecks(Object.fromEntries(EXAM_FILTER_OPTIONS.map((o) => [o, v])));
 
-  // 観察セル描画（縦=時刻 / 横=日）。どのセルもクリックで観察記録ダイアログを開く。
+  // 観察セル描画（縦=時刻 / 横=日）。未来枠以外のセルはクリックで観察記録ダイアログを開く。
   // active な隔離/拘束指示があれば subtype をそれに合わせ、無ければ「その他」で起票する。
   const renderObsCell = (iso: string, hour: number) => {
+    // 未来日入力不可: 現在日時が当該 1 時間枠の開始時刻に達していなければグレー＋クリック不可
+    const isFuture = isFutureSlot(iso, hour, 0, nowTick);
     const activeOrders = patient ? orders.filter((o) => isActiveAt(o, iso, hour)) : [];
     // 拘束優先（spec us-13 AC-8）→ 隔離 → 無ければ「その他」
     const restraint = activeOrders.find((o) => getSubtype(o) === '拘束' || getSubtype(o) === '隔離拘束');
@@ -430,23 +435,25 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
       .filter((r) => r.date === iso && r.time.startsWith(`${String(hour).padStart(2, '0')}:`))
       .slice()
       .sort((a, b) => a.time.localeCompare(b.time));
-    // 背景: 指示下→未記入色 / 指示なし→白
-    const baseBg = primary ? '#f8fafc' : '#fff';
+    // 背景: 未来枠→グレー / 指示下→未記入色 / 指示なし→白
+    const baseBg = isFuture ? '#e2e8f0' : primary ? '#f8fafc' : '#fff';
     return (
       <Box
         aria-label={`観察 ${iso} ${String(hour).padStart(2, '0')}:00`}
-        onClick={() => setObsDialog({ date: iso, hour, subtype, isolationOrderId: primary?.id })}
+        aria-disabled={isFuture || undefined}
+        title={isFuture ? OBSERVATION_FUTURE_BLOCK_LABEL : undefined}
+        onClick={isFuture ? undefined : () => setObsDialog({ date: iso, hour, subtype, isolationOrderId: primary?.id })}
         sx={{
           // セル高さを固定（行も OBS_ROW_HEIGHT 固定）。これで複数記録の
           // 色セグメントを flex で均等分割できる（百分率高さのブレを回避）。
-          width: '100%', height: OBS_ROW_HEIGHT, cursor: 'pointer',
+          width: '100%', height: OBS_ROW_HEIGHT, cursor: isFuture ? 'not-allowed' : 'pointer',
           bgcolor: baseBg,
           // 縦の区切り線のみセルに付与（横線はテーブル本来の行ボーダーに任せ、
           // 二重線で太く見えるのを防ぐ）
           borderRight: '1px solid #cbd5e1',
           // 複数記録は上下に積み、各セグメントを均等高さで分割
           display: 'flex', flexDirection: 'column',
-          '&:hover': { boxShadow: 'inset 0 0 0 2px #2563eb' },
+          '&:hover': isFuture ? {} : { boxShadow: 'inset 0 0 0 2px #2563eb' },
         }}
       >
         {recs.map((r, idx) => {
@@ -728,7 +735,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                   </TableCell>
                 </TableRow>
                 {/* 凡例（色 + 状態テキストで色覚配慮・design-rules §13.5）。
-                    どのセルもクリックで観察記録ダイアログを開ける。 */}
+                    未来枠（未到来の時間帯）以外のセルはクリックで観察記録ダイアログを開ける。 */}
                 <TableRow>
                   <TableCell colSpan={9} sx={{ py: 0.5, px: 1.5, borderBottom: '1px solid #e2e8f0' }}>
                     <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center" useFlexGap>
@@ -741,6 +748,12 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                           <Typography sx={{ fontSize: '0.65rem', color: s.color }}>{s.state}</Typography>
                         </Stack>
                       ))}
+                      <Stack direction="row" spacing={0.4} alignItems="center">
+                        <Box sx={{ width: 12, height: 12, bgcolor: '#e2e8f0', border: '1px solid #cbd5e1' }} />
+                        <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
+                          {OBSERVATION_FUTURE_BLOCK_LABEL}
+                        </Typography>
+                      </Stack>
                     </Stack>
                   </TableCell>
                 </TableRow>
