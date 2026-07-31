@@ -18,6 +18,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import ObservationRecordDialog from '../isolation/ObservationRecordDialog';
 import { isFutureSlot, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL } from '../isolation/observationFutureBlock';
 import { NewRecordDialog } from '../karte/MedicalRecordTab';
+import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
 
 interface Props {
   patientId?: string;
@@ -152,8 +153,6 @@ const STOOL_COUNT_OPTIONS = [0, 1, 2, 3, 4];
 const BRISTOL_OPTIONS = ['1', '2', '3', '4', '5', '6', '7'];
 const LAXATIVE_OPTIONS = ['なし', '緩下剤', '坐薬', '浣腸'];
 const BATH_OPTIONS = ['入浴', 'シャワー浴', '清拭', '—'];
-// 看護記録 新規登録の種別
-const NR_KIND_OPTIONS = ['経過記録', 'SOAP', 'フォーカス', '看護計画評価'];
 
 // 隔離拘束帯: dateIdx range [from, to]
 interface RestraintBar {
@@ -579,23 +578,15 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   const patchIntake = (k: 'morning' | 'lunch' | 'dinner', v: string) =>
     setDraft((d) => (d ? { ...d, intake: { ...d.intake, [k]: v } } : d));
 
-  // ----- 看護記録 新規登録 -----
-  const [nrDay, setNrDay] = useState<number | null>(null);
-  const [nrDraft, setNrDraft] = useState<{ kind: string; title: string; body: string }>({
-    kind: '経過記録', title: '', body: '',
-  });
+  // ----- 看護記録 新規登録（フッター「看護記録」ボタンと同一の NursingRecordDialog を流用）-----
+  const [nrOpen, setNrOpen] = useState(false);
+  const [nrDate, setNrDate] = useState<string | undefined>(undefined);
   const openNursing = (i: number) => {
-    setNrDay(i);
-    setNrDraft({ kind: '経過記録', title: '', body: '' });
-  };
-  const closeNursing = () => setNrDay(null);
-  const saveNursing = () => {
-    if (nrDay === null) return;
-    const label = `看護記録(${nrDraft.title.trim() || nrDraft.kind})`;
-    const iso = dayIso[nrDay];
-    const target = rows[nrDay];
-    setRowEdits((prev) => ({ ...prev, [iso]: { ...target, nursingLinks: [...target.nursingLinks, label] } }));
-    closeNursing();
+    // 患者未指定（/flowsheet 等）では開かず通知して return（空 patientId のレコード作成を防ぐ）。
+    if (!patientId) { showSnackbar('患者が選択されていません', 'warning'); return; }
+    // 対象日の ISO（YYYY-MM-DD・main の date-send 基盤の dayIso）をダイアログの記載日初期値に渡す。
+    setNrDate(dayIso[i]);
+    setNrOpen(true);
   };
 
   return (
@@ -1307,40 +1298,26 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
         </DialogActions>
       </Dialog>
 
-      {/* 看護記録 新規登録ダイアログ（看護記録ボタン / 新規作成ボタンで起動） */}
-      <Dialog open={nrDay !== null} onClose={closeNursing} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>
-          {nrDay !== null ? `${rows[nrDay].date}（${rows[nrDay].weekday}）の看護記録 新規登録` : '看護記録 新規登録'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 0.5 }}>
-            <TextField
-              select size="small" label="記録種別" value={nrDraft.kind}
-              onChange={(e) => setNrDraft((d) => ({ ...d, kind: e.target.value }))}
-              sx={{ maxWidth: 220 }}
-            >
-              {NR_KIND_OPTIONS.map((k) => (
-                <MenuItem key={k} value={k}>{k}</MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              size="small" label="タイトル" value={nrDraft.title}
-              onChange={(e) => setNrDraft((d) => ({ ...d, title: e.target.value }))}
-              placeholder="例: 熱発時対応 / 不穏時対応"
-            />
-            <TextField
-              size="small" label="本文" value={nrDraft.body}
-              onChange={(e) => setNrDraft((d) => ({ ...d, body: e.target.value }))}
-              multiline minRows={5}
-              placeholder={nrDraft.kind === 'SOAP' ? 'S:\nO:\nA:\nP:' : '経過を記入'}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeNursing}>キャンセル</Button>
-          <Button variant="contained" onClick={saveNursing}>登録</Button>
-        </DialogActions>
-      </Dialog>
+      {/* 看護記録 新規登録（看護記録ボタン / 新規作成ボタンで起動）。
+          フッターの「看護記録」と同一の NursingRecordDialog を流用する。 */}
+      <NursingRecordDialog
+        open={nrOpen}
+        patientId={patientId ?? ''}
+        defaultDate={nrDate}
+        initialMode="new"
+        onClose={() => setNrOpen(false)}
+        onSaved={(info) => {
+          // 作成した看護記録を、記載日に対応する列の「看護記録」行へリンク表示する（従来挙動）。
+          // main の date-send 基盤に合わせ rowEdits（ISO キー）へ反映＝セッション限定・リロードで消える。
+          if (info.mode !== 'new') return;
+          const iso = info.recordedAt.slice(0, 10);
+          if (!dayIso.includes(iso)) return; // 表示中の週外なら反映しない
+          setRowEdits((prev) => {
+            const base = prev[iso] ?? buildDay(iso);
+            return { ...prev, [iso]: { ...base, nursingLinks: [...base.nursingLinks, `看護記録(${info.title})`] } };
+          });
+        }}
+      />
 
       {/* 隔離拘束 観察記録ダイアログ（セルクリックで起動・既存 ep-07 ダイアログを流用） */}
       {obsDialog && patient && (

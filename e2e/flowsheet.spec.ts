@@ -31,6 +31,31 @@ test.describe('フローシート', () => {
     await expect(page.locator('text=在院日数')).toBeVisible();
   });
 
+  test('看護記録: フローシートの新規作成はフッターと同一の看護経過記録ダイアログを開く', async ({ page }) => {
+    // 看護記録行（「看護記録」ラベルセルを含む row）にスコープして [新規作成] をクリック
+    const nrRow = page.getByRole('row').filter({ has: page.getByRole('cell', { name: '看護記録', exact: true }) });
+    await nrRow.getByRole('button', { name: '新規作成' }).first().click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    // NursingRecordDialog の特徴（テンプレート呼出・タグ欄）が出る
+    await expect(dialog.getByRole('button', { name: 'テンプレート呼出' })).toBeVisible();
+    await expect(dialog.getByPlaceholder('タグを追加 (Enter)')).toBeVisible();
+    // 旧「看護記録 新規登録」ダイアログは表示されない
+    await expect(page.getByText('看護記録 新規登録')).toHaveCount(0);
+  });
+
+  test('看護記録: フローシートで作成すると当該日の看護記録行にリンク表示される', async ({ page }) => {
+    const nrRow = page.getByRole('row').filter({ has: page.getByRole('cell', { name: '看護記録', exact: true }) });
+    await nrRow.getByRole('button', { name: '新規作成' }).first().click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('タイトル').fill('熱発対応');
+    await dialog.getByRole('button', { name: '登録', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    // 記載日に対応する列の看護記録行に作成した記録のリンクが表示される
+    await expect(page.getByText('看護記録(熱発対応)')).toBeVisible();
+  });
+
   test('バイタルグラフ行が表示される', async ({ page }) => {
     await expect(page.locator('text=/体温|バイタル|T\\.P\\.R/').first()).toBeVisible();
   });
