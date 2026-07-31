@@ -259,3 +259,46 @@ S3 から下記契約で承認：
 
 - screen-mapping.tsv は `IsolationRestraint.tsx` 行（ep-06）に ep-07 を追記したい（既存行更新）。MASTER 側で調整いただけると助かります
 - screen-mapping.tsv の `RestraintObservationMatrix` 行は `/flowsheet/:patientId` にしたが、KarteAlphaPage 統合完了後の正確な path 表記は MASTER 判断で OK
+
+## 仕様変更メモ（2026-07-31）: 未来日入力不可を固定
+
+観察記録の未来日記載を不可とする方針が確定したため、spec を更新し実装も追随させた。
+
+### spec 更新内容
+
+- `docs/specs/ep-07-observation/_epic.md`
+  - 「共通ルール: 未来日入力不可（エピック横断）」を新設。判定条件と 15分枠の具体例（16時29分／16時30分／16時31分）を記載
+  - マスタ設定・オプション機能による ON/OFF 前提の記述を削除（`optionalFeatures.observationFutureBlock` トグルの記述を含む）
+- `docs/specs/ep-07-observation/us-13-individual-observation.spec.md`
+  - 観察グリッドの未来枠はグレー＋クリック不可、ダイアログの未来枠行は非活性・登録対象外として明記
+  - 「未来日抑止は未実装。マスタ仕様として後続検討」の記述を削除
+  - AC-11（未来枠のセルは入力不可）／AC-12（ダイアログ内の未来枠行は登録不可）を追加
+- `docs/specs/ep-07-observation/us-14-bulk-observation.spec.md`
+  - 未来枠の回数枠はグレー＋クリック不可、一括ダイアログの患者フィルタ条件を「未来枠でない」に変更
+  - AC-11 を設定依存の記述から固定仕様の記述へ改訂
+
+### 判定条件（要約）
+
+- 入力可: `記録枠の開始時刻 ≤ 現在日時` / 入力不可: `現在日時 < 記録枠の開始時刻`
+- 判定は枠の **開始時刻のみ**（終了時刻は使わない）。過去方向の制限はなし
+- 記録枠の粒度: 観察グリッドのセル = 1 時間枠 / 観察記録ダイアログの各行 = 観察間隔で等分した枠 / 一覧の回数枠 = 区分の観察回数で等分した枠
+
+### 実装内容
+
+判定ロジックは 1 箇所に集約し、各画面はそこから判定する。
+
+- `src/components/isolation/observationFutureBlock.ts` — **新規**。共通判定（`isFutureSlot` / `isFutureTimeString` / `slotStartMinute`）と、時刻経過で未来枠を解除するための `useNowTick`、共通メッセージを提供
+- `src/components/flowsheet/Flowsheet.tsx` — 観察グリッドのセルに未来枠判定を追加（グレー＋クリック不可＋ホバー無効、凡例に「未来日入力不可」を追加）
+- `src/components/isolation/ObservationRecordDialog.tsx` — 行単位の未来枠判定を追加。未来枠の行は [選択] チェックと入力欄を非活性・未選択にし、[全選択]／[内容一括入力]／行追加の対象からも除外。時間欄を未来時刻へ手入力して [登録] した場合はエラーで登録中止（時間欄のみ活性のまま残し、修正できるようにする）
+- `src/components/isolation/ObservationBulkDialog.tsx` — 回数枠の開始時刻（1 時間を区分別観察回数で等分）で判定。未来枠なら対象 0 件表示、記録時間の既定値も回数枠の開始時刻に修正。登録時にも未来時刻を弾く
+- `src/components/isolation/IsolationRestraint.tsx`（記録タブ）— 回数枠タイトル・各セルの判定を「時のみ」から「回数枠の開始時刻」へ修正し、未来枠はグレー＋クリック不可。「未来日入力抑止 ON」チップを削除
+- `src/components/isolation/RestraintObservationMatrix.tsx` — 常時適用へ変更（ツールチップ文言も設定依存の表記を撤去）
+- `src/stores/useAppStore.ts` — `optionalFeatures.observationFutureBlock` を削除。persist を version 3 に上げ、既存 localStorage の同キーを migrate で掃除
+- `src/components/admission/AdmissionDischarge.tsx` — オプション機能トグル「観察未来日抑止」を削除
+- `e2e/observation-future-block.spec.ts` — **新規**。`page.clock.setFixedTime` で 2026-05-19 16:29／16:30／16:31 を再現し、spec の 15分枠の例をそのまま検証（6 ケース）
+
+### 動作確認
+
+- `npx tsc --noEmit` クリーン / `npm run build` クリーン
+- E2E: 新規 `observation-future-block.spec.ts` 6 件パス。既存 `flowsheet.spec.ts` / `isolation.spec.ts`（36 件）もパス（回帰なし）
+- `npm run lint` は本改修前から実行不可（ESLint 10 系に対し flat config 未整備）。今回は対応範囲外

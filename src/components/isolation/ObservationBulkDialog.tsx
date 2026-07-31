@@ -14,12 +14,16 @@ import type {
   ObservationRecord, ObservationState, ObservationLinkSetting, IsolationOrder, IsolationSubtype, Patient,
 } from '../../types';
 import {
-  MASTER_OBSERVATION_STATES, MASTER_STAFF_FOR_SIGN,
+  MASTER_OBSERVATION_STATES, MASTER_OBSERVATION_FREQUENCY, MASTER_STAFF_FOR_SIGN,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import { useFlowsheetStore } from '../../features/flowsheet/store';
 import ObservationContentBulkDialog from './ObservationContentBulkDialog';
 import ObservationLinkSettingDialog from './ObservationLinkSettingDialog';
+import {
+  isFutureSlot, isFutureTimeString, slotStartMinute, useNowTick,
+  OBSERVATION_FUTURE_BLOCK_MESSAGE, OBSERVATION_FUTURE_BLOCK_LABEL,
+} from './observationFutureBlock';
 
 const STATE_OPTIONS: ObservationState[] = ['未記入', '浅眠', '落ち着き', '不穏', '睡眠', '中途覚醒'];
 
@@ -64,18 +68,23 @@ function deriveShift(hour: number): 'night' | 'day' | 'evening' {
 const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, hour, occurrence, candidates }) => {
   const addObservationRecordsBulk = useAppStore((s) => s.addObservationRecordsBulk);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
-  const observationFutureBlock = useAppStore((s) => s.optionalFeatures.observationFutureBlock);
   const currentUserRole = useAppStore((s) => s.currentUserRole);
   const addNursingRecord = useFlowsheetStore((s) => s.addNursingRecord);
 
   const defaultStaff = currentUserRole === 'doctor' ? '田村 医師' : '山本 看護師';
 
-  // 未来日チェック: 対象時刻が現在より未来の場合は表示候補から除外
-  const filteredCandidates = React.useMemo(() => {
-    if (!observationFutureBlock) return candidates;
-    const target = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
-    return candidates.filter(() => target.getTime() <= Date.now());
-  }, [candidates, observationFutureBlock, date, hour]);
+  // 対象回数枠の開始時刻（1 時間を区分別の観察回数で等分した、occurrence 番目の枠）
+  const frequency = MASTER_OBSERVATION_FREQUENCY[subtype === '隔離拘束' ? '拘束' : (subtype as '隔離' | '拘束' | 'その他')] ?? 1;
+  const slotMinute = slotStartMinute(occurrence, frequency);
+  const slotTime = `${String(hour).padStart(2, '0')}:${String(slotMinute).padStart(2, '0')}`;
+
+  // 未来日入力不可（ep-07 共通ルール）: 現在日時が回数枠の開始時刻に達していなければ入力対象 0 件
+  const nowTick = useNowTick();
+  const isFutureTarget = isFutureSlot(date, hour, slotMinute, nowTick);
+  const filteredCandidates = React.useMemo(
+    () => (isFutureTarget ? [] : candidates),
+    [candidates, isFutureTarget],
+  );
 
   const [rows, setRows] = React.useState<PatientRowDraft[]>([]);
   const [contentBulkOpen, setContentBulkOpen] = React.useState(false);
@@ -85,7 +94,7 @@ const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, 
     if (!open) return;
     setRows(filteredCandidates.map(({ patient, order }) => {
       const releases = order.releaseTimes ?? [];
-      const targetHHMM = `${String(hour).padStart(2, '0')}:00`;
+      const targetHHMM = slotTime;
       // 対象時間が解放時間に該当するかチェック（拘束入力時のみ表示）
       const matchedRelease = releases.find((r) => r.start <= targetHHMM && targetHHMM < r.end);
       const showReleaseHint = subtype === '拘束' && !!matchedRelease;
@@ -102,7 +111,7 @@ const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, 
         signedBy: defaultStaff,
       };
     }));
-  }, [open, filteredCandidates, subtype, hour, defaultStaff]);
+  }, [open, filteredCandidates, subtype, slotTime, defaultStaff]);
 
   const updateRow = (i: number, patch: Partial<PatientRowDraft>) => {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -120,6 +129,12 @@ const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, 
     const targets = rows.filter((r) => r.selected && !r.alreadyRegistered);
     if (targets.length === 0) {
       showSnackbar('登録対象がありません', 'warning');
+      return;
+    }
+    // 未来日入力不可: 記録時間を未来時刻へ手入力した行があれば登録を中止する
+    const futureTargets = targets.filter((r) => isFutureTimeString(date, r.recordTime, nowTick));
+    if (futureTargets.length > 0) {
+      showSnackbar(`${OBSERVATION_FUTURE_BLOCK_MESSAGE}: ${futureTargets.map((r) => r.recordTime).join('、')}`, 'error');
       return;
     }
     const newRecords: ObservationRecord[] = targets.map((r, i) => {
@@ -181,10 +196,10 @@ const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, 
           観察記録（一括入力）
           <Chip label={subtype} size="small" color="warning" variant="outlined" />
           <Typography variant="body2" color="text.secondary">
-            {date} {String(hour).padStart(2, '0')}:00 {occurrence}回目 / {rows.length}件
+            {date} {slotTime} 〜 {occurrence}回目 / {rows.length}件
           </Typography>
-          {observationFutureBlock && new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`).getTime() > Date.now() && rows.length === 0 && (
-            <Chip label="未来日のため対象 0 件" size="small" color="error" />
+          {isFutureTarget && (
+            <Chip label={`${OBSERVATION_FUTURE_BLOCK_LABEL}（対象 0 件）`} size="small" color="error" />
           )}
         </DialogTitle>
         <DialogContent dividers>
@@ -199,7 +214,7 @@ const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, 
           {rows.length === 0 ? (
             <Box sx={{ py: 4, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                該当する患者はいません{observationFutureBlock ? '（未来日入力抑止が有効）' : ''}
+                {isFutureTarget ? OBSERVATION_FUTURE_BLOCK_MESSAGE : '該当する患者はいません'}
               </Typography>
             </Box>
           ) : (

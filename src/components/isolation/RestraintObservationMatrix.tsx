@@ -20,6 +20,7 @@ import {
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import ObservationRecordDialog from './ObservationRecordDialog';
+import { isFutureSlot, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL } from './observationFutureBlock';
 
 interface Props {
   /** 患者 ID */
@@ -57,7 +58,8 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const RestraintObservationMatrix: React.FC<Props> = ({ patientId, dates }) => {
   const dynamicOrders = useAppStore((s) => s.dynamicIsolationOrders);
   const dynamicObservations = useAppStore((s) => s.dynamicObservationRecords);
-  const futureBlock = useAppStore((s) => s.optionalFeatures.observationFutureBlock);
+  // 未来日入力不可（ep-07 共通ルール）。時刻経過で未来枠が入力可へ変わるため定期的に再判定する
+  const nowTick = useNowTick();
 
   const patient: Patient | undefined = React.useMemo(
     () => PATIENTS.find((p) => p.id === patientId),
@@ -88,8 +90,8 @@ const RestraintObservationMatrix: React.FC<Props> = ({ patientId, dates }) => {
   };
 
   const renderCell = (date: string, hour: number) => {
-    const target = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`).getTime();
-    const isFuture = target > Date.now();
+    // 未来日入力不可: 現在日時が 1 時間枠の開始時刻に達していなければ入力不可
+    const isFuture = isFutureSlot(date, hour, 0, nowTick);
     // 当時間帯で active な指示
     const activeOrders = orders.filter((o) => isActiveAt(o, date, hour));
     if (activeOrders.length === 0) {
@@ -114,13 +116,13 @@ const RestraintObservationMatrix: React.FC<Props> = ({ patientId, dates }) => {
     const lastState = recordsInHour.length > 0 ? recordsInHour[recordsInHour.length - 1].state : '未記入';
     const stateConf = MASTER_OBSERVATION_STATES.find((s) => s.state === lastState);
 
-    const disabled = futureBlock && isFuture;
+    const disabled = isFuture;
 
     return (
       <Tooltip
         title={
           disabled
-            ? '未来日入力不可（マスタ設定）'
+            ? OBSERVATION_FUTURE_BLOCK_LABEL
             : `${date} ${String(hour).padStart(2, '0')}:00 / ${subtype} / ${MASTER_OBSERVATION_FREQUENCY[subtype === '隔離拘束' ? '拘束' : (subtype as '隔離' | '拘束')] ?? 1}回${matchedRelease ? ' / 開放時間' : ''}`
         }
         arrow
