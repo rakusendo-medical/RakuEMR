@@ -507,10 +507,14 @@ test.describe('部門記録簿', () => {
 
   test('部門記録簿: タグチップで記事を絞り込める（複数選択はAND）', async ({ page }) => {
     await page.goto('/nursing/records?patientId=P001');
-    // 初期は seed の2記事が見える
+    // 初期は seed の2記事が見える（気分変動=[看護記録]／転倒リスク=[看護記録,リスク管理]）
     await expect(page.getByText('気分変動')).toBeVisible();
     await expect(page.getByText('転倒リスク')).toBeVisible();
-    // タグ「リスク管理」で絞り込み → 転倒リスクのみ
+    // タグ「看護記録」だけ → 両方が持つので両方表示のまま
+    await page.getByRole('button', { name: 'タグ絞り込み 看護記録' }).click();
+    await expect(page.getByText('気分変動')).toBeVisible();
+    await expect(page.getByText('転倒リスク')).toBeVisible();
+    // さらに「リスク管理」も選択（AND）→ 両タグを持つ「転倒リスク」だけに絞られる
     await page.getByRole('button', { name: 'タグ絞り込み リスク管理' }).click();
     await expect(page.getByText('転倒リスク')).toBeVisible();
     await expect(page.getByText('気分変動')).toHaveCount(0);

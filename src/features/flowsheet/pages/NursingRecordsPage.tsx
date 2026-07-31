@@ -11,14 +11,14 @@ import {
 } from '@mui/icons-material';
 import { PATIENTS } from '../../../data/mockData';
 import { useFlowsheetStore } from '../store';
-import type { NursingRecord, ShiftType } from '../types';
+import type { NursingRecord, RecordFormType, ShiftType } from '../types';
 import NursingRecordDialog from '../components/NursingRecordDialog';
 
 const SHIFT_LABEL: Record<ShiftType, string> = { night: '深夜', day: '日勤', evening: '準夜' };
 const SHIFT_COLOR: Record<ShiftType, string> = { night: '#dc2626', day: '#1e40af', evening: '#16a34a' };
 
 // 記録形式（種別）チップの配色。タグ（アウトライン）と見分けられるよう塗りチップにする。
-const FORM_CHIP_STYLE: Record<string, { bg: string; color: string }> = {
+const FORM_CHIP_STYLE: Record<RecordFormType, { bg: string; color: string }> = {
   focus: { bg: '#dcfce7', color: '#166534' }, // 緑
   soap: { bg: '#dbeafe', color: '#1e40af' },  // 青
   free: { bg: '#ede9fe', color: '#6b21a8' },  // 紫
@@ -119,7 +119,7 @@ const NursingRecordsPage: React.FC = () => {
     const isDeleted = !!r.deletedAt;
     const isUpdated = !!r.updatedAt && !isDeleted;
     const time = r.recordedAt.slice(11, 16);
-    const formStyle = FORM_CHIP_STYLE[r.formType] ?? { bg: '#e5e7eb', color: '#374151' };
+    const formStyle = FORM_CHIP_STYLE[r.formType];
     return (
       <Card
         key={r.id}
@@ -241,6 +241,7 @@ const NursingRecordsPage: React.FC = () => {
                 variant={selectedTags.has(t) ? 'filled' : 'outlined'}
                 onClick={() => toggleTag(t)}
                 aria-label={`タグ絞り込み ${t}`}
+                aria-pressed={selectedTags.has(t)}
               />
             ))}
             {selectedTags.size > 0 && (
