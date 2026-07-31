@@ -156,6 +156,9 @@ const WardMap: React.FC = () => {
         toRoom: params.toRoom,
         toBed: params.toBed,
       });
+      // now は 30 秒間隔更新のため、同一分内に登録した「即時移動」が最大 30 秒間
+      // ベッドへ反映されない（＝取消の戻し先満床チェックもズレる）。登録時に即時更新する。
+      setNow(new Date());
     }
     showSnackbar(
       moveDialog.mode === 'assign' ? '割当を登録しました（モック）' : '移動を登録しました（モック）',
@@ -551,8 +554,8 @@ const WardMap: React.FC = () => {
         moves={movesForDialog}
         allMoves={allMoves}
         cancelledMoveIds={cancelledMoveIds}
-        onCancelMove={(id) => { cancelMove(id); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}
-        onUpdateMove={(id, patch) => { updateMove(id, patch); showSnackbar('移動を更新しました', 'info'); }}
+        onCancelMove={(id) => { cancelMove(id); setNow(new Date()); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}
+        onUpdateMove={(id, patch) => { updateMove(id, patch); setNow(new Date()); showSnackbar('移動を更新しました', 'info'); }}
         onClose={closeMoveDialog}
         onSubmit={handleMoveSubmit}
       />
