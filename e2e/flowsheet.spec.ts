@@ -31,6 +31,18 @@ test.describe('フローシート', () => {
     await expect(page.locator('text=在院日数')).toBeVisible();
   });
 
+  test('看護記録: フローシートの新規作成はフッターと同一の看護経過記録ダイアログを開く', async ({ page }) => {
+    // 看護記録行の [新規作成]（フッター「看護記録」と同じ NursingRecordDialog を開く）
+    await page.getByRole('button', { name: '新規作成' }).first().click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    // NursingRecordDialog の特徴（テンプレート呼出・タグ欄）が出る
+    await expect(dialog.getByRole('button', { name: 'テンプレート呼出' })).toBeVisible();
+    await expect(dialog.getByPlaceholder('タグを追加 (Enter)')).toBeVisible();
+    // 旧「看護記録 新規登録」ダイアログは表示されない
+    await expect(page.getByText('看護記録 新規登録')).toHaveCount(0);
+  });
+
   test('バイタルグラフ行が表示される', async ({ page }) => {
     await expect(page.locator('text=/体温|バイタル|T\\.P\\.R/').first()).toBeVisible();
   });
