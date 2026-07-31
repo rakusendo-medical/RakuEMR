@@ -49,6 +49,13 @@ const NursingRecordsPage: React.FC = () => {
     setSearchParams({ patientId: id });
   };
 
+  // 表示モード（通常/全て）切替: 候補タグが変わるため、タグ選択とページもリセットする。
+  const onChangeViewMode = (v: 'normal' | 'all') => {
+    setViewMode(v);
+    setPage(0);
+    setSelectedTags(new Set());
+  };
+
   const toggleTag = (t: string) => {
     setSelectedTags((prev) => {
       const next = new Set(prev);
@@ -196,7 +203,7 @@ const NursingRecordsPage: React.FC = () => {
           <ToggleButtonGroup
             value={viewMode}
             exclusive size="small"
-            onChange={(_, v) => v && setViewMode(v)}
+            onChange={(_, v) => v && onChangeViewMode(v)}
           >
             <ToggleButton value="normal">通常</ToggleButton>
             <ToggleButton value="all">全て</ToggleButton>
