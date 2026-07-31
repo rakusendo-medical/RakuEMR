@@ -44,6 +44,7 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const confirmDischarge = useAppStore((s) => s.confirmDischarge);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
+  const appendMedicalRecordContent = useAppStore((s) => s.appendMedicalRecordContent);
 
   const initialDischarge = order?.scheduledDate ? formatDateTime(order.scheduledDate, '10') : formatDateTimeNow();
   const [dischargeAt, setDischargeAt] = React.useState<string>(initialDischarge);
@@ -134,23 +135,32 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
 
   const finalize = () => {
     confirmDischarge(order.id);
-    // カルテ記事に「入退院記録」エントリを動的追加
     const now = new Date();
     const ymd = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
     const ts = `${ymd} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    appendMedicalRecord(order.patientId, {
-      id: `MR-CONF-D-${order.id}-${Date.now()}`,
-      date: ymd,
-      dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][now.getDay()],
-      category: '入退院記録',
-      author: order.doctorName,
-      authorRole: '医師',
-      content: `退院確定 ／ ${dischargeAt.replace('T', ' ')} 退院 ／ 転帰: ${outcome} ／ 帰住先: ${returnTo}\n紹介医療機関: ${hospital} ／ 退院決定理由: ${reason || '(未入力)'}`,
-      tags: ['退院確定'],
-      timestamp: ts,
-      likes: 0,
-      comments: 0,
-    });
+    if (order.karteRecordId) {
+      // us-09: 指示段階の記事がある場合は同一記事へ確定内容を追記（新規記事は作成しない・病棟・病室は記載しない）
+      appendMedicalRecordContent(
+        order.patientId,
+        order.karteRecordId,
+        `退院確定（${ts}）／ ${dischargeAt.replace('T', ' ')} 退院 ／ 転帰: ${outcome}`,
+      );
+    } else {
+      // カルテ記事に「入退院記録」エントリを動的追加
+      appendMedicalRecord(order.patientId, {
+        id: `MR-CONF-D-${order.id}-${Date.now()}`,
+        date: ymd,
+        dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][now.getDay()],
+        category: '入退院記録',
+        author: order.doctorName,
+        authorRole: '医師',
+        content: `退院確定 ／ ${dischargeAt.replace('T', ' ')} 退院 ／ 転帰: ${outcome} ／ 帰住先: ${returnTo}\n紹介医療機関: ${hospital} ／ 退院決定理由: ${reason || '(未入力)'}`,
+        tags: ['退院確定'],
+        timestamp: ts,
+        likes: 0,
+        comments: 0,
+      });
+    }
     onConfirmed(order.id);
     showSnackbar(
       `退院確定: ${order.patientName} ／ 未実施の移動・給食オーダを削除しました`,

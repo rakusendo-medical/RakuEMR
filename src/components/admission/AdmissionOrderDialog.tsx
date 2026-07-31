@@ -40,6 +40,18 @@ const MEAL_SLOTS = [
 
 const slotToHHMM = (key: string) => `${key.slice(0, 2)}:${key.slice(2)}`;
 
+/** カルテ記事用の現在時刻スタンプ（YYYY/MM/DD・曜日・タイムスタンプ） */
+const nowStamp = () => {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ymd = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
+  return {
+    ymd,
+    ts: `${ymd} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][now.getDay()],
+  };
+};
+
 const buildDateTime = (date: string, slotKey: string) => {
   const ds = date.split('T')[0];
   return `${ds}T${slotToHHMM(slotKey)}`;
@@ -49,7 +61,16 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const optionalFeatures = useAppStore((s) => s.optionalFeatures);
   const addPendingOrder = useAppStore((s) => s.addPendingOrder);
+  const updatePendingOrder = useAppStore((s) => s.updatePendingOrder);
+  const storePendingOrders = useAppStore((s) => s.pendingOrders);
+  const removePendingOrder = useAppStore((s) => s.removePendingOrder);
+  const confirmAdmission = useAppStore((s) => s.confirmAdmission);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
+  const appendMedicalRecordContent = useAppStore((s) => s.appendMedicalRecordContent);
+  const cancelMedicalRecord = useAppStore((s) => s.cancelMedicalRecord);
+
+  // 変更モード対象の指示（us-08: 更新・確定・中止は指示時のカルテ記事へ追記／取消する）
+  const editingOrder = editingOrderId ? storePendingOrders.find((o) => o.id === editingOrderId) : undefined;
 
   const [admitAt, setAdmitAt] = React.useState<string>(formatDateTimeNow());
   const [mealSlot, setMealSlot] = React.useState<string>('0800');
@@ -78,7 +99,11 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
 
   React.useEffect(() => {
     if (open && patient) {
-      const init = formatDateTimeNow();
+      // 変更モードでは登録済み指示の入院予定日を初期表示する（時刻は現在時刻。当日指示なら確定可能なまま）
+      const editing = editingOrderId ? useAppStore.getState().pendingOrders.find((o) => o.id === editingOrderId) : undefined;
+      const init = editing?.scheduledDate
+        ? `${editing.scheduledDate}T${formatDateTimeNow().split('T')[1]}`
+        : formatDateTimeNow();
       setAdmitAt(init);
       setMealSlot('0800');
       setAutoMealSlot('0800');
@@ -104,7 +129,7 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       setVacancyOpen(false);
       setDeleteReasonOpen(false);
     }
-  }, [open, patient]);
+  }, [open, patient, editingOrderId]);
 
   // 入院形態が変わったら入院時文書チェックリストを差し替え
   React.useEffect(() => {
@@ -187,10 +212,48 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     bedLabel: roomUndecided || !toBed ? '—' : toBed,
   });
 
+  // us-08: 指示時のカルテ記事本文。病棟・病室は記載しない（指示が出た事実と指示内容のみ）。
+  const buildOrderKarteBody = () =>
+    `${admitAt.replace('T', ' ')} 入院予定 ／ 入院形態: ${admitForm} ／ 紹介元: ${referralName || '(未選択)'} ／ 紹介経路: ${route}\n入院決定理由: ${reason || '(未入力)'} ／ 指示内容: ${orderText || '(未入力)'}`;
+
   const handleRegisterOrder = () => {
-    addPendingOrder(buildOrderEntry());
+    if (editingOrderId && editingOrder) {
+      // us-08: 更新はカルテ記事を新規作成せず、指示時の記事へ追記する
+      updatePendingOrder(editingOrderId, {
+        scheduledDate: admitAt.split('T')[0],
+        wardId: toWard,
+        roomNumber: roomUndecided || !toRoom ? '—' : toRoom,
+        bedLabel: roomUndecided || !toBed ? '—' : toBed,
+      });
+      if (editingOrder.karteRecordId) {
+        appendMedicalRecordContent(
+          patient.id,
+          editingOrder.karteRecordId,
+          `指示変更（${nowStamp().ts}）／ ${buildOrderKarteBody()}`,
+        );
+      }
+      showSnackbar(`入院指示を更新しました（${patient.name}）／ カルテ記事へ追記しました`, 'success');
+      onClose();
+      return;
+    }
+    const { ymd, ts, dayOfWeek } = nowStamp();
+    const recordId = `MR-ORD-A-${Date.now()}`;
+    appendMedicalRecord(patient.id, {
+      id: recordId,
+      date: ymd,
+      dayOfWeek,
+      category: '入退院記録',
+      author: patient.doctorName,
+      authorRole: '医師',
+      content: `【入院指示】${buildOrderKarteBody()}`,
+      tags: ['入院指示'],
+      timestamp: ts,
+      likes: 0,
+      comments: 0,
+    });
+    addPendingOrder({ ...buildOrderEntry(), karteRecordId: recordId });
     showSnackbar(
-      `入院指示を登録しました（${patient.name}）／ 入退院情報カレンダーに赤字（未確定）で表示されます`,
+      `入院指示を登録しました（${patient.name}）／ カルテ記事を作成しました ／ 入退院情報カレンダーに赤字（未確定）で表示されます`,
       'success',
     );
     onClose();
@@ -209,23 +272,31 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   };
 
   const finalizeAdmission = () => {
-    // カルテ記事に「入退院記録」エントリを動的追加
-    const now = new Date();
-    const ymd = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
-    const ts = `${ymd} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    appendMedicalRecord(patient.id, {
-      id: `MR-ORD-A-${Date.now()}`,
-      date: ymd,
-      dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][now.getDay()],
-      category: '入退院記録',
-      author: patient.doctorName,
-      authorRole: '医師',
-      content: `入院確定（指示発行同時） ／ ${admitAt.replace('T', ' ')} 入院 ／ 入院形態: ${admitForm}\n紹介元: ${referralName || '(未選択)'} ／ 紹介経路: ${route} ／ 入院決定理由: ${reason || '(未入力)'}`,
-      tags: ['入院確定', admitForm],
-      timestamp: ts,
-      likes: 0,
-      comments: 0,
-    });
+    const { ymd, ts, dayOfWeek } = nowStamp();
+    if (editingOrderId && editingOrder?.karteRecordId) {
+      // us-08: 指示段階の記事がある場合は同一記事へ確定内容を追記（新規記事は作成しない）
+      appendMedicalRecordContent(
+        patient.id,
+        editingOrder.karteRecordId,
+        `入院確定（${ts}）／ ${admitAt.replace('T', ' ')} 入院 ／ 入院形態: ${admitForm}`,
+      );
+      confirmAdmission(editingOrderId);
+    } else {
+      // 指示なしで直接確定した場合はこのとき記事を作成する
+      appendMedicalRecord(patient.id, {
+        id: `MR-ORD-A-${Date.now()}`,
+        date: ymd,
+        dayOfWeek,
+        category: '入退院記録',
+        author: patient.doctorName,
+        authorRole: '医師',
+        content: `入院確定（指示発行同時） ／ ${admitAt.replace('T', ' ')} 入院 ／ 入院形態: ${admitForm}\n紹介元: ${referralName || '(未選択)'} ／ 紹介経路: ${route} ／ 入院決定理由: ${reason || '(未入力)'}`,
+        tags: ['入院確定', admitForm],
+        timestamp: ts,
+        likes: 0,
+        comments: 0,
+      });
+    }
     showSnackbar(
       `入院確定: ${patient.name} ／ カルテ記事・医師指示簿・入院歴・治療歴に書込みました${printMealSheet || printMoveSheet ? '（指示箋印刷あり）' : ''}`,
       'success',
@@ -238,9 +309,21 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     finalizeAdmission();
   };
 
-  const handleDeleteConfirmed = () => {
+  const handleDeleteConfirmed = (params: { category: string; reason: string }) => {
     setDeleteReasonOpen(false);
-    showSnackbar(`入院指示を中止しました（${patient.name}）`, 'info');
+    if (editingOrderId) {
+      // us-08: 中止時はカルテ記事を削除せず、中止内容を追記した上で取消表示にする
+      if (editingOrder?.karteRecordId) {
+        appendMedicalRecordContent(
+          patient.id,
+          editingOrder.karteRecordId,
+          `指示中止（${nowStamp().ts}）／ 分類: ${params.category} ／ 理由: ${params.reason || '(未入力)'}`,
+        );
+        cancelMedicalRecord(patient.id, editingOrder.karteRecordId);
+      }
+      removePendingOrder(editingOrderId);
+    }
+    showSnackbar(`入院指示を中止しました（${patient.name}）／ カルテ記事は取消表示で残ります`, 'info');
     onClose();
   };
 

@@ -61,9 +61,10 @@ test.describe('入退院指示のカルテ記事', () => {
     await page.getByRole('button', { name: '退院確定' }).click();
 
     // 未実施オーダがある場合はオーダ確認ダイアログが出るので確定する
-    const orderConfirm = page.getByRole('button', { name: /中止確定|確定|OK/ });
-    if (await orderConfirm.first().isVisible().catch(() => false)) {
-      await orderConfirm.first().click();
+    //   （閉じかけの指示ダイアログの [退院確定] を誤クリックしないよう、オーダ確認ダイアログ内に限定）
+    const orderConfirmDialog = page.getByRole('dialog').filter({ hasText: 'オーダ確認' });
+    if (await orderConfirmDialog.isVisible().catch(() => false)) {
+      await orderConfirmDialog.getByRole('button', { name: '退院確定' }).click();
     }
     await expect(page.getByText(/退院確定:/)).toBeVisible();
 

@@ -193,6 +193,7 @@ const WardMap: React.FC = () => {
         roomNumber: p.roomNumber,
         bedLabel: p.bedLabel,
         wardId: p.wardId,
+        karteRecordId: p.karteRecordId,
       })),
     ];
     const order = candidates.find(
@@ -413,6 +414,7 @@ const WardMap: React.FC = () => {
                     roomNumber: pending.roomNumber,
                     bedLabel: pending.bedLabel,
                     wardId: pending.wardId,
+                    karteRecordId: pending.karteRecordId,
                   }
                 : null);
               if (order) setAdmissionConfirmOrder(order);

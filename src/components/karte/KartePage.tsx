@@ -157,6 +157,10 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   //  2) useAppStore.selectedPatient（OutpatientList 等が `setSelectedPatient` で渡した合成 Patient）
   //     -> 外来 visit（`OUTPATIENT_VISITS`）の patientId は PATIENTS に居ないため、ここで受ける
   const outpatientDischarges = useAppStore((s) => s.outpatientDischarges);
+  // us-08/us-09: この患者に「指示」段階の入退院指示があれば、指示ダイアログを変更モードで開く
+  const pendingOrders = useAppStore((s) => s.pendingOrders);
+  const pendingAdmitOrderId = pendingOrders.find((o) => o.patientId === patientId && o.type === '入院')?.id ?? null;
+  const pendingDischargeOrderId = pendingOrders.find((o) => o.patientId === patientId && o.type === '退院')?.id ?? null;
   const patient = useMemo(() => {
     const base = PATIENTS.find((p) => p.id === patientId)
       ?? (selectedPatient && selectedPatient.id === patientId ? selectedPatient : undefined);
@@ -507,15 +511,18 @@ export default function KartePage({ modeOverride }: KartePageProps) {
         </Alert>
       </Snackbar>
 
-      {/* us-36 サブ A: 入退院指示ダイアログ（既存ダイアログを直接起動・API 変更なし） */}
+      {/* us-36 サブ A: 入退院指示ダイアログ。us-08/us-09: 登録済みの「指示」がある場合は
+          変更モード（変更・中止・確定はいずれも指示時のカルテ記事へ追記／取消）で開く */}
       <AdmissionOrderDialog
         open={admissionOrderOpen}
         patient={patient}
+        editingOrderId={pendingAdmitOrderId}
         onClose={() => setAdmissionOrderOpen(false)}
       />
       <DischargeOrderDialog
         open={dischargeOrderOpen}
         patient={patient}
+        editingOrderId={pendingDischargeOrderId}
         onClose={() => setDischargeOrderOpen(false)}
       />
 

@@ -55,6 +55,7 @@ const AdmissionScheduleCalendar: React.FC = () => {
       roomNumber: p.roomNumber,
       bedLabel: p.bedLabel,
       wardId: p.wardId,
+      karteRecordId: p.karteRecordId,
     }));
     return [...fromMaster, ...fromStore]
       .filter((o) => o.type === type)
