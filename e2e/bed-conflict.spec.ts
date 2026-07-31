@@ -1,10 +1,12 @@
 import { test, expect } from './fixtures';
 
 /**
- * us-02 / us-03: 病床競合の取り扱い（後負け）
+ * us-02 / us-03: 病床競合（後負け）と移動履歴の取消・更新条件
  *
- * 1 つの病床に複数の患者を割り当てない。競合時は先に割り当てた患者を優先し、
- * 後からの登録・更新・取消（戻し）をエラーとする（定員超過の禁止）。
+ * - 病床競合: 1 つの病床に複数の患者を割り当てない。先に割り当てた患者を優先し、
+ *   後からの登録・更新をエラーとする（定員超過の禁止）。
+ * - 履歴の取消・更新: 未実施（未）の予定のみ可。実施済（済）・取消済み・入院行は不可。
+ *   取消は履歴に取消状態で残す（物理削除禁止）。
  *
  * モックデータ前提: 第１病棟は 107 号室・108 号室のみ空き 1 床、それ以外は満床。
  */
@@ -61,27 +63,50 @@ test.describe('病床競合（後負け）', () => {
     await expect(page.getByRole('dialog').getByRole('button', { name: /^(登録|確認)$/ })).toBeDisabled();
   });
 
-  test('取消により戻し先が定員超過となる場合は取消できない', async ({ page }) => {
-    // ① 患者A（105号室・満床）を 107号室（空き1床）へ即時移動 → 105 に空きが 1 できる
+  test('実施済（済）の移動は取消・更新できない', async ({ page }) => {
+    // ① 患者A（105号室）を 107号室 へ即時移動 → 履歴に「済」の転室行ができる
     await openMoveDialog(page, '井上 さくら');
     await selectRoom(page, '107号室');
     await submitMove(page);
     await page.keyboard.press('Escape');
 
-    // ② 患者B（102号室）を 105号室 の空き枠へ即時移動 → 105 は再び満床
-    await openMoveDialog(page, '加藤 良子');
-    await selectRoom(page, '105号室');
+    // ② 再度ダイアログを開く → 済の行には取消ボタンが表示されない
+    await openMoveDialog(page, '井上 さくら');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('107号室', { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: '取消', exact: true })).toHaveCount(0);
+
+    // ③ 済の行は更新可能な行にならない（更新可能な履歴行にのみ付く aria-label が存在しない）
+    await expect(dialog.getByRole('button', { name: /107号室への転室を更新/ })).toHaveCount(0);
+  });
+
+  test('未実施（未）の移動は更新でき、取消は履歴に取消として残る', async ({ page }) => {
+    // ① 患者B（101号室）が 108号室 へ未来日時の移動予定を登録
+    await openMoveDialog(page, '後藤 幸子');
+    await selectRoom(page, '108号室');
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const moveAt = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T09:00`;
+    await page.getByRole('dialog').getByRole('textbox', { name: '移動日時' }).fill(moveAt);
     await submitMove(page);
     await page.keyboard.press('Escape');
 
-    // ③ 患者Aの移動を取消そうとする → 戻し先 105 が満床のため取消エラー
-    await openMoveDialog(page, '井上 さくら');
+    // ② 再度開く → 未の行はクリックで更新モードに入れる
+    //   （移動予定チップでセル内の患者名が隠れるため、選択状態のまま残る下部メニューの [移動] から開く）
+    await page.getByRole('button', { name: '[移動]', exact: true }).click();
+    await expect(page.locator('text=転棟・転室ダイアログ')).toBeVisible();
     const dialog = page.getByRole('dialog');
+    //   履歴行は更新可能なときだけ role="button" + aria-label を持つ。病室番号の文字列は
+    //   移動先セレクトの現在値等とも重複しうるため、aria-label で行を特定する。
+    await dialog.getByRole('button', { name: /108号室への転室を更新/ }).click();
+    await expect(dialog.getByText('移動（更新）')).toBeVisible();
+    await dialog.getByRole('button', { name: '新規登録に戻る' }).click();
+
+    // ③ 未の行を取消 → 履歴に「取消」状態で残る（物理削除されない）
     await dialog.getByRole('button', { name: '取消', exact: true }).first().click();
     await dialog.getByRole('button', { name: '取消を実行' }).click();
-    await expect(page.getByText(/戻し先の病室が満床のため取消できません/)).toBeVisible();
-
-    // 履歴の状態は「済」のまま（取消されていない）
-    await expect(dialog.locator('.MuiChip-label', { hasText: '取消' })).toHaveCount(0);
+    await expect(page.getByText(/移動を取消しました/)).toBeVisible();
+    await expect(dialog.getByText('108号室', { exact: true })).toBeVisible();
+    await expect(dialog.locator('.MuiChip-label', { hasText: '取消' }).first()).toBeVisible();
   });
 });
