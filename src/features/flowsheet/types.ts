@@ -36,6 +36,7 @@ export interface CareItemMaster {
   unit?: string;
   options?: string[];        // radio / combo / check で使用
   inputWindow?: { from: HHmm; to: HHmm }; // 入力可能時間
+  standardMinutes?: number;  // 標準所要時間（ADL 等。表示は「名称(N分)」）
 }
 
 export interface FlowsheetPatternMaster {
