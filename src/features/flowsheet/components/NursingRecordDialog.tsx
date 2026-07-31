@@ -23,8 +23,8 @@ interface Props {
   defaultDate?: ISODate;
   initialMode?: Mode;
   onClose: () => void;
-  /** 登録／更新の完了後に呼ばれる（呼び出し元でグリッド表示へ反映する等に使う）。 */
-  onSaved?: (info: { title: string; recordedAt: ISODateTime; mode: Mode }) => void;
+  /** 登録／更新の完了後に呼ばれる（呼び出し元でグリッド表示へ反映する等に使う）。mode は登録='new'／更新='edit'。 */
+  onSaved?: (info: { title: string; recordedAt: ISODateTime; mode: 'new' | 'edit' }) => void;
 }
 
 const FORM_LABELS: Record<RecordFormType, string> = {

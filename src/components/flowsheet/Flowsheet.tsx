@@ -582,6 +582,8 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   const [nrOpen, setNrOpen] = useState(false);
   const [nrDate, setNrDate] = useState<string | undefined>(undefined);
   const openNursing = (i: number) => {
+    // 患者未指定（/flowsheet 等）では開かず通知して return（空 patientId のレコード作成を防ぐ）。
+    if (!patientId) { showSnackbar('患者が選択されていません', 'warning'); return; }
     // 対象日の ISO（YYYY-MM-DD・main の date-send 基盤の dayIso）をダイアログの記載日初期値に渡す。
     setNrDate(dayIso[i]);
     setNrOpen(true);
@@ -1306,16 +1308,14 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
         onClose={() => setNrOpen(false)}
         onSaved={(info) => {
           // 作成した看護記録を、記載日に対応する列の「看護記録」行へリンク表示する（従来挙動）。
-          // ローカル state のみ更新するためリロードで消える。
+          // main の date-send 基盤に合わせ rowEdits（ISO キー）へ反映＝セッション限定・リロードで消える。
           if (info.mode !== 'new') return;
           const iso = info.recordedAt.slice(0, 10);
-          setRows((rs) => rs.map((r) => {
-            const [y, m, d] = r.date.split('/');
-            const rIso = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-            return rIso === iso
-              ? { ...r, nursingLinks: [...r.nursingLinks, `看護記録(${info.title})`] }
-              : r;
-          }));
+          if (!dayIso.includes(iso)) return; // 表示中の週外なら反映しない
+          setRowEdits((prev) => {
+            const base = prev[iso] ?? buildDay(iso);
+            return { ...prev, [iso]: { ...base, nursingLinks: [...base.nursingLinks, `看護記録(${info.title})`] } };
+          });
         }}
       />
 
