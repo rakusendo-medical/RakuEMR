@@ -440,4 +440,26 @@ test.describe('部門記録簿', () => {
     await expect(page.locator('text=/記録|部門/').first()).toBeVisible();
   });
 
+  test('看護経過記録: テンプレート呼出の下のタグ欄で自由入力＋Enterで複数タグを付けられる', async ({ page }) => {
+    await page.getByRole('button', { name: '新規作成' }).click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'テンプレート呼出' })).toBeVisible();
+
+    // テンプレート呼出の下のタグ欄で、自由入力→Enter で複数タグを付与できる
+    const tagInput = dialog.getByPlaceholder('タグを追加 (Enter)');
+    await expect(tagInput).toBeVisible();
+    await tagInput.fill('観察');
+    await tagInput.press('Enter');
+    await tagInput.fill('申し送り事項');
+    await tagInput.press('Enter');
+    await expect(dialog.getByText('観察', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('申し送り事項', { exact: true })).toBeVisible();
+
+    // 同じタグは重複して追加されない
+    await tagInput.fill('観察');
+    await tagInput.press('Enter');
+    await expect(dialog.getByText('観察', { exact: true })).toHaveCount(1);
+  });
+
 });
