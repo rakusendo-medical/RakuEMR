@@ -27,6 +27,8 @@ const NursingRecordsPage: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<'normal' | 'all'>('normal');
   const [keyword, setKeyword] = useState('');
+  // タグ絞り込み（複数選択は AND＝すべて含む）
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
 
   const [dialog, setDialog] = useState<{ open: boolean; recordId: string | null; mode: 'view' | 'new' | 'edit' }>(
@@ -36,8 +38,29 @@ const NursingRecordsPage: React.FC = () => {
   const onChangePatient = (id: string) => {
     setPatientId(id);
     setPage(0);
+    setSelectedTags(new Set()); // 患者を変えたらタグ絞り込みはリセット
     setSearchParams({ patientId: id });
   };
+
+  const toggleTag = (t: string) => {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t); else next.add(t);
+      return next;
+    });
+    setPage(0);
+  };
+
+  // 絞り込み用の候補タグ（選択中患者の記録から集約。viewMode を反映）。
+  const availableTags = useMemo(() => {
+    const nowIso = new Date().toISOString();
+    const base = records.filter((r) =>
+      r.patientId === patientId
+      && (viewMode === 'all' || (!r.deletedAt && !r.updatedAt && r.recordedAt <= nowIso)));
+    const set = new Set<string>();
+    base.forEach((r) => r.tags.forEach((t) => set.add(t)));
+    return Array.from(set).sort();
+  }, [records, patientId, viewMode]);
 
   const filtered = useMemo(() => {
     let list = records.filter((r) => r.patientId === patientId);
@@ -48,11 +71,16 @@ const NursingRecordsPage: React.FC = () => {
       const k = keyword.toLowerCase();
       list = list.filter((r) =>
         r.title.toLowerCase().includes(k) ||
-        JSON.stringify(r.body.body).toLowerCase().includes(k),
+        JSON.stringify(r.body.body).toLowerCase().includes(k) ||
+        r.tags.some((t) => t.toLowerCase().includes(k)),
       );
     }
+    // タグ絞り込み（AND＝選択したタグをすべて含む記事のみ）
+    if (selectedTags.size > 0) {
+      list = list.filter((r) => [...selectedTags].every((t) => r.tags.includes(t)));
+    }
     return list.sort((a, b) => (a.recordedAt < b.recordedAt ? 1 : -1));
-  }, [records, patientId, viewMode, keyword]);
+  }, [records, patientId, viewMode, keyword, selectedTags]);
 
   // 月毎にグルーピング
   const grouped = useMemo(() => {
@@ -160,7 +188,7 @@ const NursingRecordsPage: React.FC = () => {
             <ToggleButton value="all">全て</ToggleButton>
           </ToggleButtonGroup>
           <TextField
-            size="small" placeholder="記事選択及び検索"
+            size="small" placeholder="検索（タイトル・本文・タグ）"
             value={keyword}
             onChange={(e) => { setKeyword(e.target.value); setPage(0); }}
           />
@@ -177,6 +205,31 @@ const NursingRecordsPage: React.FC = () => {
           </MuiLink>
         </Stack>
       </Paper>
+
+      {/* タグ絞り込み: 既存記録から集約したタグをチップ選択（複数選択は AND）。 */}
+      {availableTags.length > 0 && (
+        <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
+          <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>タグで絞り込み:</Typography>
+            {availableTags.map((t) => (
+              <Chip
+                key={t}
+                size="small"
+                label={t}
+                color={selectedTags.has(t) ? 'primary' : 'default'}
+                variant={selectedTags.has(t) ? 'filled' : 'outlined'}
+                onClick={() => toggleTag(t)}
+                aria-label={`タグ絞り込み ${t}`}
+              />
+            ))}
+            {selectedTags.size > 0 && (
+              <Button size="small" onClick={() => { setSelectedTags(new Set()); setPage(0); }}>
+                クリア
+              </Button>
+            )}
+          </Stack>
+        </Paper>
+      )}
 
       {grouped.length === 0 ? (
         <Paper variant="outlined" sx={{ p: 3 }}>
