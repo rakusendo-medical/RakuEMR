@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { Patient, Order } from '../../types';
 import { ORDERS } from '../../data/mockData';
+import { useAppStore } from '../../stores/useAppStore';
 import RestraintOrderLinks from '../isolation/RestraintOrderLinks';
 import type { KarteMode } from './KartePage';
 
@@ -35,6 +36,8 @@ interface TimelineRecord {
   tags: string[];
   orderNumber?: string;
   timestamp: string;   // YYYY/MM/DD HH:mm
+  /** us-08/us-09: 指示中止などで取消された記事（削除せず取消表示で残す） */
+  cancelled?: boolean;
 }
 
 const CATEGORY_COLORS: Record<RecordCategory, string> = {
@@ -149,10 +152,26 @@ export default function MedicalRecordTab({
   newRecordTrigger,
 }: MedicalRecordTabProps) {
   // ----- 集約タイムライン -----
+  // ep-02/ep-03: 入退院指示・確定でストアに動的追加されたカルテ記事（dynamicMedicalRecords）をマージ表示する
+  const dynamicMedicalRecords = useAppStore((s) => s.dynamicMedicalRecords);
   const timeline = useMemo<TimelineRecord[]>(() => {
-    const merged = [...MOCK_RECORDS, ...ordersToTimeline(patient.id)];
+    const dynamicRecords = (dynamicMedicalRecords[patient.id] ?? []).map<TimelineRecord>((r) => ({
+      id: r.id,
+      date: r.date,
+      dayOfWeek: r.dayOfWeek,
+      category: r.category as RecordCategory,
+      categoryColor: CATEGORY_COLORS[r.category as RecordCategory] ?? CATEGORY_COLORS['医師記録'],
+      author: r.author,
+      authorRole: r.authorRole,
+      content: r.content,
+      tags: r.tags,
+      orderNumber: r.orderNumber,
+      timestamp: r.timestamp,
+      cancelled: r.cancelled,
+    }));
+    const merged = [...MOCK_RECORDS, ...ordersToTimeline(patient.id), ...dynamicRecords];
     return merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-  }, [patient.id]);
+  }, [patient.id, dynamicMedicalRecords]);
 
   const [activeFilter, setActiveFilter] = useState<RecordCategory | 'all'>('all');
   // us-47: 期間切替（既定 6 日分）
@@ -396,8 +415,18 @@ export default function MedicalRecordTab({
                           </Typography>
                         </Box>
 
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Box sx={{ flex: 1, minWidth: 0, opacity: record.cancelled ? 0.6 : 1 }}>
                           <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.3 }} flexWrap="wrap">
+                            {/* us-08/us-09: 取消済み記事は削除せず「取消」表示で残す */}
+                            {record.cancelled && (
+                              <Chip
+                                label="取消"
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                sx={{ height: 18, fontSize: '0.6rem' }}
+                              />
+                            )}
                             {record.tags.map((tag) => (
                               <Chip
                                 key={tag}
@@ -423,7 +452,15 @@ export default function MedicalRecordTab({
                               </Typography>
                             )}
                           </Stack>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontSize: '0.75rem',
+                              whiteSpace: 'pre-line',
+                              wordBreak: 'break-word',
+                              ...(record.cancelled && { textDecoration: 'line-through', color: 'text.disabled' }),
+                            }}
+                          >
                             {record.content}
                           </Typography>
                           <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.3 }}>

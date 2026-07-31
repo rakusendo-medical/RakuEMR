@@ -62,6 +62,8 @@ const WardMap: React.FC = () => {
   // 右サイドバーから直接起動する入院系ダイアログ
   const [admissionConfirmOrder, setAdmissionConfirmOrder] = React.useState<AdmissionOrder | null>(null);
   const [admissionOrderPatient, setAdmissionOrderPatient] = React.useState<Patient | null>(null);
+  // us-08: 入院指示ダイアログを変更モードで開く場合の対象指示 ID（セッション登録分の[詳細]起動時のみ設定）
+  const [admissionOrderEditingId, setAdmissionOrderEditingId] = React.useState<string | null>(null);
   // ===== ep-08 隔離拘束歴 =====
   const [isolationHistoryPatientId, setIsolationHistoryPatientId] = React.useState<string | null>(null);
 
@@ -154,6 +156,9 @@ const WardMap: React.FC = () => {
         toRoom: params.toRoom,
         toBed: params.toBed,
       });
+      // now は 30 秒間隔更新のため、同一分内に登録した「即時移動」が最大 30 秒間
+      // ベッドへ反映されない（＝取消の戻し先満床チェックもズレる）。登録時に即時更新する。
+      setNow(new Date());
     }
     showSnackbar(
       moveDialog.mode === 'assign' ? '割当を登録しました（モック）' : '移動を登録しました（モック）',
@@ -193,6 +198,7 @@ const WardMap: React.FC = () => {
         roomNumber: p.roomNumber,
         bedLabel: p.bedLabel,
         wardId: p.wardId,
+        karteRecordId: p.karteRecordId,
       })),
     ];
     const order = candidates.find(
@@ -413,13 +419,31 @@ const WardMap: React.FC = () => {
                     roomNumber: pending.roomNumber,
                     bedLabel: pending.bedLabel,
                     wardId: pending.wardId,
+                    karteRecordId: pending.karteRecordId,
                   }
                 : null);
               if (order) setAdmissionConfirmOrder(order);
             }}
             onOpenAdmissionSchedule={(orderId) => {
               // 入院予定[詳細] → 入院指示ダイアログ
-              const o = ADMISSION_ORDERS.find((x) => x.id === orderId);
+              // us-08: セッション登録分（pendingOrders）の指示も[詳細]で開けるようにし、
+              // その場合は変更モード（指示時のカルテ記事へ追記）で起動する
+              const pending = pendingOrders.find((x) => x.id === orderId && x.type === '入院');
+              const o = ADMISSION_ORDERS.find((x) => x.id === orderId)
+                ?? (pending
+                  ? {
+                      id: pending.id,
+                      patientId: pending.patientId,
+                      patientName: pending.patientName,
+                      type: '入院' as const,
+                      status: '指示済' as const,
+                      scheduledDate: pending.scheduledDate,
+                      doctorName: pending.doctorName,
+                      roomNumber: pending.roomNumber,
+                      bedLabel: pending.bedLabel,
+                      wardId: pending.wardId,
+                    }
+                  : undefined);
               if (!o) return;
               // PATIENTS にあればそれを、無ければ order 情報から合成
               const found = PATIENTS.find((p) => p.id === o.patientId);
@@ -436,6 +460,7 @@ const WardMap: React.FC = () => {
                 doctorName: o.doctorName,
                 admissionState: 'outpatient',
               };
+              setAdmissionOrderEditingId(pending ? pending.id : null);
               setAdmissionOrderPatient(p);
             }}
             onOpenAbsent={() => navigate('/outing')}
@@ -527,9 +552,10 @@ const WardMap: React.FC = () => {
         target={moveDialog.target}
         rooms={displayedRooms}
         moves={movesForDialog}
+        allMoves={allMoves}
         cancelledMoveIds={cancelledMoveIds}
-        onCancelMove={(id) => { cancelMove(id); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}
-        onUpdateMove={(id, patch) => { updateMove(id, patch); showSnackbar('移動を更新しました', 'info'); }}
+        onCancelMove={(id) => { cancelMove(id); setNow(new Date()); showSnackbar('移動を取消しました（履歴に取消として残ります）', 'info'); }}
+        onUpdateMove={(id, patch) => { updateMove(id, patch); setNow(new Date()); showSnackbar('移動を更新しました', 'info'); }}
         onClose={closeMoveDialog}
         onSubmit={handleMoveSubmit}
       />
@@ -542,10 +568,14 @@ const WardMap: React.FC = () => {
         onConfirmed={() => setDischargeConfirmOrder(null)}
       />
 
-      {/* 退院指示ダイアログ（操作メニュー起動） */}
+      {/* 退院指示ダイアログ（操作メニュー起動）。us-09: 登録済みの「指示」があれば
+          カルテ画面と同様に変更モードで開く（重複指示・カルテ記事の重複作成を防ぐ） */}
       <DischargeOrderDialog
         open={!!dischargeOrderPatient}
         patient={dischargeOrderPatient}
+        editingOrderId={dischargeOrderPatient
+          ? pendingOrders.find((o) => o.patientId === dischargeOrderPatient.id && o.type === '退院')?.id ?? null
+          : null}
         onClose={() => setDischargeOrderPatient(null)}
       />
 
@@ -558,11 +588,12 @@ const WardMap: React.FC = () => {
         onOpenVacancy={() => setActiveFeature('vacancy')}
       />
 
-      {/* 右サイドバー 入院予定者[詳細] → 入院指示ダイアログ */}
+      {/* 右サイドバー 入院予定者[詳細] → 入院指示ダイアログ（セッション登録分は変更モード） */}
       <AdmissionOrderDialog
         open={!!admissionOrderPatient}
         patient={admissionOrderPatient}
-        onClose={() => setAdmissionOrderPatient(null)}
+        editingOrderId={admissionOrderEditingId}
+        onClose={() => { setAdmissionOrderPatient(null); setAdmissionOrderEditingId(null); }}
       />
 
       {/* ===== ep-08 隔離拘束歴 ===== */}

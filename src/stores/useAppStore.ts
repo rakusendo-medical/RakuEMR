@@ -59,6 +59,8 @@ export interface PendingOrderEntry {
   wardId: WardId;
   roomNumber: string;
   bedLabel: string;
+  /** us-08/us-09: 指示時に作成したカルテ記事 ID（更新・確定・中止で同一記事を追記／取消する） */
+  karteRecordId?: string;
 }
 
 interface AppState {
@@ -101,6 +103,8 @@ interface AppState {
   // ep-03: 「指示」段階で登録された入退院指示（永続化対象、確定で自動除去）
   pendingOrders: PendingOrderEntry[];
   addPendingOrder: (o: PendingOrderEntry) => void;
+  // id は参照整合性維持のため更新不可（Omit で型レベルで禁止）
+  updatePendingOrder: (id: string, patch: Partial<Omit<PendingOrderEntry, 'id'>>) => void;
   removePendingOrder: (id: string) => void;
 
   // ep-01 us-02: 病床移動の予定（モックのためセッション限定・非永続化。partialize から除外・リロードで復帰）
@@ -122,6 +126,10 @@ interface AppState {
   // 新カルテ画面（KartePage）では PATIENTS 由来の静的 records と、ここの動的 records をマージして表示する。
   dynamicMedicalRecords: Record<string, MedicalRecord[]>;
   appendMedicalRecord: (patientId: string, record: MedicalRecord) => void;
+  // us-08/us-09: 指示→更新→確定はカルテ記事を 1 記事に集約するため、既存記事への本文追記を提供する。
+  appendMedicalRecordContent: (patientId: string, recordId: string, text: string) => void;
+  // us-08/us-09: 指示中止時は記事を削除せず取消表示にする。
+  cancelMedicalRecord: (patientId: string, recordId: string) => void;
 
   // ep-04: 入退院歴の動的編集（永続化対象）
   // ADMISSION_HISTORY（マスタ）に対する差分のみ保持。AdmissionHistoryView 側で計算合成する。
@@ -257,6 +265,10 @@ export const useAppStore = create<AppState>()(
 
       pendingOrders: [],
       addPendingOrder: (o) => set((state) => ({ pendingOrders: [...state.pendingOrders, o] })),
+      updatePendingOrder: (id, patch) =>
+        set((state) => ({
+          pendingOrders: state.pendingOrders.map((x) => (x.id === id ? { ...x, ...patch, id: x.id } : x)),
+        })),
       removePendingOrder: (id) => set((state) => ({ pendingOrders: state.pendingOrders.filter((x) => x.id !== id) })),
 
       scheduledMoves: [],
@@ -276,6 +288,24 @@ export const useAppStore = create<AppState>()(
           dynamicMedicalRecords: {
             ...state.dynamicMedicalRecords,
             [patientId]: [...(state.dynamicMedicalRecords[patientId] ?? []), record],
+          },
+        })),
+      appendMedicalRecordContent: (patientId, recordId, text) =>
+        set((state) => ({
+          dynamicMedicalRecords: {
+            ...state.dynamicMedicalRecords,
+            [patientId]: (state.dynamicMedicalRecords[patientId] ?? []).map((r) =>
+              r.id === recordId ? { ...r, content: `${r.content}\n${text}` } : r,
+            ),
+          },
+        })),
+      cancelMedicalRecord: (patientId, recordId) =>
+        set((state) => ({
+          dynamicMedicalRecords: {
+            ...state.dynamicMedicalRecords,
+            [patientId]: (state.dynamicMedicalRecords[patientId] ?? []).map((r) =>
+              r.id === recordId ? { ...r, cancelled: true } : r,
+            ),
           },
         })),
 

@@ -10,7 +10,7 @@ import {
   ISOLATION_ORDERS, generateObservationRecords,
   MASTER_STAFF_FOR_SIGN, MASTER_BEHAVIOR_RESTRICT_WARDS,
   MASTER_OBSERVATION_FREQUENCY, MASTER_OBSERVATION_STATES,
-  PATIENTS, patientNumberOf,
+  PATIENTS, patientNumberOf, MOVE_HISTORY_SAMPLES,
   type AdmitFormType,
 } from '../../data/mockData';
 import type {
@@ -229,6 +229,14 @@ const IsolationOrderListTab: React.FC = () => {
   const removeConfirmSign = useAppStore((s) => s.removeConfirmSign);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const currentUserRole = useAppStore((s) => s.currentUserRole);
+  // us-02: 転棟・転室ダイアログの後負け（移動予定を含む満床）判定用。WardMap と同じ合成を渡す
+  const scheduledMoves = useAppStore((s) => s.scheduledMoves);
+  const moveEdits = useAppStore((s) => s.moveEdits);
+  const cancelledMoveIds = useAppStore((s) => s.cancelledMoveIds);
+  const allMovesForConflict = useMemo(
+    () => [...MOVE_HISTORY_SAMPLES, ...scheduledMoves].map((m) => (moveEdits[m.id] ? { ...m, ...moveEdits[m.id] } : m)),
+    [scheduledMoves, moveEdits],
+  );
 
   const today = new Date().toISOString().slice(0, 10);
   const [cond, setCond] = useState<SearchCondition>({
@@ -574,6 +582,8 @@ const IsolationOrderListTab: React.FC = () => {
           open={!!bedMoveTarget}
           mode="move"
           target={bedMoveTarget}
+          allMoves={allMovesForConflict}
+          cancelledMoveIds={cancelledMoveIds}
           onClose={() => setBedMoveTarget(null)}
           onSubmit={() => {
             showSnackbar('転棟・転室を登録しました（モック）', 'success');

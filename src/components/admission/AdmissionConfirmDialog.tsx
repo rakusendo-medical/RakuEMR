@@ -67,6 +67,7 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const confirmAdmission = useAppStore((s) => s.confirmAdmission);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
+  const appendMedicalRecordContent = useAppStore((s) => s.appendMedicalRecordContent);
 
   const initialAdmitAt = order?.scheduledDate ? `${order.scheduledDate}T09:00` : formatDateTimeNow();
   // 入院日(日付/時/分 を分離)
@@ -164,23 +165,32 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
 
   const finalize = () => {
     confirmAdmission(order.id);
-    // カルテ記事に「入退院記録」エントリを動的追加
     const now = new Date();
     const ymd = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
     const ts = `${ymd} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    appendMedicalRecord(order.patientId, {
-      id: `MR-CONF-A-${order.id}-${Date.now()}`,
-      date: ymd,
-      dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][now.getDay()],
-      category: '入退院記録',
-      author: order.doctorName,
-      authorRole: '医師',
-      content: `入院確定 ／ ${admitAt.replace('T', ' ')} 入院 ／ 病室 ${tentativeWard ? '仮病棟' : `${toWard === 'ward1' ? '第１病棟' : '第２病棟'} ${toRoom}号室 ${toBed}`}\n紹介医療機関: ${hospital} ／ 入院決定理由: ${reason || '(未入力)'}`,
-      tags: ['入院確定'],
-      timestamp: ts,
-      likes: 0,
-      comments: 0,
-    });
+    if (order.karteRecordId) {
+      // us-08: 指示段階の記事がある場合は同一記事へ確定内容を追記（新規記事は作成しない・病棟・病室は記載しない）
+      appendMedicalRecordContent(
+        order.patientId,
+        order.karteRecordId,
+        `入院確定（${ts}）／ ${admitAt.replace('T', ' ')} 入院`,
+      );
+    } else {
+      // カルテ記事に「入退院記録」エントリを動的追加
+      appendMedicalRecord(order.patientId, {
+        id: `MR-CONF-A-${order.id}-${Date.now()}`,
+        date: ymd,
+        dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][now.getDay()],
+        category: '入退院記録',
+        author: order.doctorName,
+        authorRole: '医師',
+        content: `入院確定 ／ ${admitAt.replace('T', ' ')} 入院 ／ 病室 ${tentativeWard ? '仮病棟' : `${toWard === 'ward1' ? '第１病棟' : '第２病棟'} ${toRoom}号室 ${toBed}`}\n紹介医療機関: ${hospital} ／ 入院決定理由: ${reason || '(未入力)'}`,
+        tags: ['入院確定'],
+        timestamp: ts,
+        likes: 0,
+        comments: 0,
+      });
+    }
     onConfirmed(order.id);
     showSnackbar(
       `入院確定: ${order.patientName} ／ カルテ・医師指示簿に書込みました${printOrderSheet ? '(指示箋印刷あり)' : ''}`,

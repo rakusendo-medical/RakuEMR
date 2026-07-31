@@ -219,6 +219,8 @@ export interface AdmissionOrder {
   bedLabel: string;
   wardId: WardId;
   notes?: string;
+  /** us-08/us-09: 指示時に作成したカルテ記事 ID（確定・中止時に同一記事へ追記／取消するための参照） */
+  karteRecordId?: string;
 }
 
 /** 移動歴 */
@@ -624,6 +626,8 @@ export interface MedicalRecord {
   timestamp: string;
   likes: number;
   comments: number;
+  /** us-08/us-09: 指示中止などで取消された記事。削除せず取消表示で残す */
+  cancelled?: boolean;
 }
 
 export interface LifeEvent {
