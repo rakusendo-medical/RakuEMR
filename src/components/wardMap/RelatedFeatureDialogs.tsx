@@ -129,7 +129,12 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
 
   const rooms = ROOMS.filter((r) => r.wardId === selectedWard);
   const daysInMonth = new Date(yearMonth.y, yearMonth.m, 0).getDate();
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  // 参照を安定させる（毎 render で新配列になると、これを依存に持つ roomsByDay が
+  // 病棟切替などのたびに日数ぶん再計算されてしまう）
+  const days = React.useMemo(
+    () => Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    [daysInMonth],
+  );
 
   // us-01/us-02: 在床は「その日時点」で判定する。病棟マップと同じく登録済みの移動（転棟・転室）を
   //   日付ごとに適用し、移動予定日を境に在床が入れ替わるようにする（病棟マップ・後負け判定と表示を揃える）。
@@ -165,6 +170,12 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
   const scheduleOrders = React.useMemo(() => {
     const fromMaster = ADMISSION_ORDERS
       .filter((o) => o.status !== 'キャンセル' && !!o.scheduledDate)
+      // 入院指示の「手続完了」は在床（ROOMS）側に反映済みのため除外する。含めると、
+      //   その患者が別病室へ移動した後も指示側が古い病室・ベッドを使用中と主張し続け、
+      //   同じ患者で二重に病床を占有してしまう。
+      // 退院指示は状態を問わず反映する。モックの静的な在床は退院を反映しないため、
+      //   除外すると退院済みの患者がいつまでも使用中に見えてしまう。
+      .filter((o) => o.type === '退院' || o.status !== '手続完了')
       .map((o) => ({
         type: o.type, patientId: o.patientId, scheduledDate: o.scheduledDate,
         wardId: o.wardId, roomNumber: o.roomNumber, bedLabel: o.bedLabel,
@@ -325,11 +336,15 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
                       : occupied(r.roomNumber, bed.bed, d) ? '使用中' : '空床';
                     const bg = state === '使用不可' ? DISABLED : state === '使用中' ? OCCUPIED : EMPTY_BG;
                     const cellDate = `${yearMonth.y}/${String(yearMonth.m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
+                    // 色だけでは状態が伝わらないため、ツールチップ（title）と読み上げ名（aria-label）の
+                    // 両方に同じ説明を持たせる（title は環境によって読み上げられないため）
+                    const cellLabel = `${cellDate} ${r.roomNumber}号室 ${bed.bed} ${state}`;
                     return (
                       <Box
                         key={d}
                         component="td"
-                        title={`${cellDate} ${r.roomNumber}号室 ${bed.bed} ${state}`}
+                        title={cellLabel}
+                        aria-label={cellLabel}
                         sx={{ height: 22, bgcolor: bg }}
                       />
                     );

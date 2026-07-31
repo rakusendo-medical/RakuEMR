@@ -13,9 +13,12 @@ import type { Page } from '@playwright/test';
 test.describe('空床照会（入退院指示の反映）', () => {
 
   const pad = (n: number) => String(n).padStart(2, '0');
-  /** 今日から days 日後の日付（時刻は 00:00 基準） */
+  // 基準日は 1 度だけ固定する。呼び出しごとに new Date() すると、実行が日付境界を跨いだとき
+  // 同一テスト内で基準日がずれてフレークする。
+  const BASE_DATE = new Date();
+  /** 基準日から days 日後の日付 */
   const dayAfter = (days: number) => {
-    const d = new Date();
+    const d = new Date(BASE_DATE);
     d.setDate(d.getDate() + days);
     return d;
   };
@@ -119,7 +122,7 @@ test.describe('空床照会（入退院指示の反映）', () => {
     await page.keyboard.press('Escape');
 
     // ② 空床照会: 移動元（107号室 ベッド1）が空床、移動先（108号室 ベッド5）が使用中になる
-    const today = new Date();
+    const today = dayAfter(0);
     const dialog = await openVacancy(page, today);
     await expect(dialog.getByTitle(`${toCellDate(today)} 107号室 1 空床`)).toBeVisible();
     await expect(dialog.getByTitle(`${toCellDate(today)} 108号室 5 使用中`)).toBeVisible();
@@ -127,7 +130,7 @@ test.describe('空床照会（入退院指示の反映）', () => {
 
   test('在床中で退院予定のないベッドは常に使用中、使用不可床は区別表示される', async ({ page }) => {
     await page.goto('/');
-    const today = new Date();
+    const today = dayAfter(0);
     const dialog = await openVacancy(page, today);
 
     // 在床（107号室 ベッド1）は当日も使用中
