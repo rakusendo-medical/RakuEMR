@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -19,6 +20,7 @@ import ObservationRecordDialog from '../isolation/ObservationRecordDialog';
 import { isFutureSlot, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL } from '../isolation/observationFutureBlock';
 import { NewRecordDialog } from '../karte/MedicalRecordTab';
 import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
+import { PATTERN_OPTIONS, FLOWSHEET_PATTERNS, patternItems, careItemLabel } from './patternMaster';
 
 interface Props {
   patientId?: string;
@@ -436,6 +438,16 @@ function SectionHeaderRow({ title }: { title: string }) {
   );
 }
 
+// ----- フローシートパターン変更（最下部の欄 + ダイアログ）-----
+// パターン候補・入力項目はマスタ（patternMaster: ケア項目マスタ＋パターンマスタ）で管理する。
+// 未適用の患者は「共通項目時間設定」が適用される想定。パターン候補は PATTERN_OPTIONS、
+// パターンごとの入力項目は patternItems（いずれも patternMaster から import）で解決する。
+// endDate 未設定（''）は「終了日なし＝以降ずっと適用」。終了日以降は入力不可。
+interface PatternPeriod { id: string; startDate: string; endDate?: string; pattern: string; }
+// iso が適用期間内か（開始日〜終了日、終了日なしは開始日以降すべて）。
+const inPeriod = (startDate: string, endDate: string | undefined, iso: string) =>
+  iso >= startDate && (!endDate || iso <= endDate);
+
 const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   // ----- 日付送り（ページめくり）-----
   // 右端（基準日）を state で持ち、7 日列は「基準日から遡る 7 日」を都度組み立てる。
@@ -504,6 +516,161 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   );
   const setAllFilters = (v: boolean) =>
     setFilterChecks(Object.fromEntries(EXAM_FILTER_OPTIONS.map((o) => [o, v])));
+
+  // ----- フローシートパターン変更（最下部の欄 → [パターン変更] でダイアログ）-----
+  const [patternPeriods, setPatternPeriods] = useState<PatternPeriod[]>([
+    { id: 'pp1', startDate: '2026-05-13', pattern: '精神科基本' },
+    { id: 'pp2', startDate: '2026-05-16', pattern: '精神科隔離' },
+  ]);
+  const [patternDialogOpen, setPatternDialogOpen] = useState(false);
+  const [pStart, setPStart] = useState('2026-05-19'); // 既定は当日（モック当日=5/19）
+  const [pEnd, setPEnd] = useState(''); // 終了日（空＝終了日なし）
+  const [pName, setPName] = useState(PATTERN_OPTIONS[0]);
+  // [登録]（新規適用）は確認サブダイアログ（AC-1）を挟み、OK で適用＋適用日以降データ削除（AC-3）。
+  const [applyConfirm, setApplyConfirm] = useState<{ startDate: string; endDate: string; pattern: string } | null>(null);
+  const requestApplyPattern = () => setApplyConfirm({ startDate: pStart, endDate: pEnd, pattern: pName });
+  const confirmApplyPattern = () => {
+    if (!applyConfirm) return;
+    const { startDate, endDate, pattern } = applyConfirm;
+    setPatternPeriods((prev) => [...prev, { id: `pp-${Date.now()}-${prev.length}`, startDate, endDate: endDate || undefined, pattern }]);
+    // AC-3: 適用日以降のケアメニューデータを削除（不可逆）。
+    setPatternCells((prev) => {
+      const next: Record<string, string> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        const [, , iso] = k.split('|');
+        if (iso >= startDate) continue;
+        next[k] = v;
+      }
+      return next;
+    });
+    setApplyConfirm(null);
+  };
+  // 削除＝適用解除（「パターンなし」状態になる）。
+  const removePatternPeriod = (id: string) =>
+    setPatternPeriods((prev) => prev.filter((p) => p.id !== id));
+
+  // ----- パターンボックス: 表示モードトグル（全パターン / 適用パターン名）-----
+  // 'applied'（既定）= 適用中のパターンのみ表示（＝従来の挙動）。
+  // 'all' = マスタの全パターンを表示（未適用は薄グレー・入力不可）。
+  const [patternViewMode, setPatternViewMode] = useState<'applied' | 'all'>('applied');
+  // 表示するパターングループ（startDate=null は未適用＝全パターン表示時のみ）。
+  const patternGroups: { id: string; pattern: string; startDate: string | null; endDate?: string }[] =
+    patternViewMode === 'all'
+      ? FLOWSHEET_PATTERNS.map((mp) => {
+          const applied = patternPeriods.find((p) => p.pattern === mp.name);
+          return applied
+            ? { id: applied.id, pattern: applied.pattern, startDate: applied.startDate, endDate: applied.endDate }
+            : { id: `all-${mp.id}`, pattern: mp.name, startDate: null };
+        })
+      : patternPeriods.map((p) => ({ id: p.id, pattern: p.pattern, startDate: p.startDate, endDate: p.endDate }));
+  // パターン適用行 × 日付セルの登録値（key = `${periodId}|${item}|${iso}`）。
+  // セルは読み取り専用。値の登録は見出しの [新規作成] ダイアログ（savePatternEntry）経由のみ。
+  const [patternCells, setPatternCells] = useState<Record<string, string>>({});
+
+  // ----- 適用期間テーブルのインライン編集（開始日・パターンの変更）-----
+  // 変更は draft（periodEdits）に保持し、[更新] → 確認サブダイアログ → 反映（不可逆挙動）。
+  const [periodEdits, setPeriodEdits] = useState<Record<string, { startDate: string; endDate: string; pattern: string }>>({});
+  // 一覧は「行クリックで編集モード」（SPEC us-21）。編集中の行 id のみ入力コントロールを表示。
+  const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
+  const editedPeriod = (p: PatternPeriod) => periodEdits[p.id] ?? { startDate: p.startDate, endDate: p.endDate ?? '', pattern: p.pattern };
+  const isPeriodDirty = (p: PatternPeriod) => {
+    const e = periodEdits[p.id];
+    return !!e && (e.startDate !== p.startDate || e.endDate !== (p.endDate ?? '') || e.pattern !== p.pattern);
+  };
+  const setPeriodEdit = (p: PatternPeriod, patch: Partial<{ startDate: string; endDate: string; pattern: string }>) =>
+    setPeriodEdits((prev) => ({ ...prev, [p.id]: { ...editedPeriod(p), ...patch } }));
+
+  // パターン変更の確認サブダイアログ（適用日以降のケアメニューデータ削除を伴う）。
+  const [periodConfirm, setPeriodConfirm] = useState<{ id: string; startDate: string; endDate: string; pattern: string } | null>(null);
+  // パターン削除（適用解除）の確認サブダイアログ（AC-6）。
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; pattern: string } | null>(null);
+  // 当該パターン（期間）に入力済みの値があるか（key = `${periodId}|${label}|${iso}`）。
+  const hasPeriodValues = (id: string) =>
+    Object.entries(patternCells).some(([k, v]) => k.split('|')[0] === id && v.trim() !== '');
+  // 削除要求: 入力済みの値がある場合は削除不可（確認を開かず警告）。
+  const requestDeletePeriod = (p: PatternPeriod) => {
+    if (hasPeriodValues(p.id)) {
+      showSnackbar('入力済みの値があるため削除できません', 'warning');
+      return;
+    }
+    setDeleteConfirm({ id: p.id, pattern: p.pattern });
+  };
+  const confirmDeletePeriod = () => {
+    if (!deleteConfirm) return;
+    removePatternPeriod(deleteConfirm.id);
+    setEditingPeriodId(null);
+    setDeleteConfirm(null);
+  };
+  const requestPeriodChange = (p: PatternPeriod) => {
+    const e = editedPeriod(p);
+    setPeriodConfirm({ id: p.id, startDate: e.startDate, endDate: e.endDate, pattern: e.pattern });
+  };
+  const applyPeriodChange = () => {
+    if (!periodConfirm) return;
+    const { id, startDate, endDate, pattern } = periodConfirm;
+    setPatternPeriods((prev) => prev.map((p) => (p.id === id ? { ...p, startDate, endDate: endDate || undefined, pattern } : p)));
+    // 「適用日以降のケアメニューデータは削除」をワイヤーフレームで表現: 当該期間の開始日以降セルをクリア。
+    setPatternCells((prev) => {
+      const next: Record<string, string> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        const [pid, , iso] = k.split('|');
+        if (pid === id && iso >= startDate) continue;
+        next[k] = v;
+      }
+      return next;
+    });
+    setPeriodEdits((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    setEditingPeriodId(null);
+    setPeriodConfirm(null);
+    showSnackbar('パターンを変更しました', 'success');
+  };
+
+  // パターン見出しの [入力] → そのパターンの入力ダイアログ（日付＋各項目をまとめて入力）。
+  // 入力は適用パターン下のみ（パターンなし＝未適用では入力不可）。
+  const [entryTarget, setEntryTarget] = useState<PatternPeriod | null>(null);
+  const [entryDate, setEntryDate] = useState('');
+  const [entryValues, setEntryValues] = useState<Record<string, string>>({});
+  // 指定日付の既存入力値を項目ラベル→値のマップとして読み込む（未入力は空文字）。
+  const loadEntryValues = (p: PatternPeriod, iso: string): Record<string, string> =>
+    Object.fromEntries(patternItems(p.pattern).map((ci) => {
+      const label = careItemLabel(ci);
+      return [label, patternCells[`${p.id}|${label}|${iso}`] ?? ''];
+    }));
+  // iso 未指定時は適用開始日（開始日より前は入力不可のため）。
+  // 呼び出し側は endDate も含めた PatternPeriod を渡すこと（ダイアログの日付 max 制約に使う）。
+  const openPatternEntry = (p: PatternPeriod, iso: string = p.startDate) => {
+    setEntryTarget(p);
+    setEntryDate(iso);
+    setEntryValues(loadEntryValues(p, iso));
+  };
+  // AC-4: 日付のフローシートアイコン → その日に適用中パターンの [入力]（項目はそのパターンのみ）。
+  // 同日複数適用時は開始日が最も新しいものを対象。未適用（パターンなし）は入力導線なし。
+  const openFlowsheetEdit = (i: number) => {
+    const iso = dayIso[i];
+    const applicable = patternPeriods
+      .filter((p) => inPeriod(p.startDate, p.endDate, iso))
+      .sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+    if (!applicable) {
+      showSnackbar('適用パターンがありません（パターンなし）', 'info');
+      return;
+    }
+    openPatternEntry(applicable, iso);
+  };
+
+  const savePatternEntry = () => {
+    if (!entryTarget) return;
+    const p = entryTarget;
+    setPatternCells((prev) => {
+      const next = { ...prev };
+      patternItems(p.pattern).forEach((ci) => {
+        const label = careItemLabel(ci);
+        next[`${p.id}|${label}|${entryDate}`] = entryValues[label] ?? '';
+      });
+      return next;
+    });
+    showSnackbar(`${p.pattern} を登録しました`, 'success');
+    setEntryTarget(null);
+  };
 
   // 観察セル描画（縦=時刻 / 横=日）。未来枠以外のセルはクリックで観察記録ダイアログを開く。
   // active な隔離/拘束指示があれば subtype をそれに合わせ、無ければ「その他」で起票する。
@@ -705,6 +872,14 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                   style={{ position: 'sticky', top: HEADER_ROW_TOP.row3, zIndex: 100, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}
                 >
                   <Stack direction="row" spacing={0.3} justifyContent="center">
+                    <Button
+                      size="small" variant="outlined"
+                      aria-label={`フローシート編集 ${dayIso[i]}`}
+                      onClick={() => openFlowsheetEdit(i)}
+                      sx={{ minWidth: 0, px: 0.5, py: 0, color: '#1e3a5f', borderColor: '#c5d5e8' }}
+                    >
+                      <AssignmentIcon sx={{ fontSize: '0.95rem' }} />
+                    </Button>
                     <Button
                       size="small" variant="outlined"
                       onClick={() => openNursing(i)}
@@ -1207,7 +1382,106 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
               ))}
             </TableRow>
 
-            {/* ===== サイン ===== */}
+            </>
+            )}
+
+            {/* ===== パターン変更（フローシートサブタブのみ・最下部に統合して日付列に整列） ===== */}
+            {subTab === 'flowsheet' && (
+            <>
+            <TableRow>
+              <TableCell colSpan={9} sx={{ ...sectionHeaderCellSx, bgcolor: '#eef2f7' }}>
+                {/* パターンボックス: 表示モードトグル ＋ [パターン変更] ボタン */}
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <ToggleButtonGroup
+                    size="small" exclusive value={patternViewMode}
+                    onChange={(_, v) => { if (v) setPatternViewMode(v); }}
+                  >
+                    <ToggleButton value="applied" aria-label="適用パターン名表示" sx={{ py: 0, px: 1, fontSize: '0.7rem' }}>適用パターン名</ToggleButton>
+                    <ToggleButton value="all" aria-label="全パターン表示" sx={{ py: 0, px: 1, fontSize: '0.7rem' }}>全パターン</ToggleButton>
+                  </ToggleButtonGroup>
+                  <Button size="small" variant="outlined" onClick={() => setPatternDialogOpen(true)}>
+                    パターン変更
+                  </Button>
+                </Stack>
+              </TableCell>
+            </TableRow>
+            {patternGroups.length === 0 ? (
+              // パターンなし（未適用）: グレー・入力不可（共通項目時間設定）。入力は要パターン適用。
+              <TableRow>
+                <TableCell sx={stickyLabelCell}>パターンなし</TableCell>
+                <TableCell sx={stickySubCell} />
+                {rows.map((d, i) => (
+                  <TableCell key={i} aria-label={i === 0 ? 'パターン未適用' : undefined} sx={{ ...dayCellSx(d.isToday), bgcolor: '#e2e8f0' }} />
+                ))}
+              </TableRow>
+            ) : (
+              patternGroups.map((g) => (
+                <React.Fragment key={g.id}>
+                  {/* パターン名のグループ見出し行（label+sub をまたいで表示）。
+                      startDate=null（全パターン表示時の未適用）は入力ボタン無し・薄グレー。 */}
+                  <TableRow>
+                    <TableCell
+                      colSpan={2}
+                      aria-label={`${g.startDate != null ? 'パターン適用済' : 'パターン未適用行'} ${g.pattern}`}
+                      sx={{ ...stickyLabelCell, width: 'auto', bgcolor: '#eef2f7', color: '#1e3a5f', fontWeight: 700, fontSize: '0.8rem' }}
+                    >
+                      {g.pattern}
+                    </TableCell>
+                    {dayIso.map((iso, i) => {
+                      // 入力可能日付（適用開始日〜終了日）のみ [入力] を表示。範囲外・未適用は薄グレー。
+                      const active = g.startDate != null && inPeriod(g.startDate, g.endDate, iso);
+                      return (
+                        <TableCell key={i} sx={{ ...dayCellSx(rows[i].isToday), p: 0.25, bgcolor: active ? '#eef2f7' : '#f1f5f9' }}>
+                          {active && (
+                            <Button
+                              size="small" variant="outlined"
+                              aria-label={`${g.pattern} 入力 ${iso}`}
+                              onClick={() => openPatternEntry({ id: g.id, pattern: g.pattern, startDate: g.startDate as string, endDate: g.endDate }, iso)}
+                              sx={{ fontSize: '0.6rem', minWidth: 0, px: 1, py: 0, lineHeight: 1.5, color: '#475569', borderColor: '#cbd5e1', whiteSpace: 'nowrap' }}
+                            >
+                              入力
+                            </Button>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                  {/* パターンの入力項目（子行）: 各項目 × 日付セルは読み取り専用（直接入力不可）。
+                      入力は見出しの [入力] ダイアログ経由のみ。登録値をセルに表示する。 */}
+                  {patternItems(g.pattern).map((ci) => {
+                    const item = careItemLabel(ci);
+                    return (
+                    <TableRow key={item}>
+                      <TableCell colSpan={2} sx={{ ...stickyLabelCell, width: 'auto', pl: 2, fontWeight: 400, fontSize: '0.72rem' }}>
+                        {item}
+                      </TableCell>
+                      {dayIso.map((iso, i) => {
+                        const key = `${g.id}|${item}|${iso}`;
+                        const active = g.startDate != null && inPeriod(g.startDate, g.endDate, iso); // 適用期間内のみ表示
+                        return (
+                          <TableCell
+                            key={iso}
+                            sx={{ ...dayCellSx(rows[i].isToday), p: 0.25, ...(active ? {} : { bgcolor: '#f1f5f9' }) }}
+                          >
+                            {active && (
+                              <Box
+                                aria-label={`${g.pattern} ${item} ${iso}`}
+                                sx={{ fontSize: '0.72rem', textAlign: 'center', minHeight: 18, lineHeight: '18px' }}
+                              >
+                                {patternCells[key] ?? ''}
+                              </Box>
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                    );
+                  })}
+                </React.Fragment>
+              ))
+            )}
+
+            {/* ===== サイン（パターン変更セクションの下に配置） ===== */}
             <TableRow>
               <TableCell sx={{ ...stickyLabelCell, bgcolor: '#e3edf7', color: '#1e3a5f', fontWeight: 700 }}>
                 サイン
@@ -1224,6 +1498,213 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* パターン変更欄の凡例（フローシートサブタブのみ） */}
+      {subTab === 'flowsheet' && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+          グレー＝パターンなし（共通項目時間設定）／白＝パターン適用済（日付枠ごとに入力可）
+        </Typography>
+      )}
+
+      {/* パターン変更ダイアログ（最下部 [パターン変更] から起動） */}
+      <Dialog open={patternDialogOpen} onClose={() => setPatternDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>フローシートパターン変更</DialogTitle>
+        <DialogContent dividers>
+          {/* ヘッダー入力: 開始日 + 終了日 + パターン + [登録] */}
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+            <TextField
+              type="date" size="small" label="開始日" InputLabelProps={{ shrink: true }}
+              value={pStart} onChange={(e) => setPStart(e.target.value)}
+            />
+            <TextField
+              type="date" size="small" label="終了日" InputLabelProps={{ shrink: true }}
+              inputProps={{ min: pStart }}
+              value={pEnd} onChange={(e) => setPEnd(e.target.value)}
+            />
+            <TextField
+              select size="small" label="パターン" sx={{ minWidth: 180 }}
+              value={pName} onChange={(e) => setPName(e.target.value)}
+            >
+              {PATTERN_OPTIONS.map((o) => (<MenuItem key={o} value={o}>{o}</MenuItem>))}
+            </TextField>
+            <Button variant="contained" size="small" onClick={requestApplyPattern}>登録</Button>
+          </Stack>
+          {/* 適用期間テーブル */}
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableBody>
+                <TableRow sx={{ bgcolor: '#f1f5f9' }}>
+                  <TableCell sx={{ fontWeight: 700 }}>開始日</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>終了日</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>パターン名</TableCell>
+                  <TableCell sx={{ width: 56 }} />
+                </TableRow>
+                {patternPeriods.map((p) => {
+                  const e = editedPeriod(p);
+                  const dirty = isPeriodDirty(p);
+                  const editing = editingPeriodId === p.id;
+                  return editing ? (
+                    // 編集モード: 開始日・パターンを編集可。[更新]で確認サブダイアログ。
+                    <TableRow key={p.id}>
+                      <TableCell>
+                        <TextField
+                          type="date" size="small" variant="standard"
+                          value={e.startDate}
+                          onChange={(ev) => setPeriodEdit(p, { startDate: ev.target.value })}
+                          inputProps={{ 'aria-label': `開始日 ${p.pattern}` }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          type="date" size="small" variant="standard"
+                          value={e.endDate}
+                          onChange={(ev) => setPeriodEdit(p, { endDate: ev.target.value })}
+                          inputProps={{ 'aria-label': `終了日 ${p.pattern}`, min: e.startDate }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          select size="small" variant="standard" sx={{ minWidth: 110 }}
+                          value={e.pattern}
+                          onChange={(ev) => setPeriodEdit(p, { pattern: ev.target.value })}
+                          inputProps={{ 'aria-label': `パターン名 ${p.pattern}` }}
+                        >
+                          {PATTERN_OPTIONS.map((o) => (<MenuItem key={o} value={o}>{o}</MenuItem>))}
+                        </TextField>
+                      </TableCell>
+                      <TableCell sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {dirty && (
+                          <Button size="small" onClick={() => requestPeriodChange(p)}>更新</Button>
+                        )}
+                        <Button size="small" color="error" onClick={() => requestDeletePeriod(p)}>削除</Button>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    // 参照モード: 行クリックで編集モードに入る（SPEC us-21）。
+                    <TableRow
+                      key={p.id} hover sx={{ cursor: 'pointer' }}
+                      aria-label={`適用パターン行 ${p.pattern}`}
+                      onClick={() => setEditingPeriodId(p.id)}
+                    >
+                      <TableCell>{p.startDate}</TableCell>
+                      <TableCell>{p.endDate || '—'}</TableCell>
+                      <TableCell>{p.pattern}</TableCell>
+                      <TableCell sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <Button
+                          size="small" color="error"
+                          onClick={(ev) => { ev.stopPropagation(); requestDeletePeriod(p); }}
+                        >
+                          削除
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {patternPeriods.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4}>
+                      <Typography variant="caption" color="text.secondary">
+                        適用中のパターンはありません（共通項目時間設定が適用されます）
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Box sx={{ textAlign: 'center', mt: 0.5 }}>
+            <Button size="small" onClick={requestApplyPattern}>[新規]</Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={() => { setEditingPeriodId(null); setPatternDialogOpen(false); }}>キャンセル</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* パターン変更の確認サブダイアログ（適用日以降のケアメニューデータ削除を伴う不可逆操作） */}
+      <Dialog open={!!periodConfirm} onClose={() => setPeriodConfirm(null)} maxWidth="xs">
+        <DialogTitle sx={{ pb: 1 }}>パターン変更の確認</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: '0.9rem' }}>
+            {periodConfirm?.startDate} 以降のケアメニューデータは削除されます。よろしいですか？
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPeriodConfirm(null)}>キャンセル</Button>
+          <Button variant="contained" color="error" onClick={applyPeriodChange}>OK</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* パターン削除（適用解除）の確認サブダイアログ（AC-6） */}
+      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} maxWidth="xs">
+        <DialogTitle sx={{ pb: 1 }}>パターン削除の確認</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: '0.9rem' }}>
+            「{deleteConfirm?.pattern}」を適用解除します（パターンなし状態になります）。よろしいですか？
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(null)}>キャンセル</Button>
+          <Button variant="contained" color="error" onClick={confirmDeletePeriod}>OK</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新規適用の確認サブダイアログ（AC-1/AC-3: 適用日以降のケアメニューデータ削除を伴う不可逆操作） */}
+      <Dialog open={!!applyConfirm} onClose={() => setApplyConfirm(null)} maxWidth="xs">
+        <DialogTitle sx={{ pb: 1 }}>パターン適用の確認</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: '0.9rem' }}>
+            {applyConfirm?.startDate} 以降のケアメニューデータは削除されます。よろしいですか？
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApplyConfirm(null)}>キャンセル</Button>
+          <Button variant="contained" color="error" onClick={confirmApplyPattern}>OK</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* パターン項目の入力ダイアログ（パターン見出し／未適用行の [入力] から起動） */}
+      <Dialog open={!!entryTarget} onClose={() => setEntryTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>{entryTarget?.pattern} 新規作成</DialogTitle>
+        {entryTarget && (
+          <DialogContent dividers>
+            <TextField
+              type="date" size="small" label="日付" InputLabelProps={{ shrink: true }} fullWidth
+              inputProps={{ min: entryTarget.startDate, max: entryTarget.endDate || undefined }}  // 適用開始日〜終了日のみ
+              value={entryDate}
+              onChange={(e) => { setEntryDate(e.target.value); setEntryValues(loadEntryValues(entryTarget, e.target.value)); }}
+              sx={{ mb: 1.5 }}
+            />
+            <Stack spacing={1.25}>
+              {patternItems(entryTarget.pattern).map((ci) => {
+                const label = careItemLabel(ci);
+                const hasOptions = !!ci.options && ci.options.length > 0;
+                return (
+                  <TextField
+                    key={label} size="small" label={label} fullWidth
+                    select={hasOptions}
+                    placeholder={hasOptions ? undefined : '入力'}
+                    value={entryValues[label] ?? ''}
+                    onChange={(e) => setEntryValues((prev) => ({ ...prev, [label]: e.target.value }))}
+                    inputProps={hasOptions ? undefined : { 'aria-label': `入力 ${label}` }}
+                  >
+                    {hasOptions
+                      ? [
+                          <MenuItem key="__empty" value=""><em>（未選択）</em></MenuItem>,
+                          ...ci.options!.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>),
+                        ]
+                      : undefined}
+                  </TextField>
+                );
+              })}
+            </Stack>
+          </DialogContent>
+        )}
+        <DialogActions>
+          <Button onClick={() => setEntryTarget(null)}>キャンセル</Button>
+          <Button variant="contained" onClick={savePatternEntry}>登録</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 当日入力ダイアログ（日列クリック / バイタルボタンで起動） */}
       <Dialog open={editDay !== null} onClose={closeEdit} maxWidth="xs" fullWidth>

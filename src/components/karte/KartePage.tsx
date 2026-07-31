@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Fab,
   Paper,
   Snackbar,
   Tab,
@@ -28,6 +29,7 @@ import {
   EventNote as ScheduleIcon,
   ViewAgenda as LayoutStackIcon,
   ViewColumn as LayoutSideBySideIcon,
+  KeyboardArrowUp as ScrollTopIcon,
 } from '@mui/icons-material';
 import { PATIENTS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
@@ -336,8 +338,12 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     });
   };
 
+  // カルテ本文スクロール領域の参照と「トップへ戻る」ボタンの表示制御。
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <KartePatientHeader patient={patient} mode={mode} onBack={handleBack} />
 
       <Box
@@ -466,6 +472,9 @@ export default function KartePage({ modeOverride }: KartePageProps) {
         他タブは padding を維持して読みやすさを保つ。
       */}
       <Box
+        ref={scrollRef}
+        data-testid="karte-scroll"
+        onScroll={(e) => setShowScrollTop(e.currentTarget.scrollTop > 200)}
         sx={{
           flex: 1,
           minHeight: 0,
@@ -488,6 +497,19 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           newRecordTrigger={newRecordTrigger}
         />
       </Box>
+
+      {/* 一番上へスクロールするボタン（終了ボタンの上・右下。下方スクロール時のみ表示） */}
+      {showScrollTop && (
+        <Fab
+          size="small"
+          color="primary"
+          aria-label="一番上へスクロール"
+          onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          sx={{ position: 'absolute', right: 24, bottom: 72, zIndex: 1200 }}
+        >
+          <ScrollTopIcon />
+        </Fab>
+      )}
 
       <KarteActionBar
         mode={mode}

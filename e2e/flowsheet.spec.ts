@@ -481,6 +481,221 @@ test.describe('フローシート', () => {
     await expect(page.locator('text=在院日数')).toBeVisible();
   });
 
+  test('フローシート最下部の[パターン変更]ボタンでダイアログを開き適用期間を登録するとバーに反映される', async ({ page }) => {
+    // 最下部に「パターン変更」ボタンが表示される
+    await expect(page.getByRole('button', { name: 'パターン変更', exact: true })).toBeVisible();
+    // 初期は「身体管理」の適用なし
+    await expect(page.getByText('身体管理', { exact: true })).toHaveCount(0);
+    // [パターン変更] ボタン → フローシートパターン変更ダイアログ
+    await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // ヘッダーでパターン「身体管理」を選択 → [登録] で適用期間テーブルに追加
+    await dialog.getByLabel('パターン').first().click();
+    await page.getByRole('option', { name: '身体管理' }).click();
+    await dialog.getByRole('button', { name: '登録' }).click();
+    // 新規適用の確認サブダイアログ → OK
+    const applyConfirm = page.getByRole('dialog').filter({ hasText: 'ケアメニューデータは削除されます' });
+    await expect(applyConfirm).toBeVisible();
+    await applyConfirm.getByRole('button', { name: 'OK' }).click();
+    // 適用期間テーブルに「身体管理」行（参照モードのテキスト表示）が追加される
+    await expect(dialog.getByRole('row', { name: '適用パターン行 身体管理' })).toBeVisible();
+    // [キャンセル] → ダイアログが閉じ、最下部バーに「身体管理」（適用済）が反映
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText('身体管理', { exact: true })).toBeVisible();
+  });
+
+  test('パターン適用で入力項目が展開され、セルは直接入力できない（開始日前は非表示）', async ({ page }) => {
+    // 既定適用の「精神科隔離」パターンは項目に展開される
+    await expect(page.getByText('観察', { exact: true })).toBeVisible();
+    await expect(page.getByText('安全確認', { exact: true })).toBeVisible();
+    // 既定の 精神科隔離 は 2026-05-16 適用開始 → 開始日より前（5/13）はセルなし
+    await expect(page.getByLabel('精神科隔離 観察 2026-05-13')).toHaveCount(0);
+    // 開始日以降（5/16）はセルがあるが読み取り専用（入力欄=textbox は無い・初期は空）
+    const cell = page.getByLabel('精神科隔離 観察 2026-05-16');
+    await expect(cell).toBeVisible();
+    await expect(cell).toHaveText('');
+    await expect(page.getByRole('textbox', { name: '精神科隔離 観察 2026-05-16' })).toHaveCount(0);
+  });
+
+  test('入力可能日付の[入力]で入力ダイアログを開き、登録するとセルに反映される', async ({ page }) => {
+    // 精神科隔離 は 5/16 開始 → 開始日より前（5/13）の見出しに [入力] は無い
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-13' })).toHaveCount(0);
+    // 入力可能日付（開始日以降・5/16）の見出しセルに [入力] → 入力ダイアログ
+    await page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('精神科隔離 新規作成')).toBeVisible();
+    // ダイアログにはパターンの各項目フィールドが並ぶ
+    await expect(dialog.getByLabel('入力 観察')).toBeVisible();
+    await expect(dialog.getByLabel('入力 安全確認')).toBeVisible();
+    // 「観察」に入力 → [登録]（日付＝クリックした 5/16）
+    await dialog.getByLabel('入力 観察').fill('異常なし');
+    await dialog.getByRole('button', { name: '登録' }).click();
+    await expect(dialog).toBeHidden();
+    // 本体テーブルの 2026-05-16 観察セル（読み取り専用）に反映される
+    await expect(page.getByLabel('精神科隔離 観察 2026-05-16')).toHaveText('異常なし');
+  });
+
+  test('適用期間テーブルの既存行を変更すると確認サブダイアログ後に反映される', async ({ page }) => {
+    await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // 精神科隔離 行をクリックして編集モードに入り、開始日を 2026-05-17 に変更 → [更新] 出現
+    await dialog.getByRole('row', { name: '適用パターン行 精神科隔離' }).click();
+    await dialog.getByLabel('開始日 精神科隔離').fill('2026-05-17');
+    const updateBtn = dialog.getByRole('button', { name: '更新' });
+    await expect(updateBtn).toBeVisible();
+    await updateBtn.click();
+    // 確認サブダイアログ（適用日以降のデータ削除）→ OK
+    const confirm = page.getByRole('dialog').filter({ hasText: 'ケアメニューデータは削除されます' });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole('button', { name: 'OK' }).click();
+    await expect(confirm).toBeHidden();
+    // ダイアログを閉じて本体テーブルを確認
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    // 反映: 精神科隔離 見出しの [入力] が新開始日 5/17 にゲーティング（5/16 は消え、5/17 が出る）
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-17' })).toBeVisible();
+  });
+
+  test('パターンボックスの表示モードトグルで全パターン/適用パターン名を切り替えられる', async ({ page }) => {
+    // 既定は「適用パターン名」→ 適用中の 精神科隔離 は見えるが、未適用の「身体管理」の項目は非表示
+    await expect(page.getByLabel('パターン適用済 精神科隔離')).toBeVisible();
+    await expect(page.getByText('水分', { exact: true })).toHaveCount(0);
+    // 「全パターン」に切替 → 未適用パターン（身体管理）の項目も表示される
+    await page.getByRole('button', { name: '全パターン表示' }).click();
+    await expect(page.getByText('水分', { exact: true })).toBeVisible();
+    // 未適用パターンには [入力] ボタンが無い（開始日が無いため）
+    await expect(page.getByRole('button', { name: /^身体管理 入力/ })).toHaveCount(0);
+    // 「適用パターン名」へ戻すと未適用パターンの項目は消える
+    await page.getByRole('button', { name: '適用パターン名表示' }).click();
+    await expect(page.getByText('水分', { exact: true })).toHaveCount(0);
+  });
+
+  test('パターン削除で適用解除される（AC-6）', async ({ page }) => {
+    // 精神科隔離（5/16）の [入力] があることを確認
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' })).toBeVisible();
+    await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // 精神科隔離 行（2行目）を削除 → 確認サブダイアログ → OK で適用解除
+    await dialog.getByRole('button', { name: '削除' }).nth(1).click();
+    const delConfirm = page.getByRole('dialog').filter({ hasText: 'を適用解除します' });
+    await expect(delConfirm).toBeVisible();
+    await delConfirm.getByRole('button', { name: 'OK' }).click();
+    await expect(delConfirm).toBeHidden();
+    // 行が消える
+    await expect(dialog.getByRole('row', { name: '適用パターン行 精神科隔離' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    // グリッドから 精神科隔離 の [入力] も消える
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' })).toHaveCount(0);
+  });
+
+  test('入力済みの値があるパターンは削除できない', async ({ page }) => {
+    // 精神科隔離 5/16 に値を入力
+    await page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' }).click();
+    const entry = page.getByRole('dialog');
+    await entry.getByLabel('入力 観察').fill('異常なし');
+    await entry.getByRole('button', { name: '登録' }).click();
+    await expect(entry).toBeHidden();
+    // パターン変更ダイアログで 精神科隔離（2行目）の [削除] → 削除不可
+    await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '削除' }).nth(1).click();
+    // 削除確認サブダイアログは開かず、警告が出て行は残る
+    await expect(page.getByRole('dialog').filter({ hasText: 'を適用解除します' })).toHaveCount(0);
+    await expect(page.getByText('入力済みの値があるため削除できません')).toBeVisible();
+    await expect(dialog.getByRole('row', { name: '適用パターン行 精神科隔離' })).toBeVisible();
+  });
+
+  test('パターンに終了日を設定すると、終了日以降は入力できない', async ({ page }) => {
+    await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // 精神科隔離（5/16開始）行を編集モードにし、終了日 2026-05-17 を設定 → [更新] → 確認 OK
+    await dialog.getByRole('row', { name: '適用パターン行 精神科隔離' }).click();
+    await dialog.getByLabel('終了日 精神科隔離').fill('2026-05-17');
+    await dialog.getByRole('button', { name: '更新' }).click();
+    const confirm = page.getByRole('dialog').filter({ hasText: 'ケアメニューデータは削除されます' });
+    await confirm.getByRole('button', { name: 'OK' }).click();
+    await expect(confirm).toBeHidden();
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    // 終了日まで（5/17）は [入力] 可、終了日より後（5/18）は [入力] なし
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-17' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-18' })).toHaveCount(0);
+  });
+
+  test('新規適用は確認サブダイアログを挟み、適用日以降のケアメニューデータが削除される（AC-1/AC-3）', async ({ page }) => {
+    // 精神科隔離 5/16 に「観察=異常なし」を入力しておく
+    await page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' }).click();
+    const entry = page.getByRole('dialog');
+    await entry.getByLabel('入力 観察').fill('異常なし');
+    await entry.getByRole('button', { name: '登録' }).click();
+    await expect(entry).toBeHidden();
+    await expect(page.getByLabel('精神科隔離 観察 2026-05-16')).toHaveText('異常なし');
+    // パターン変更で 5/16 開始の新規適用 → 確認 → OK
+    await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('開始日', { exact: true }).fill('2026-05-16');
+    await dialog.getByRole('button', { name: '登録' }).click();
+    const applyConfirm = page.getByRole('dialog').filter({ hasText: 'ケアメニューデータは削除されます' });
+    await expect(applyConfirm).toBeVisible();
+    await applyConfirm.getByRole('button', { name: 'OK' }).click();
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    // 5/16 以降のケアメニューデータが削除される → 観察 5/16 セルは空
+    await expect(page.getByLabel('精神科隔離 観察 2026-05-16')).toHaveText('');
+  });
+
+  test('新規適用の確認をキャンセルすると何も適用されない（AC-8）', async ({ page }) => {
+    await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    // パターン「身体管理」を選び [登録] → 確認 → キャンセル
+    await dialog.getByLabel('パターン').first().click();
+    await page.getByRole('option', { name: '身体管理' }).click();
+    await dialog.getByRole('button', { name: '登録' }).click();
+    const applyConfirm = page.getByRole('dialog').filter({ hasText: 'ケアメニューデータは削除されます' });
+    await applyConfirm.getByRole('button', { name: 'キャンセル' }).click();
+    await expect(applyConfirm).toBeHidden();
+    // 「身体管理」行は追加されない
+    await expect(dialog.getByRole('row', { name: '適用パターン行 身体管理' })).toHaveCount(0);
+  });
+
+  test('日付のフローシートアイコンで、その日の適用パターンの項目のみ編集できる（AC-4）', async ({ page }) => {
+    // 5/16 は 精神科隔離 適用 → フローシートアイコンで 精神科隔離 の項目のみのダイアログが開く
+    await page.getByRole('button', { name: 'フローシート編集 2026-05-16' }).click();
+    const entry = page.getByRole('dialog');
+    await expect(entry.getByText('精神科隔離 新規作成')).toBeVisible();
+    await expect(entry.getByLabel('入力 観察')).toBeVisible();
+    // 別パターン（精神科基本）の項目は表示されない
+    await expect(entry.getByLabel('入力 睡眠')).toHaveCount(0);
+  });
+
+  test('下方スクロールで「一番上へスクロール」ボタンが現れ、押すと先頭へ戻る', async ({ page }) => {
+    const fab = page.getByRole('button', { name: '一番上へスクロール' });
+    const scroller = page.getByTestId('karte-scroll');
+    // 初期（先頭）はボタン非表示
+    await expect(fab).toHaveCount(0);
+    // 本文を下へスクロール → ボタンが出る
+    await scroller.evaluate((el) => el.scrollTo(0, 800));
+    await expect(fab).toBeVisible();
+    // 押すと先頭へ戻り、ボタンは消える
+    await fab.click();
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeLessThan(200);
+    await expect(fab).toHaveCount(0);
+  });
+
+  test('隔離拘束サブタブではパターン変更セクションが表示されない', async ({ page }) => {
+    // フローシートサブタブでは [パターン変更] ボタン・凡例が見える
+    await expect(page.getByRole('button', { name: 'パターン変更', exact: true })).toBeVisible();
+    await expect(page.getByText('グレー＝パターンなし')).toBeVisible();
+    // 隔離拘束サブタブに切替 → パターン変更セクションは消える
+    await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'パターン変更', exact: true })).toHaveCount(0);
+    await expect(page.getByText('グレー＝パターンなし')).toHaveCount(0);
+  });
+
 });
 
 test.describe('一括バイタル入力', () => {
