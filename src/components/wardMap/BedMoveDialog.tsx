@@ -36,8 +36,9 @@ interface Props {
   rooms?: Room[];
   /** この患者の移動履歴（seed＋登録分）。移動モードの履歴欄に表示 */
   moves?: ScheduledMove[];
-  /** 全患者の移動（seed＋登録分・更新差分適用済）。us-02: 移動予定を含めた満床（後負け）判定に使う */
-  allMoves?: ScheduledMove[];
+  /** 全患者の移動（seed＋登録分・更新差分適用済）。us-02: 移動予定を含めた満床（後負け）判定に使う。
+   *  必須（省略可にすると渡し忘れで後負け判定が静かに無効化されるため） */
+  allMoves: ScheduledMove[];
   /** 取消済みの移動 ID 集合 */
   cancelledMoveIds?: string[];
   /** 履歴の「取消」実行 */
@@ -70,7 +71,7 @@ const formatNow = () => {
 
 const BedMoveDialog: React.FC<Props> = ({
   open, mode, target, orderingMode = false, mealCutoff = '17:00',
-  rooms = ROOMS, moves = [], allMoves = [], cancelledMoveIds = [], onCancelMove, onUpdateMove, onClose, onSubmit,
+  rooms = ROOMS, moves = [], allMoves, cancelledMoveIds = [], onCancelMove, onUpdateMove, onClose, onSubmit,
 }) => {
   const initialWard: WardId = (target?.currentWard
     ?? (target?.unassigned?.designatedWardId !== 'tentative' ? target?.unassigned?.designatedWardId as WardId : undefined)
@@ -138,6 +139,9 @@ const BedMoveDialog: React.FC<Props> = ({
   const roomFull = !!toRoom && availableBeds.length === 0;
   // us-02/us-03: 後負け判定。他患者の「未来の移動予定」も空き枠を確保済みとみなし、
   //   予定を含めて満床となる病室への登録・更新をエラーとする（1病床複数患者の禁止）。
+  //   予約は「登録順の先着」であり、移動日時の前後関係は問わない（自分の移動日時より後の予定でも
+  //   先に登録された予定が枠を確保する）。時間帯で枠が入れ替わる運用は退床予定の管理が必要になるため
+  //   モックでは扱わず、確定的な先着予約に統一している。
   const reservedBySchedules = allMoves.filter((m) =>
     !cancelledMoveIds.includes(m.id)
     && m.patientId !== subjectPatientId

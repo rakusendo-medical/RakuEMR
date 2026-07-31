@@ -175,7 +175,13 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
           `指示変更（${nowStamp().ts}）／ ${buildOrderKarteBody()}`,
         );
       }
-      showSnackbar(`退院指示を更新しました（${patient.name}）／ カルテ記事へ追記しました`, 'success');
+      // 旧永続データ等で karteRecordId が無い場合は追記されないため、文言を分岐する
+      showSnackbar(
+        editingOrder.karteRecordId
+          ? `退院指示を更新しました（${patient.name}）／ カルテ記事へ追記しました`
+          : `退院指示を更新しました（${patient.name}）`,
+        'success',
+      );
       onClose();
       return;
     }
@@ -242,7 +248,6 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
         editingOrder.karteRecordId,
         `退院確定（${ts}）／ ${dischargeAt.replace('T', ' ')} 退院 ／ 転帰: ${outcome} ／ 入院定時オーダ中止日: ${stopDayInfo}`,
       );
-      confirmDischarge(editingOrderId);
     } else {
       // 指示なしで直接確定した場合はこのとき記事を作成する
       appendMedicalRecord(patient.id, {
@@ -258,6 +263,11 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
         likes: 0,
         comments: 0,
       });
+    }
+    // 変更モードで確定した場合は、記事の有無に関わらず指示を確定扱いにして pendingOrders から除去する
+    // （旧永続データで karteRecordId が無い指示でも確定漏れが起きないように、記事処理と分離している）
+    if (editingOrderId && editingOrder) {
+      confirmDischarge(editingOrderId);
     }
     if (isOutpatientDischarge) {
       setOutpatientDischarge(patient.id, dischargeAt);

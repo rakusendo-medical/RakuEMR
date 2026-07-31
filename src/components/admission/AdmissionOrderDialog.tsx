@@ -239,7 +239,13 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
           `指示変更（${nowStamp().ts}）／ ${buildOrderKarteBody()}`,
         );
       }
-      showSnackbar(`入院指示を更新しました（${patient.name}）／ カルテ記事へ追記しました`, 'success');
+      // 旧永続データ等で karteRecordId が無い場合は追記されないため、文言を分岐する
+      showSnackbar(
+        editingOrder.karteRecordId
+          ? `入院指示を更新しました（${patient.name}）／ カルテ記事へ追記しました`
+          : `入院指示を更新しました（${patient.name}）`,
+        'success',
+      );
       onClose();
       return;
     }
@@ -287,7 +293,6 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
         editingOrder.karteRecordId,
         `入院確定（${ts}）／ ${admitAt.replace('T', ' ')} 入院 ／ 入院形態: ${admitForm}`,
       );
-      confirmAdmission(editingOrderId);
     } else {
       // 指示なしで直接確定した場合はこのとき記事を作成する
       appendMedicalRecord(patient.id, {
@@ -303,6 +308,11 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
         likes: 0,
         comments: 0,
       });
+    }
+    // 変更モードで確定した場合は、記事の有無に関わらず指示を確定扱いにして pendingOrders から除去する
+    // （旧永続データで karteRecordId が無い指示でも確定漏れが起きないように、記事処理と分離している）
+    if (editingOrderId && editingOrder) {
+      confirmAdmission(editingOrderId);
     }
     showSnackbar(
       `入院確定: ${patient.name} ／ カルテ記事・医師指示簿・入院歴・治療歴に書込みました${printMealSheet || printMoveSheet ? '（指示箋印刷あり）' : ''}`,
