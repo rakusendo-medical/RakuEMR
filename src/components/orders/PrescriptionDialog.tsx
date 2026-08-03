@@ -11,6 +11,7 @@ import { buildRxContent, rxOrderDays } from '../../data/prescriptionContent';
 import type { Medication } from '../../data/prescriptionMaster';
 import DrugAddDialog, { type DrugSelection } from './DrugAddDialog';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import { todayStr } from './orderDate';
 
 /**
@@ -228,12 +229,9 @@ const PrescriptionDialog: React.FC<Props> = ({
 
   return (
     <Dialog open={open} onClose={requestClose} maxWidth="md" fullWidth>
-      <DialogTitle>{orderType}</DialogTitle>
+      <OrderDialogTitle title={`${orderType}オーダ`} patient={patient} />
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
-          <Typography variant="body2" color="text.secondary">
-            対象患者: {patient.patientNumber ?? patient.id}　{patient.name}
-          </Typography>
           {note && <Alert severity="info" sx={{ py: 0 }}>{note}</Alert>}
 
           <Box>

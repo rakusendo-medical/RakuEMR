@@ -590,16 +590,23 @@ test.describe('オーダ送信（オーダ入力）', () => {
     await expect(page.getByRole('row', { name: /アキネトン錠1mg/ })).toBeVisible();
   });
 
-  test('us-62 テキスト（文字）: タイトル・内容を入力→登録→指示簿に反映（マニュアル準拠）', async ({ page }) => {
+  test('us-62 テキスト（文字）: 診療録作成ダイアログ流用（左DO引用・前回カルテ取り込みなし）→登録→指示簿に反映', async ({ page }) => {
     const s = await openSend(page);
     await s.getByRole('button', { name: 'テキスト', exact: true }).click();
     const rx = page.getByRole('dialog').filter({ hasText: 'テキストオーダ作成' });
     await expect(rx).toBeVisible();
 
-    // タイトル（必須）を選び、内容（必須）を入力
-    await rx.getByRole('combobox').click();
-    await page.getByRole('option', { name: '連絡事項' }).click();
-    await rx.getByRole('textbox', { name: '内容' }).fill('ご家族へ本日中に連絡のこと');
+    // 左の DO引用パネル・前回カルテ取り込み・テンプレート・面接フォームは非表示（オーダ入力用）
+    await expect(rx.getByText('DO引用')).toHaveCount(0);
+    await expect(rx.getByRole('button', { name: '前回カルテ取り込み' })).toHaveCount(0);
+    await expect(rx.getByRole('button', { name: 'テンプレート挿入' })).toHaveCount(0);
+    await expect(rx.getByText('面接フォーム')).toHaveCount(0);
+    // フッターは キャンセル／登録 のみ（診察終了・保存なし）
+    await expect(rx.getByRole('button', { name: '診察終了' })).toHaveCount(0);
+
+    // タイトル・本文を入力
+    await rx.getByRole('textbox', { name: 'タイトル' }).fill('連絡事項');
+    await rx.getByPlaceholder('フリーテキストで記載してください').fill('ご家族へ本日中に連絡のこと');
 
     // 登録 → 指示 → 指示簿へ反映（内容にタイトルと本文）
     await rx.getByRole('button', { name: '登録' }).click();
@@ -749,7 +756,7 @@ test.describe('オーダ送信（オーダ入力）', () => {
   test('心理検査: 検査目的・検査項目を選んで指示→指示簿に「臨時」で反映（実機準拠）', async ({ page }) => {
     const s = await openSend(page);
     await s.getByRole('button', { name: '心理検査', exact: true }).click();
-    const rx = page.getByRole('dialog').filter({ hasText: '心理－指示箋' });
+    const rx = page.getByRole('dialog').filter({ hasText: '心理検査オーダ' });
     await expect(rx).toBeVisible();
 
     // 検査目的と検査項目（グループ子項目）を選ぶ
@@ -881,6 +888,42 @@ test.describe('オーダ送信（オーダ入力）', () => {
     await expect(confirm).toBeVisible();
     await confirm.getByRole('button', { name: '破棄して閉じる' }).click();
     await expect(rx2).not.toBeVisible();
+  });
+
+  test('us-55 セット一覧: 一般入院時検査を選ぶと検査＋画像（胸部/腹部）が作成中に一括展開される', async ({ page }) => {
+    const s = await openSend(page);
+
+    // セット一覧ボタン → ポップオーバ（Portal で body 直下・既定グループ=検査・オーダーセット）
+    await s.getByRole('button', { name: 'セット一覧 ▼' }).click();
+    await page.getByRole('button', { name: 'セット 一般入院時検査 を展開' }).click();
+
+    // 3 件（検査 1＋画像 2）展開のスナックバー
+    await expect(page.getByText(/セット「一般入院時検査」を展開しました（3件）/)).toBeVisible();
+
+    // 作成中に検査と画像（胸部/腹部）が積まれる（見出しは種別名そのまま）
+    await expect(s.getByText('［検査］')).toBeVisible();
+    await expect(s.getByText('［画像］')).toHaveCount(2);
+    await expect(s.getByText(/［一般撮影］-［胸部］/)).toBeVisible();
+    await expect(s.getByText(/［一般撮影］-［腹部］/)).toBeVisible();
+
+    // 指示 → 指示簿へ 3 件反映
+    await placeOrders(page, s);
+    await expect(page.getByText(/オーダを登録しました（3件）/)).toBeVisible();
+  });
+
+  test('us-55 セット一覧: グループを頓用処方に切替え、処方セットを作成中に展開できる', async ({ page }) => {
+    const s = await openSend(page);
+    await s.getByRole('button', { name: 'セット一覧 ▼' }).click();
+
+    // グループ切替（プルダウン）→ 頓用処方
+    await page.getByRole('combobox', { name: 'セット名グループ' }).click();
+    await page.getByRole('option', { name: '頓用処方' }).click();
+
+    // 不眠時セット → 処方オーダとして展開（2行表示）
+    await page.getByRole('button', { name: 'セット 不眠時 を展開' }).click();
+    await expect(page.getByText(/セット「不眠時」を展開しました/)).toBeVisible();
+    await expect(s.getByText('［処方］')).toBeVisible();
+    await expect(s.getByText(/ジアゼパム/)).toBeVisible();
   });
 
 });
