@@ -110,6 +110,10 @@ export interface Patient {
   nameKana?: string;
   bloodType?: string;
   birthDate?: string;
+  /** 身長（cm）。治療形態オーダ等の初期表示に利用。 */
+  height?: number;
+  /** 体重（kg）。治療形態オーダ等の初期表示に利用。 */
+  weight?: number;
   wardName?: string;
   nurse?: string;
   daycare?: string;
@@ -130,9 +134,11 @@ export interface Patient {
 export type OrderType =
   | "処方"
   | "注射"
+  | "検査"
+  | "画像"
   | "心理検査"
   | "ECT"
-  | "リハ"
+  | "リハビリ"
   | "入院定時"
   | "IF"
   | "文字";
@@ -155,6 +161,41 @@ export interface Order {
   doctorName: string;
   confirmedBy?: string;
   confirmedAt?: string;
+  /** オーダ単位の備考（オーダ送信「作成中のオーダ」画面で入力）。 */
+  remark?: string;
+}
+
+/** 処方ダイアログの Rp テーブル 1 行（ep-11 us-54）。 */
+export interface PrescriptionRpRow {
+  id: string;
+  name: string;
+  dose: string;
+  unit: string;
+  usage: string;
+  /** Rp 番号（用法でグループ化・手動変更可）。 */
+  rpNo: number;
+  /** 一包化グループ番号（'-' はなし）。 */
+  ippouGroup: string;
+  /** 後発品変更不可（薬剤単位）。 */
+  noGeneric: boolean;
+  /** 公費認定外（薬剤単位・入院定時/処方の拡張列）。 */
+  publicExpense?: boolean;
+  /** 別袋（薬剤単位・入院定時/処方の拡張列）。 */
+  separateBag?: boolean;
+  /** 医薬品ごとの日数／日分（処方・注射で薬剤単位に設定。入院定時はダイアログ全体の日数を使用）。 */
+  days?: string;
+  /** 用量に対するコメント（自由記述。内容へ《用量:…》で付与）。 */
+  doseComment?: string;
+  /** 用法に対するコメント（自由記述。内容へ《用法:…》で付与）。 */
+  usageComment?: string;
+}
+
+/** 「前回どおり（DO）」用の処方内容スナップショット（ep-11 us-54）。 */
+export interface PrescriptionDraft {
+  rpList: PrescriptionRpRow[];
+  ippoukaAll: boolean;
+  genericBlockedAll: boolean;
+  days: string;
 }
 
 /** 看護記録 */

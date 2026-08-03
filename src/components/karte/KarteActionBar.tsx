@@ -22,6 +22,7 @@ interface ActionDef {
 const OUTPATIENT_ACTIONS: ActionDef[] = [
   { id: 'new-record', label: '診療録作成', variant: 'contained', color: 'primary' },
   { id: 'order-input', label: 'オーダー入力' },
+  { id: 'treatment-form', label: '治療形態' },
   { id: 'patient-booking', label: '患者予約' },
   { id: 'print', label: '印刷', alignEnd: true },
   { id: 'close', label: '終了', variant: 'contained', color: 'error', alignEnd: true },
@@ -56,6 +57,7 @@ function buildInpatientActions(admissionState?: AdmissionState): ActionDef[] {
     { id: 'isolation-order', label: '隔離拘束指示' },
     { id: 'nursing-record', label: '看護記録' },
     { id: 'order-input', label: 'オーダー入力' },
+    { id: 'treatment-form', label: '治療形態' },
     { id: 'print', label: '印刷', alignEnd: true },
     { id: 'close', label: '終了', variant: 'contained', color: 'error', alignEnd: true },
   ];

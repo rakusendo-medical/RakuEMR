@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   AdmissionHistory, IsolationConfirmSignKind, IsolationHistoryAudit, IsolationOrder,
-  MedicalRecord, ObservationRecord, OrderConfirmSign, Patient, WardId,
+  MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, Patient,
+  PrescriptionDraft, WardId,
 } from '../types';
+import type { RehaForm } from '../data/rehaMaster';
 
 /** 操作者ロール（ep-02 代行入力認証フローの分岐用） */
 export type UserRole = 'doctor' | 'staff';
@@ -63,6 +65,33 @@ export interface PendingOrderEntry {
   karteRecordId?: string;
 }
 
+/** ep-11 us-61: リハビリ（治療形態）指示の履歴 1 件。form に全項目を保持し履歴から復元する。 */
+export interface RehaCompositionEntry {
+  id: string;
+  treatment: string;
+  registeredAt: string;
+  doctorName: string;
+  form: RehaForm;
+}
+
+/** ep-11 us-60: IF オーダ登録簿の 1 件（頓用。待機→実施で実オーダ発行）。 */
+export interface IfOrderEntry {
+  id: string;
+  /** IF 症状（症状条件）。 */
+  symptom: string;
+  /** コメント（自由入力）。 */
+  comment: string;
+  /** 構成したサブオーダ（処方/注射/検査/ECT/リハビリ/テキスト）。 */
+  orders: Order[];
+  /** 登録日（YYYY-MM-DD）。 */
+  registeredAt: string;
+  /** 指示医。 */
+  doctorName: string;
+  status: '待機' | '実施済';
+  executedAt?: string;
+  executedBy?: string;
+}
+
 interface AppState {
   // 選択中の病棟フィルタ
   wardFilter: WardId | 'all';
@@ -106,6 +135,51 @@ interface AppState {
   // id は参照整合性維持のため更新不可（Omit で型レベルで禁止）
   updatePendingOrder: (id: string, patch: Partial<Omit<PendingOrderEntry, 'id'>>) => void;
   removePendingOrder: (id: string) => void;
+
+  // ep-11 us-53: オーダ入力（新規オーダ作成）で追加されたオーダ。
+  //   モックのためセッション限定・非永続化（partialize から除外・リロードで消える）。
+  //   閲覧 UI（OrdersTab / OrderManagement）は seed の ORDERS と合成して表示する。
+  dynamicOrders: Order[];
+  addOrder: (o: Order) => void;
+
+  // ep-11 us-54: 「前回どおり（DO）」。処方種別（入院定時／処方）ごとに直近作成した処方内容を記憶し、
+  //   次に同じ種別ボタンで処方ダイアログを開いたとき初期値としてセットする。セッション限定・非永続化。
+  lastPrescriptionByType: Partial<Record<OrderType, PrescriptionDraft>>;
+  setLastPrescription: (type: OrderType, draft: PrescriptionDraft) => void;
+
+  // ep-11 us-57: 検査の「前回どおり」。種別ごとに直近チェックした検査項目コードを記憶。非永続化。
+  lastTestByType: Partial<Record<OrderType, number[]>>;
+  setLastTest: (type: OrderType, itemCodes: number[]) => void;
+
+  // ep-10 us-27: フローシート予定オーダの「実施」。オーダ id → 実施日時・実施者。
+  //   seed ORDERS / dynamicOrders を破壊せず実施済を記録（モックのためセッション限定・非永続）。
+  orderExecutions: Record<string, { executedAt: string; executedBy: string }>;
+  executeOrder: (orderId: string, executedBy: string, executedAt?: string) => void;
+
+  // ep-11: オーダ指示時に発行するカルテNo（オーダ id → 「NO.xxx」）。連番は nextKarteNo。非永続。
+  orderKarteNos: Record<string, string>;
+  nextKarteNo: number;
+  assignKarteNos: (map: Record<string, string>, next: number) => void;
+
+  // ep-11: オーダ発行時にカルテ記事作成で入力した所見（オーダ id → 所見）。
+  // 実施ダイアログ（定期処方実施等）の「医師より」欄に表示する医師コメント。非永続。
+  orderShoken: Record<string, string>;
+  setOrderShoken: (map: Record<string, string>) => void;
+
+  // ep-11 us-60: IF オーダの指示歴（患者 id → 過去に指示した IF 構成）。DO で内容（医薬品含む）を復元。非永続。
+  ifCompositions: Record<string, { symptom: string; comment: string; orders: Order[] }[]>;
+  addIfComposition: (patientId: string, comp: { symptom: string; comment: string; orders: Order[] }) => void;
+
+  // ep-11 us-60: IF オーダ登録簿（患者 id → 待機中/実施済の IF オーダ）。
+  //   IF は「症状発生時に必要になったら実施する」頓用オーダのため、指示＝登録のみ（即オーダ化しない）。
+  //   カルテ「IFオーダ」タブで [実施] すると、構成サブオーダを実オーダとして発行し即時実施する。非永続。
+  ifOrders: Record<string, IfOrderEntry[]>;
+  addIfOrder: (patientId: string, entry: IfOrderEntry) => void;
+  executeIfOrder: (patientId: string, id: string, executedBy: string, executedAt: string) => void;
+
+  // ep-11 us-61: リハビリ（治療形態）指示の履歴（患者 id → 過去の指示）。左の履歴一覧から内容を復元。非永続。
+  rehaCompositions: Record<string, RehaCompositionEntry[]>;
+  addRehaComposition: (patientId: string, entry: RehaCompositionEntry) => void;
 
   // ep-01 us-02: 病床移動の予定（モックのためセッション限定・非永続化。partialize から除外・リロードで復帰）
   scheduledMoves: ScheduledMove[];
@@ -269,6 +343,80 @@ export const useAppStore = create<AppState>()(
           pendingOrders: state.pendingOrders.map((x) => (x.id === id ? { ...x, ...patch, id: x.id } : x)),
         })),
       removePendingOrder: (id) => set((state) => ({ pendingOrders: state.pendingOrders.filter((x) => x.id !== id) })),
+
+      // ep-11 us-53: オーダ入力（非永続・partialize から除外）
+      dynamicOrders: [],
+      addOrder: (o) => set((state) => ({ dynamicOrders: [...state.dynamicOrders, o] })),
+
+      // ep-11 us-54: 前回どおり（DO）用の処方内容記憶（非永続）
+      lastPrescriptionByType: {},
+      setLastPrescription: (type, draft) =>
+        set((state) => ({ lastPrescriptionByType: { ...state.lastPrescriptionByType, [type]: draft } })),
+
+      // ep-11 us-57: 検査の前回どおり（非永続）
+      lastTestByType: {},
+      setLastTest: (type, itemCodes) =>
+        set((state) => ({ lastTestByType: { ...state.lastTestByType, [type]: itemCodes } })),
+
+      // ep-10 us-27: 予定オーダの実施（非永続）
+      orderExecutions: {},
+      executeOrder: (orderId, executedBy, executedAt) =>
+        set((state) => ({
+          orderExecutions: {
+            ...state.orderExecutions,
+            [orderId]: { executedAt: executedAt ?? new Date().toISOString(), executedBy },
+          },
+        })),
+
+      // ep-11: オーダ指示時のカルテNo 発行（非永続。基準 865 から連番）
+      orderKarteNos: {},
+      nextKarteNo: 865,
+      assignKarteNos: (map, next) =>
+        set((state) => ({ orderKarteNos: { ...state.orderKarteNos, ...map }, nextKarteNo: next })),
+
+      // ep-11: オーダ発行時の所見（医師コメント）。実施ダイアログの「医師より」に表示（非永続）
+      orderShoken: {},
+      setOrderShoken: (map) =>
+        set((state) => ({ orderShoken: { ...state.orderShoken, ...map } })),
+
+      // ep-11 us-60: IF オーダ指示歴（非永続）
+      ifCompositions: {},
+      addIfComposition: (patientId, comp) =>
+        set((state) => ({
+          ifCompositions: {
+            ...state.ifCompositions,
+            [patientId]: [comp, ...(state.ifCompositions[patientId] ?? [])],
+          },
+        })),
+
+      // ep-11 us-60: IF オーダ登録簿（非永続）。addIfOrder=登録（先頭追加）、executeIfOrder=実施済に更新。
+      ifOrders: {},
+      addIfOrder: (patientId, entry) =>
+        set((state) => ({
+          ifOrders: {
+            ...state.ifOrders,
+            [patientId]: [entry, ...(state.ifOrders[patientId] ?? [])],
+          },
+        })),
+      executeIfOrder: (patientId, id, executedBy, executedAt) =>
+        set((state) => ({
+          ifOrders: {
+            ...state.ifOrders,
+            [patientId]: (state.ifOrders[patientId] ?? []).map((e) =>
+              e.id === id ? { ...e, status: '実施済', executedBy, executedAt } : e,
+            ),
+          },
+        })),
+
+      // ep-11 us-61: リハビリ（治療形態）指示履歴（非永続）。先頭追加。
+      rehaCompositions: {},
+      addRehaComposition: (patientId, entry) =>
+        set((state) => ({
+          rehaCompositions: {
+            ...state.rehaCompositions,
+            [patientId]: [entry, ...(state.rehaCompositions[patientId] ?? [])],
+          },
+        })),
 
       scheduledMoves: [],
       addScheduledMove: (m) => set((state) => ({ scheduledMoves: [...state.scheduledMoves, m] })),
@@ -489,11 +637,11 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => localStorage),
       // セッション UI（選択状態・スナックバーなど）は永続化しない。
       // 病床移動（scheduledMoves / cancelledMoveIds / moveEdits）はモックのためセッション限定＝リロードで元に戻す。
-      // 永続化対象: pendingOrders / dynamicMedicalRecords / confirmedAdmissionIds /
-      //            currentUserRole / optionalFeatures
+      // 診療録の動的記事（dynamicMedicalRecords）＝オーダ指示時のカルテ記事等もモックのためセッション限定
+      //   （オーダ本体 dynamicOrders がセッション限定なのに記事だけ残る不整合を解消。リロードで消える）。
+      // 永続化対象: pendingOrders / confirmedAdmissionIds / currentUserRole / optionalFeatures ほか
       partialize: (state) => ({
         pendingOrders: state.pendingOrders,
-        dynamicMedicalRecords: state.dynamicMedicalRecords,
         confirmedAdmissionIds: state.confirmedAdmissionIds,
         currentUserRole: state.currentUserRole,
         optionalFeatures: state.optionalFeatures,
@@ -508,7 +656,8 @@ export const useAppStore = create<AppState>()(
       }),
       version: 3,
       // v2: scheduledMoves を永続化対象から除外（移動はセッション限定）。既存 localStorage から掃除する。
-      // v3: ep-07 観察記録の未来日入力不可を常時適用に固定。optionalFeatures.observationFutureBlock を掃除する。
+      // v3: ep-07 観察記録の未来日入力不可を常時適用に固定（optionalFeatures.observationFutureBlock を掃除）。
+      //     あわせて dynamicMedicalRecords を永続化対象から除外（オーダ記事はセッション限定・既存永続分も掃除）。
       migrate: (persisted: unknown, version: number) => {
         if (persisted && typeof persisted === 'object') {
           const p = persisted as Record<string, unknown>;
@@ -516,6 +665,7 @@ export const useAppStore = create<AppState>()(
           if (version < 3 && p.optionalFeatures && typeof p.optionalFeatures === 'object') {
             delete (p.optionalFeatures as Record<string, unknown>).observationFutureBlock;
           }
+          if (version < 3) delete p.dynamicMedicalRecords;
         }
         return persisted as AppState;
       },

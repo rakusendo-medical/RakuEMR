@@ -63,9 +63,11 @@ const MOCK_RECORDS: TimelineRecord[] = [
 const ORDER_TYPE_DESCRIPTION: Record<Order['type'], string> = {
   '処方': '処方',
   '注射': '注射',
+  '検査': '検査',
+  '画像': '画像',
   '心理検査': '心理検査',
   'ECT': 'ECT',
-  'リハ': 'リハ',
+  'リハビリ': 'リハビリ',
   '入院定時': '入院定時',
   'IF': 'IF',
   '文字': 'テキスト',
@@ -153,6 +155,7 @@ export default function MedicalRecordTab({
 }: MedicalRecordTabProps) {
   // ----- 集約タイムライン -----
   // ep-02/ep-03: 入退院指示・確定でストアに動的追加されたカルテ記事（dynamicMedicalRecords）をマージ表示する
+  // （オーダ指示時のカルテ記事も同じ dynamicMedicalRecords に積まれる。us-08/us-09 の取消表示にも対応）
   const dynamicMedicalRecords = useAppStore((s) => s.dynamicMedicalRecords);
   const timeline = useMemo<TimelineRecord[]>(() => {
     const dynamicRecords = (dynamicMedicalRecords[patient.id] ?? []).map<TimelineRecord>((r) => ({
@@ -588,14 +591,14 @@ interface DoItemEntry {
   body: string;     // [DO] 押下で本文末尾に追記される本文
 }
 
-// モック: 部門診療録（看護・リハ・栄養 etc.）
+// モック: 部門診療録（看護・リハビリ・栄養 etc.）
 const MOCK_DEPT_RECORDS: DoItemEntry[] = [
   { id: 'd-1', date: '2026/05/27', title: '看護記録', summary: '日勤 鈴木 / バイタル安定、内服確認OK',
     body: '【部門診療録 引用】2026/05/27 看護記録（鈴木）\nバイタル安定。内服確認 OK。日中傾眠傾向あり夜間睡眠時間と要対比。\n' },
   { id: 'd-2', date: '2026/05/26', title: '看護記録', summary: '準夜 高橋 / 入眠困難、頓服使用',
     body: '【部門診療録 引用】2026/05/26 看護記録（高橋）\n22:30 入眠困難の訴え。指示通り頓服使用。23:40 入眠確認。\n' },
-  { id: 'd-3', date: '2026/05/25', title: 'リハ記録', summary: 'PT 山田 / ROM 改善、歩行訓練継続',
-    body: '【部門診療録 引用】2026/05/25 リハ記録（PT 山田）\n肩関節 ROM 前回比 +10°。歩行訓練 50m × 3 セット。疲労なし。\n' },
+  { id: 'd-3', date: '2026/05/25', title: 'リハビリ記録', summary: 'PT 山田 / ROM 改善、歩行訓練継続',
+    body: '【部門診療録 引用】2026/05/25 リハビリ記録（PT 山田）\n肩関節 ROM 前回比 +10°。歩行訓練 50m × 3 セット。疲労なし。\n' },
   { id: 'd-4', date: '2026/05/23', title: '栄養記録', summary: 'NST 田中 / 食事摂取 7-8 割で経過',
     body: '【部門診療録 引用】2026/05/23 栄養記録（NST 田中）\n食事摂取 7-8 割で安定。BMI 19.8 → 20.2。経腸栄養剤追加不要と判断。\n' },
 ];
