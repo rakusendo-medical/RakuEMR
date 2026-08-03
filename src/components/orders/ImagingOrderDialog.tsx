@@ -13,6 +13,7 @@ import {
   type ImagingCategory, type ImagingSet,
 } from '../../data/imagingMaster';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import { todayStr } from './orderDate';
 
 /** 部位・手技の行（チェックのみ）。 */
@@ -145,10 +146,10 @@ const ImagingOrderDialog: React.FC<Props> = ({ open, orderType, patient, doctorN
     });
   };
 
-  // 区分見出し＋[追加]ボタン。
+  // 区分見出し＋[追加]ボタン（ECTオーダに合わせ、見出し直後にインライン配置）。
   const sectionHead = (title: ImagingCategory) => (
-    <Stack direction="row" alignItems="center" sx={{ bgcolor: '#eef3f8', px: 1, py: 0.5, borderTop: '1px solid', borderColor: 'divider' }}>
-      <Typography variant="subtitle2" sx={{ flex: 1 }}>{title}</Typography>
+    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+      <Typography variant="subtitle2">{title}</Typography>
       <Button size="small" startIcon={<AddIcon />} onClick={() => { setAddTarget(title); setAddQuery(''); }} aria-label={`${title} 追加`}>追加</Button>
     </Stack>
   );
@@ -165,9 +166,7 @@ const ImagingOrderDialog: React.FC<Props> = ({ open, orderType, patient, doctorN
 
   return (
     <Dialog open={open} onClose={requestClose} maxWidth="lg" fullWidth PaperProps={{ sx: { height: '88vh' } }}>
-      <DialogTitle sx={{ py: 1, bgcolor: '#2f6ca6', color: '#fff', fontSize: '1rem' }}>
-        画像オーダ　{patient.patientNumber ?? patient.id}：{patient.name}
-      </DialogTitle>
+      <OrderDialogTitle title="画像オーダ" patient={patient} />
       <DialogContent dividers sx={{ p: 0, display: 'flex', minHeight: 0 }}>
         {/* 左: セット名グループ（プルダウン）→ セット名一覧 */}
         <Box sx={{ width: 260, borderRight: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
@@ -192,33 +191,39 @@ const ImagingOrderDialog: React.FC<Props> = ({ open, orderType, patient, doctorN
           </Box>
         </Box>
 
-        {/* 右: 内容 */}
-        <Box sx={{ flex: 1, overflow: 'auto', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 1.5, py: 1, bgcolor: '#f8fafc', borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" sx={{ flex: 1 }}>
-              内容　{setName ? `［${groupName}］-［${setName}］` : '（セット名を選択してください）'}
-            </Typography>
+        {/* 右: 内容（実施予定日・[追加]の配置は ECTオーダに準拠） */}
+        <Box sx={{ flex: 1, overflow: 'auto', minWidth: 0, p: 1.5 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
             <TextField label="実施予定日" type="date" required size="small" value={startDate}
-              onChange={(e) => setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 170 }} />
+              onChange={(e) => setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 180 }} />
+            <Typography variant="caption" color="text.secondary">担当医: {doctorName}</Typography>
           </Stack>
 
-          <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            内容　{setName ? `［${groupName}］-［${setName}］` : '（セット名を選択してください）'}
+          </Typography>
+
               {/* 部位 */}
+              <Box sx={{ mb: 1.5 }}>
               {sectionHead('部位')}
               {bui.length === 0
-                ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 0.5 }}>なし（[追加]で登録）</Typography>
+                ? <Typography variant="caption" color="text.secondary">なし（[追加]で登録）</Typography>
                 : bui.map((r) => checkRow(r, setBui, '部位'))}
+              </Box>
 
               {/* 手技 */}
+              <Box sx={{ mb: 1.5 }}>
               {sectionHead('手技')}
               {gijutsu.length === 0
-                ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 0.5 }}>なし（[追加]で登録）</Typography>
+                ? <Typography variant="caption" color="text.secondary">なし（[追加]で登録）</Typography>
                 : gijutsu.map((r) => checkRow(r, setGijutsu, '手技'))}
+              </Box>
 
               {/* 薬剤（造影剤等・用量入力可） */}
+              <Box sx={{ mb: 1.5 }}>
               {sectionHead('薬剤')}
               {yakuzai.length === 0
-                ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 0.5 }}>なし（[追加]で登録）</Typography>
+                ? <Typography variant="caption" color="text.secondary">なし（[追加]で登録）</Typography>
                 : yakuzai.map((r) => (
                   <Stack key={r.id} direction="row" alignItems="center" spacing={1} sx={{ px: 1, borderBottom: '1px dashed', borderColor: 'divider' }}>
                     <FormControlLabel sx={{ m: 0, flex: 1 }}
@@ -233,11 +238,13 @@ const ImagingOrderDialog: React.FC<Props> = ({ open, orderType, patient, doctorN
                     </IconButton>
                   </Stack>
                 ))}
+              </Box>
 
               {/* フィルム（撮影回数＝分画・回） */}
+              <Box sx={{ mb: 1.5 }}>
               {sectionHead('フィルム')}
               {film.length === 0
-                ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 0.5 }}>なし（[追加]で登録）</Typography>
+                ? <Typography variant="caption" color="text.secondary">なし（[追加]で登録）</Typography>
                 : film.map((r) => (
                   <Stack key={r.id} direction="row" alignItems="center" spacing={1} sx={{ px: 1, borderBottom: '1px dashed', borderColor: 'divider' }}>
                     <FormControlLabel sx={{ m: 0, flex: 1 }}
@@ -256,7 +263,7 @@ const ImagingOrderDialog: React.FC<Props> = ({ open, orderType, patient, doctorN
                     </IconButton>
                   </Stack>
                 ))}
-          </Box>
+              </Box>
         </Box>
       </DialogContent>
       <DialogActions>
