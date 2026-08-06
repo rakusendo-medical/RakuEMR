@@ -3,6 +3,7 @@ import {
   Box, Paper, Stack, Typography, Chip, TextField, Button, IconButton,
   Tooltip, MenuItem, Select, FormControl, InputLabel, Snackbar, Alert,
   Divider, Dialog, DialogTitle, DialogContent, DialogActions,
+  Checkbox, FormControlLabel,
 } from '@mui/material';
 import {
   Save, Print, AttachFile, AccountTree, Brush,
@@ -643,6 +644,10 @@ export interface NewRecordData {
   interviewForm: string;
   tags: string[];
   body: string;
+  /** オーダモード（orderFields）で入力する指示日（YYYY-MM-DD）。 */
+  orderDate?: string;
+  /** オーダモードの「継続する」（中止まで指示簿に表示。false=指示日のみ）。 */
+  continuous?: boolean;
 }
 
 export function NewRecordDialog({
@@ -658,6 +663,7 @@ export function NewRecordDialog({
   titleLabel = '診療録作成',
   titleNode,
   defaultRecordedAt,
+  orderFields = false,
   registerLabel,
   onRegister,
 }: {
@@ -680,12 +686,17 @@ export function NewRecordDialog({
   titleNode?: ReactNode;
   /** 記載日時の初期値（datetime-local 形式）。既定は実日時。オーダ入力ではモック当日を渡す。 */
   defaultRecordedAt?: string;
+  /** オーダ入力モード: タグと本文の間に「指示日」「継続する」を表示し、onRegister に orderDate/continuous を渡す。 */
+  orderFields?: boolean;
   /** 指定するとフッターを「キャンセル／[registerLabel]」にし、診察終了・保存を出さない（オーダ登録モード）。 */
   registerLabel?: string;
   /** オーダ登録モードで [registerLabel] 押下時に入力内容を親へ渡す。 */
   onRegister?: (data: NewRecordData) => void;
 }) {
   const [recordedAt, setRecordedAt] = useState<string>(defaultRecordedAt ?? nowAsLocalInput());
+  // オーダモードの指示日（既定は記載日時の日付）・継続フラグ。
+  const [orderDate, setOrderDate] = useState<string>((defaultRecordedAt ?? nowAsLocalInput()).slice(0, 10));
+  const [continuous, setContinuous] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
   const [status, setStatus] = useState<StatusId>('');
   const [templateId, setTemplateId] = useState<string>('');
@@ -756,6 +767,8 @@ export function NewRecordDialog({
 
   const reset = () => {
     setRecordedAt(defaultRecordedAt ?? nowAsLocalInput());
+    setOrderDate((defaultRecordedAt ?? nowAsLocalInput()).slice(0, 10));
+    setContinuous(false);
     setTitle('');
     setStatus('');
     setTemplateId('');
@@ -789,7 +802,7 @@ export function NewRecordDialog({
   const canRegister = body.trim() !== '';
   const handleRegister = () => {
     if (!canRegister || !onRegister) return;
-    onRegister({ recordedAt, title, status, interviewForm, tags, body });
+    onRegister({ recordedAt, title, status, interviewForm, tags, body, orderDate, continuous });
     reset();
     onClose();
   };
@@ -1022,6 +1035,25 @@ export function NewRecordDialog({
                 />
               </Stack>
             </Box>
+
+            {/* ===== 指示日 + 継続する（オーダ入力モードのみ・タグと本文の間）===== */}
+            {orderFields && (
+              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+                <TextField
+                  size="small"
+                  type="date"
+                  label="指示日"
+                  value={orderDate}
+                  onChange={(e) => setOrderDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ minWidth: 180 }}
+                />
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={continuous} onChange={(_, v) => setContinuous(v)} />}
+                  label={<Typography variant="body2">継続する（中止するまで指示簿に表示。無しは指示日のみ）</Typography>}
+                />
+              </Stack>
+            )}
 
             {/* ===== フリーテキスト本文 + 前回カルテ取り込み ===== */}
             <Box>

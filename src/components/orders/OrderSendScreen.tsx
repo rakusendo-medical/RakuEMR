@@ -290,7 +290,7 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
    * 内容は【タイトル】本文を基本に、面接フォーム・状態・タグを補足行として付す。
    */
   const registerTextOrder = (data: NewRecordData) => {
-    const startDate = data.recordedAt ? data.recordedAt.slice(0, 10) : todayStr();
+    const startDate = data.orderDate || (data.recordedAt ? data.recordedAt.slice(0, 10) : todayStr());
     const head = data.title.trim() ? `【${data.title.trim()}】` : '';
     const lines: string[] = [`${head}${data.body.trim()}`.trim()];
     if (data.interviewForm) {
@@ -306,7 +306,9 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
       id: `ORD-${Date.now()}`,
       patientId: patient.id, patientName: patient.name,
       type: '文字', content: lines.join('\n'),
-      schedule: '', status: '指示済', startDate, days: 1, doctorName,
+      // 継続する＝中止まで指示簿に表示（days 0=継続）。無し＝指示日のみ（1 日）。
+      schedule: data.continuous ? '継続' : '', status: '指示済',
+      startDate, days: data.continuous ? 0 : 1, doctorName,
     };
     setPending((prev) => [...prev, order]);
     setRxDialog((s) => ({ ...s, open: false }));
@@ -828,6 +830,7 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
           patientId={patient.id}
           titleNode={<OrderDialogTitle title="テキストオーダ作成" patient={patient} />}
           defaultRecordedAt={`${MOCK_TODAY}T09:00`}
+          orderFields
           hideDoPanel
           hideImportPrevious
           hideTemplate
