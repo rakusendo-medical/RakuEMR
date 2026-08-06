@@ -13,6 +13,10 @@ import { todayStr } from '../orders/orderDate';
 interface Props {
   patient: Patient;
   mode?: KarteMode;
+  /** 指示簿から遷移してきたときに選択・表示する対象オーダ id。 */
+  focusOrderId?: string | null;
+  /** focusOrderId を再適用するためのシグナル（同じ id を再クリックしても反映されるよう increment）。 */
+  focusSignal?: number;
 }
 
 // 実施者（ログイン看護師・モック固定）。フローシートのオーダ実施と同一。
@@ -43,7 +47,7 @@ const sectionOf = (t: OrderType) => SECTION[t] ?? { label: t, bg: '#eef2f6', fg:
  * IF は頓用のため、症状が出たら該当サブオーダにチェックして [実施] すると、実オーダとして発行し
  * その場で実施済にする（フローシート予定オーダ・指示簿へ実施済で反映）。
  */
-const IfOrderTab: React.FC<Props> = ({ patient }) => {
+const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => {
   const entries = useAppStore((s) => s.ifOrders[patient.id]) ?? [];
   const addOrder = useAppStore((s) => s.addOrder);
   const executeOrder = useAppStore((s) => s.executeOrder);
@@ -59,6 +63,15 @@ const IfOrderTab: React.FC<Props> = ({ patient }) => {
   React.useEffect(() => {
     if (selectedId === null && entries.length > 0) setSelectedId(entries[0].id);
   }, [entries, selectedId]);
+
+  // 指示簿から遷移してきたとき、対象オーダ id が一覧にあれば選択・表示する。
+  React.useEffect(() => {
+    if (focusOrderId && entries.some((e) => e.id === focusOrderId)) {
+      setSelectedId(focusOrderId);
+    }
+    // focusSignal の変化で再適用（同じ id の再クリックにも対応）。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSignal]);
   React.useEffect(() => {
     if (selected) setCheckedIds(new Set(selected.orders.map((o) => o.id)));
     else setCheckedIds(new Set());

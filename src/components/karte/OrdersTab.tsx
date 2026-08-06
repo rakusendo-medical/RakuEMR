@@ -89,9 +89,11 @@ interface OrdersTabProps {
   mode: KarteMode;
   /** 「指示状況タブを開く」クリック時に呼ばれる。KartePage 側で `commitTab('order-status')` 相当へ繋ぐ */
   onOpenOrderStatusTab: () => void;
+  /** IF オーダ行クリック時に呼ばれる。KartePage 側で IFオーダタブへ遷移し、対象オーダを表示する。 */
+  onOpenIfOrder: (orderId: string) => void;
 }
 
-export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: OrdersTabProps) {
+export default function OrdersTab({ patient, mode, onOpenOrderStatusTab, onOpenIfOrder }: OrdersTabProps) {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   // 臨時オーダ編集ダイアログで編集中のオーダ id。
@@ -224,18 +226,24 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
                 const group = ORDER_TYPE_LABEL[o.type];
                 const t = GROUP_COLORS[group];
                 const editable = group === '臨時';
+                const ifRow = group === 'IF';
+                const clickable = editable || ifRow;
                 return (
                   <TableRow
                     key={o.id}
                     hover
-                    onClick={editable ? () => setEditingId(o.id) : undefined}
-                    // キーボード操作: 臨時行は Tab で到達でき、Enter/Space で編集ダイアログを開ける。
-                    tabIndex={editable ? 0 : undefined}
-                    onKeyDown={editable ? (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingId(o.id); }
+                    onClick={editable ? () => setEditingId(o.id) : ifRow ? () => onOpenIfOrder(o.id) : undefined}
+                    // キーボード操作: 臨時/IF 行は Tab で到達でき、Enter/Space で開ける。
+                    tabIndex={clickable ? 0 : undefined}
+                    onKeyDown={clickable ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (editable) setEditingId(o.id);
+                        else if (ifRow) onOpenIfOrder(o.id);
+                      }
                     } : undefined}
-                    sx={editable ? { cursor: 'pointer' } : undefined}
-                    title={editable ? 'クリックで内容を確認・変更' : undefined}
+                    sx={clickable ? { cursor: 'pointer' } : undefined}
+                    title={editable ? 'クリックで内容を確認・変更' : ifRow ? 'クリックで IFオーダタブを開く' : undefined}
                   >
                     <TableCell>
                       <Typography variant="caption" color={orderKarteNos[o.id] ? 'text.primary' : 'text.disabled'}>
