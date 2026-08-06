@@ -8,7 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import type { Patient, OrderType, Order } from '../../types';
 import { useAppStore } from '../../stores/useAppStore';
 import type { KarteMode } from './KartePage';
-import { todayStr } from '../orders/orderDate';
+import { todayStr, MOCK_TODAY } from '../orders/orderDate';
 
 interface Props {
   patient: Patient;
@@ -51,7 +51,9 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
   const entries = useAppStore((s) => s.ifOrders[patient.id]) ?? [];
   const addOrder = useAppStore((s) => s.addOrder);
   const executeOrder = useAppStore((s) => s.executeOrder);
-  const executeIfOrder = useAppStore((s) => s.executeIfOrder);
+  const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
+  const nextKarteNo = useAppStore((s) => s.nextKarteNo);
+  const assignKarteNos = useAppStore((s) => s.assignKarteNos);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -84,25 +86,51 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
       return next;
     });
 
-  const done = selected?.status === '実施済';
-  const canExecute = !!selected && !done && selected.orders.some((o) => checkedIds.has(o.id));
+  // IF は頓用（都度実施）のため、実施ボタンは何度でも押せる（実施済で無効化しない）。
+  const canExecute = !!selected && selected.orders.some((o) => checkedIds.has(o.id));
 
   const handleExecute = () => {
     if (!selected) return;
     const at = nowStr();
-    // チェックされたサブオーダを実オーダとして発行し、即時実施（実施済）にする。
-    selected.orders.forEach((o, i) => {
-      if (!checkedIds.has(o.id)) return;
-      const id = `IFEXEC-${selected.id}-${i}`;
+    const stamp = Date.now();
+    // 実施ごとに、各オーダへカルテNoを連番発行する。
+    let n = nextKarteNo;
+    const nos: Record<string, string> = {};
+    // カルテ記事の日付（モック当日）。
+    const d = new Date(`${MOCK_TODAY}T00:00:00`);
+    const dateStr = MOCK_TODAY.replace(/-/g, '/');
+    const dow = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+    const typeLabel = (t: OrderType) => (t === '文字' ? 'テキスト' : t);
+
+    const targets = selected.orders.filter((o) => checkedIds.has(o.id));
+    // チェックされたサブオーダを実オーダとして発行し、即時実施済にする（実施ごとに一意 id）。
+    targets.forEach((o, i) => {
+      const id = `IFEXEC-${selected.id}-${stamp}-${i}`;
       addOrder({
         ...o, id, patientId: patient.id, patientName: patient.name,
         // 頓用の単発実施のため、実施日（本日）1 日のみ実施確認表に出す。
         status: '指示済', startDate: todayStr(), days: 1,
       });
       executeOrder(id, LOGIN_NURSE, at);
+      nos[id] = `NO.${n}`; n += 1;
+      // 各オーダのカルテ記事（看護記録）を作成し、実施した扱いにする。
+      appendMedicalRecord(patient.id, {
+        id: `MR-IF-${stamp}-${i}`,
+        date: dateStr, dayOfWeek: dow,
+        category: '看護記録', author: LOGIN_NURSE, authorRole: '看護師',
+        content: [
+          `【IFオーダ実施】${selected.symptom ? `（${selected.symptom}）` : ''}`,
+          `［${typeLabel(o.type)}］`,
+          o.content,
+        ].join('\n'),
+        tags: ['IF', '実施'],
+        orderNumber: nos[id],
+        timestamp: `${dateStr} ${at.slice(11)}`,
+        likes: 0, comments: 0,
+      });
     });
-    executeIfOrder(patient.id, selected.id, LOGIN_NURSE, at);
-    showSnackbar(`IFオーダ（${selected.symptom || '症状未設定'}）を実施しました`, 'success');
+    assignKarteNos(nos, n);
+    showSnackbar(`IFオーダ（${selected.symptom || '症状未設定'}）を実施しました（${targets.length}件・カルテ記載）`, 'success');
   };
 
   // 選択中IFオーダのサブオーダを種別ごとにグループ化（登録順を維持）。
@@ -162,22 +190,20 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
                     <Typography variant="body2" sx={{ color: s.fg, fontWeight: 700, flex: 1 }}>
                       ［{s.label}］
                     </Typography>
-                    <IconButton size="small" aria-label={`削除 ${s.label}`} disabled={done}>
+                    <IconButton size="small" aria-label={`削除 ${s.label}`}>
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
                   </Stack>
                   <Box sx={{ p: 1 }}>
                     {g.orders.map((o) => (
                       <Stack key={o.id} direction="row" alignItems="flex-start" spacing={0.5} sx={{ mb: 0.25 }}>
-                        <Checkbox size="small" sx={{ p: 0.25 }} checked={checkedIds.has(o.id)} disabled={done}
-                          onChange={() => toggle(o.id)} inputProps={{ 'aria-label': `実施対象 ${o.content}` }} />
+                        <Checkbox size="small" sx={{ p: 0.25 }} checked={checkedIds.has(o.id)}                          onChange={() => toggle(o.id)} inputProps={{ 'aria-label': `実施対象 ${o.content}` }} />
                         <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{o.content}</Typography>
                       </Stack>
                     ))}
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
                       <Typography variant="caption" color="text.secondary">備考</Typography>
-                      <TextField size="small" variant="standard" fullWidth disabled={done}
-                        inputProps={{ 'aria-label': `備考 ${s.label}` }} />
+                      <TextField size="small" variant="standard" fullWidth                        inputProps={{ 'aria-label': `備考 ${s.label}` }} />
                     </Stack>
                   </Box>
                 </Box>
@@ -189,16 +215,15 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
         {/* 下部: 実施バー（指示箋印刷・医事連携・看護記録の作成／実施日／処方チェック・実施） */}
         <Divider />
         <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1, flexWrap: 'wrap', rowGap: 0.5 }}>
-          <FormControlLabel control={<Checkbox size="small" defaultChecked disabled={done} />}
+          <FormControlLabel control={<Checkbox size="small" defaultChecked />}
             label={<Typography variant="caption">指示箋印刷</Typography>} />
-          <FormControlLabel control={<Checkbox size="small" defaultChecked disabled={done} />}
+          <FormControlLabel control={<Checkbox size="small" defaultChecked />}
             label={<Typography variant="caption">医事連携</Typography>} />
-          <FormControlLabel control={<Checkbox size="small" disabled={done} />}
+          <FormControlLabel control={<Checkbox size="small" />}
             label={<Typography variant="caption">看護記録の作成</Typography>} />
           <Box sx={{ flex: 1 }} />
           <Typography variant="caption" color="text.secondary">実施日: {todayStr()}</Typography>
-          <Button size="small" variant="outlined" disabled={done}
-            onClick={() => showSnackbar('処方チェック: 問題ありません', 'success')}>処方チェック</Button>
+          <Button size="small" variant="outlined"            onClick={() => showSnackbar('処方チェック: 問題ありません', 'success')}>処方チェック</Button>
           <Button size="small" variant="contained" disabled={!canExecute} onClick={handleExecute}>実施</Button>
         </Stack>
       </Box>
