@@ -8,7 +8,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import type { Order, OrderType, Patient, WardId, PrescriptionRpRow } from '../../types';
-import { buildRxContent, rxOrderDays, isRxType, rxRenderConfig, rxMarks } from '../../data/prescriptionContent';
+import { buildRxContent, rxOrderDays, isRxType, rxRenderConfig, rxMarks, orderToDrugs, orderToPendingRx } from '../../data/prescriptionContent';
 import type { Medication } from '../../data/prescriptionMaster';
 import { MEDICATIONS } from '../../data/prescriptionMaster';
 import { PRESCRIPTION_SETS, resolveSetDrugs } from '../../data/prescriptionSetMaster';
@@ -78,70 +78,8 @@ const injectionConfig: ComposeConfig = {
   daysLabel: '日分', perRowDays: true,
 };
 
-/**
- * 過去に作成したオーダ（履歴）の content を、処方追加ダイアログの薬剤行（名称・用量・単位・用法）へ復元する。
- * content は「名称 用量単位（用法）（包N・後発不可）」を ／ で連結した文字列。
- * 用法の（…）が取れればそれを用法に、無ければオーダの schedule を用法に充てる（用量・単位は編集で調整可）。
- */
-function orderToDrugs(o: Order): { name: string; dose: string; unit: string; usage: string }[] {
-  return o.content
-    // 改行（1 薬品 1 行）または ／（旧形式・seed）で分割。
-    .split(/\r?\n|\s*／\s*/)
-    // 先頭の「Rp{番号}」またはインデントを除去。
-    .map((seg) => seg.replace(/^Rp\d+[　\s]*/, '').replace(/^[　\s]+/, '').trim())
-    // 末尾の Rp 日数「×N日分」を除去し、日数のみ行（N日分・継続）は薬剤ではないので除外。
-    .map((seg) => seg.replace(/\s*×\d+日分\s*$/, '').trim())
-    .filter((seg) => seg !== '' && seg !== '継続' && !/^\d+日分$/.test(seg))
-    .map((seg) => parseDrugSegment(seg, o.schedule));
-}
-/**
- * 1 薬品の表記（例「アキネトン錠1mg 1錠（1日1回 朝食後）（包1）」）を
- * 名称・用量・単位・用法へ分解する。用法＝最初の丸カッコ、以降の丸カッコ（包装等）は無視。
- * 用量・単位＝名称との間の半角スペースで区切られた「{数値}{単位}」（無ければ空）。
- */
-function parseDrugSegment(seg: string, fallbackUsage: string): { name: string; dose: string; unit: string; usage: string } {
-  let usage = fallbackUsage || '';
-  let name = seg.trim();
-  let dose = '';
-  let unit = '';
-  const pm = seg.match(/^([^（]+)（([^（）]+)）/); // head（用法）…（新形式のみ用量・単位を分離）
-  if (pm) {
-    const head = pm[1].trim();
-    usage = pm[2].trim();
-    name = head;
-    // 名称と用量の区切りは半角スペース。末尾の「 {数値}{単位}」のみ分離（名称中の "1mg" 等は分離しない）。
-    const dm = head.match(/^(.*\S)\s+(\d+(?:\.\d+)?)\s*(\D+?)\s*$/);
-    if (dm) { name = dm[1].trim(); dose = dm[2]; unit = dm[3].trim(); }
-  }
-  return { name, dose, unit, usage };
-}
-/**
- * DO（前回どおり）等で複製した処方系オーダの content を、作成中の構造化データ（Rp 行＋ダイアログ日数）へ復元する。
- * 上部ボタンから作成した時と同じ 2 行表示・インライン編集・クリック再編集を可能にするため、
- * 用法ごとに Rp を採番し、一包化=1・日数は既定（処方/注射=7・定時/入院定時はオーダ日数）で組み立てる。
- */
-function orderToPendingRx(o: Order): { rows: PrescriptionRpRow[]; dialogDays: number } | null {
-  if (!isRxType(o.type)) return null;
-  const drugs = orderToDrugs(o);
-  if (drugs.length === 0) return null;
-  const { perRowDays } = rxRenderConfig(o.type);
-  let maxRp = 0;
-  const rpByUsage = new Map<string, number>();
-  const stamp = Date.now();
-  const rows: PrescriptionRpRow[] = drugs.map((d, i) => {
-    let rpNo = rpByUsage.get(d.usage);
-    if (rpNo === undefined) { maxRp += 1; rpNo = maxRp; rpByUsage.set(d.usage, rpNo); }
-    return {
-      id: `pr-${stamp}-${i}`,
-      rpNo,
-      name: d.name, dose: d.dose, unit: d.unit, usage: d.usage,
-      ippouGroup: '1', noGeneric: false,
-      days: perRowDays ? '7' : undefined,
-    };
-  });
-  const dialogDays = perRowDays ? 0 : (o.days > 0 ? o.days : 0);
-  return { rows, dialogDays };
-}
+// 過去オーダの content → 薬剤行／構造化データ復元は共有モジュール（prescriptionContent）へ切り出し済み。
+// orderToDrugs / orderToPendingRx を import して使う（指示簿の臨時オーダ編集ダイアログでも再利用）。
 
 // 検査は種別「検査」として登録（検査マスタを利用）。
 const testConfig: ComposeConfig = { kind: 'test', orderType: '検査' };
@@ -396,7 +334,7 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
       ...src, id, status: '指示済', startDate: todayStr(), doctorName,
       confirmedBy: undefined, confirmedAt: undefined,
     };
-    const rx = orderToPendingRx(src);
+    const rx = orderToPendingRx(src, id);
     if (rx) {
       const dup: Order = {
         ...base,
