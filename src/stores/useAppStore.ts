@@ -3,8 +3,23 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   AdmissionHistory, IsolationConfirmSignKind, IsolationHistoryAudit, IsolationOrder,
   MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, Patient,
-  PrescriptionDraft, WardId,
+  PrescriptionDraft, PrescriptionRpRow, WardId,
 } from '../types';
+
+/**
+ * ep-11: 指示簿の臨時オーダを閲覧画面から編集した内容のオーバーレイ。
+ * seed ORDERS / dynamicOrders を破壊せず、表示時に上書き適用する（モックのためセッション限定・非永続）。
+ */
+export interface OrderOverride {
+  startDate?: string;
+  remark?: string;
+  content?: string;
+  days?: number;
+  schedule?: string;
+  /** 処方系: 再編集用の構造化データ（次回オープン時の復元に使う）。 */
+  rows?: PrescriptionRpRow[];
+  dialogDays?: number;
+}
 import type { RehaForm } from '../data/rehaMaster';
 
 /** 操作者ロール（ep-02 代行入力認証フローの分岐用） */
@@ -141,6 +156,10 @@ interface AppState {
   //   閲覧 UI（OrdersTab / OrderManagement）は seed の ORDERS と合成して表示する。
   dynamicOrders: Order[];
   addOrder: (o: Order) => void;
+
+  // ep-11: 指示簿の臨時オーダ編集（オーダ id → オーバーレイ）。表示側で適用。非永続。
+  orderOverrides: Record<string, OrderOverride>;
+  setOrderOverride: (id: string, patch: OrderOverride) => void;
 
   // ep-11 us-54: 「前回どおり（DO）」。処方種別（入院定時／処方）ごとに直近作成した処方内容を記憶し、
   //   次に同じ種別ボタンで処方ダイアログを開いたとき初期値としてセットする。セッション限定・非永続化。
@@ -347,6 +366,11 @@ export const useAppStore = create<AppState>()(
       // ep-11 us-53: オーダ入力（非永続・partialize から除外）
       dynamicOrders: [],
       addOrder: (o) => set((state) => ({ dynamicOrders: [...state.dynamicOrders, o] })),
+
+      // ep-11: 指示簿の臨時オーダ編集オーバーレイ（非永続）
+      orderOverrides: {},
+      setOrderOverride: (id, patch) =>
+        set((state) => ({ orderOverrides: { ...state.orderOverrides, [id]: { ...state.orderOverrides[id], ...patch } } })),
 
       // ep-11 us-54: 前回どおり（DO）用の処方内容記憶（非永続）
       lastPrescriptionByType: {},

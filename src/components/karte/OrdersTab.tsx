@@ -18,6 +18,7 @@ import type { Order, OrderStatus, OrderType, Patient } from '../../types';
 import { ORDERS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import SectionHeader from '../common/SectionHeader';
+import OrderEditDialog from '../orders/OrderEditDialog';
 import type { KarteMode } from './KartePage';
 
 // 指示簿の種別表示は「定期／臨時／IF／文字」にグルーピングする（オーダ内部の型はそのまま）。
@@ -93,16 +94,36 @@ interface OrdersTabProps {
 export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: OrdersTabProps) {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  // 臨時オーダ編集ダイアログで編集中のオーダ id。
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const dynamicOrders = useAppStore((s) => s.dynamicOrders);
   const orderKarteNos = useAppStore((s) => s.orderKarteNos);
+  const orderOverrides = useAppStore((s) => s.orderOverrides);
+  const setOrderOverride = useAppStore((s) => s.setOrderOverride);
 
   // 指示簿は「指示済みオーダの閲覧一覧」。seed の静的 ORDERS に、オーダ入力（アクションバー起動）で
   // 追加された dynamicOrders を合成して当該患者分を表示する（新規登録の導線は指示簿には置かない）。
+  // 臨時オーダ編集（orderOverrides）があれば表示時に上書き適用する（seed/dynamic は破壊しない）。
   const all = useMemo(
-    () => [...ORDERS, ...dynamicOrders].filter((o) => o.patientId === patient.id),
-    [patient.id, dynamicOrders],
+    () =>
+      [...ORDERS, ...dynamicOrders]
+        .filter((o) => o.patientId === patient.id)
+        .map((o) => {
+          const ov = orderOverrides[o.id];
+          if (!ov) return o;
+          return {
+            ...o,
+            startDate: ov.startDate ?? o.startDate,
+            remark: ov.remark ?? o.remark,
+            content: ov.content ?? o.content,
+            days: ov.days ?? o.days,
+            schedule: ov.schedule ?? o.schedule,
+          };
+        }),
+    [patient.id, dynamicOrders, orderOverrides],
   );
+  const editingOrder = editingId ? all.find((o) => o.id === editingId) ?? null : null;
   const filtered = useMemo(() => {
     return all
       .filter((o) => typeFilter === 'all' || ORDER_TYPE_LABEL[o.type] === typeFilter)
@@ -202,8 +223,20 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
               {filtered.map((o) => {
                 const group = ORDER_TYPE_LABEL[o.type];
                 const t = GROUP_COLORS[group];
+                const editable = group === '臨時';
                 return (
-                  <TableRow key={o.id} hover>
+                  <TableRow
+                    key={o.id}
+                    hover
+                    onClick={editable ? () => setEditingId(o.id) : undefined}
+                    // キーボード操作: 臨時行は Tab で到達でき、Enter/Space で編集ダイアログを開ける。
+                    tabIndex={editable ? 0 : undefined}
+                    onKeyDown={editable ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingId(o.id); }
+                    } : undefined}
+                    sx={editable ? { cursor: 'pointer' } : undefined}
+                    title={editable ? 'クリックで内容を確認・変更' : undefined}
+                  >
                     <TableCell>
                       <Typography variant="caption" color={orderKarteNos[o.id] ? 'text.primary' : 'text.disabled'}>
                         {orderKarteNos[o.id] ?? '—'}
@@ -235,6 +268,16 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
           </Table>
         </TableContainer>
       )}
+
+      {/* 臨時オーダの確認・変更ダイアログ（作成中のオーダと同じ形式で編集） */}
+      <OrderEditDialog
+        open={editingOrder !== null}
+        patient={patient}
+        order={editingOrder}
+        override={editingId ? orderOverrides[editingId] : undefined}
+        onClose={() => setEditingId(null)}
+        onSave={(patch) => { if (editingId) setOrderOverride(editingId, patch); }}
+      />
     </Stack>
   );
 }
