@@ -700,10 +700,12 @@ test.describe('オーダ送信（オーダ入力）', () => {
     await expect(page.getByText(/不穏時（注射）/).first()).toBeVisible();
     await expect(page.getByText(/アキネトン錠1mg/).first()).toBeVisible();
 
-    // [実施]（下部・チェック済みサブオーダを即時実施）→ 実施済
+    // [実施]（下部・チェック済みサブオーダを即時実施）→ 頓用（都度実施）のため実施済にはならず再実施可能
     await page.getByRole('button', { name: '実施', exact: true }).click();
     await expect(page.getByText(/を実施しました/)).toBeVisible();
-    await expect(page.getByText(/（実施済）/)).toBeVisible();
+    // IF は都度実施: エントリは待機のまま（実施済にならない）・実施ボタンは再度押せる
+    await expect(page.getByText(/（実施済）/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '実施', exact: true })).toBeEnabled();
 
     // 指示簿に発行された処方（アキネトン）が反映される
     await page.getByRole('tab', { name: '指示簿' }).click();
