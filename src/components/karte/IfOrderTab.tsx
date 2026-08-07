@@ -27,10 +27,10 @@ const nowStr = (): string => {
 
 // 種別ごとのセクション見出しラベルと配色（参考システム実機準拠）。
 const SECTION: Record<string, { label: string; bg: string; fg: string }> = {
-  処方: { label: '臨時処方（内服）', bg: '#e3f0fb', fg: '#1e5aa8' },
+  処方: { label: '処方', bg: '#e3f0fb', fg: '#1e5aa8' },
   入院定時: { label: '入院定時', bg: '#e3f0fb', fg: '#1e5aa8' },
   注射: { label: '注射', bg: '#e6f4ea', fg: '#1e7e34' },
-  検査: { label: '検体検査（外注）', bg: '#fce8e8', fg: '#b3261e' },
+  検査: { label: '検査', bg: '#fce8e8', fg: '#b3261e' },
   ECT: { label: 'ECT', bg: '#eef2f6', fg: '#475569' },
   リハビリ: { label: 'リハビリ', bg: '#eef2f6', fg: '#475569' },
   文字: { label: 'テキスト', bg: '#eef2f6', fg: '#475569' },

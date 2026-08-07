@@ -1,8 +1,10 @@
 import React from 'react';
 import {
   Dialog, AppBar, Toolbar, Typography, IconButton, Box, Button, Stack, Divider,
-  List, ListItem, ListItemText, Chip, FormControlLabel, Checkbox, Tooltip, TextField,
+  List, ListItem, ListItemButton, ListItemText, Chip, FormControlLabel, Checkbox, Tooltip, TextField,
+  Popover, Select, MenuItem, InputLabel, FormControl,
 } from '@mui/material';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import type { Order, OrderType, Patient, WardId, PrescriptionRpRow } from '../../types';
@@ -12,6 +14,7 @@ import { MEDICATIONS } from '../../data/prescriptionMaster';
 import { PRESCRIPTION_SETS, resolveSetDrugs } from '../../data/prescriptionSetMaster';
 import { INJECTION_MEDICATIONS, INJECTION_SETS, resolveInjectionSetDrugs } from '../../data/injectionSetMaster';
 import { ORDERS } from '../../data/mockData';
+import { ORDER_SET_GROUPS, resolveOrderSet, type OrderSetDef } from '../../data/orderSetMaster';
 import { useAppStore } from '../../stores/useAppStore';
 import PrescriptionDialog from './PrescriptionDialog';
 import TestOrderDialog from './TestOrderDialog';
@@ -19,8 +22,9 @@ import PsychTestOrderDialog from './PsychTestOrderDialog';
 import ImagingOrderDialog from './ImagingOrderDialog';
 import EctOrderDialog from './EctOrderDialog';
 import IfOrderDialog from './IfOrderDialog';
-import TextOrderDialog from './TextOrderDialog';
+import { NewRecordDialog, STATUS_COLORS, INTERVIEW_FORMS, type NewRecordData } from '../karte/MedicalRecordTab';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import OrderKarteRecordDialog from './OrderKarteRecordDialog';
 import { todayStr, MOCK_TODAY } from './orderDate';
 
@@ -29,10 +33,10 @@ const WARD_LABEL: Record<WardId, string> = { ward1: '第１病棟', ward2: '第�
 // 作成中オーダの種別ごとの色分けセクション（参考システム実機準拠）。見出しラベル・背景・文字色。
 const PENDING_SECTION: Partial<Record<OrderType, { label: string; bg: string; fg: string }>> = {
   入院定時: { label: '入院定時', bg: '#e3f0fb', fg: '#1e5aa8' },
-  処方: { label: '臨時処方（内服）', bg: '#e0f2f1', fg: '#00695c' },
+  処方: { label: '処方', bg: '#e0f2f1', fg: '#00695c' },
   注射: { label: '注射', bg: '#e8f5e9', fg: '#2e7d32' },
-  検査: { label: '検体検査（外注）', bg: '#fce4ec', fg: '#ad1457' },
-  画像: { label: '画像（放射線）', bg: '#e1f5fe', fg: '#0277bd' },
+  検査: { label: '検査', bg: '#fce4ec', fg: '#ad1457' },
+  画像: { label: '画像', bg: '#e1f5fe', fg: '#0277bd' },
   心理検査: { label: '心理検査', bg: '#f3e5f5', fg: '#6a1b9a' },
   ECT: { label: 'ECT', bg: '#fff3e0', fg: '#e65100' },
   IF: { label: 'IF', bg: '#e8eaf6', fg: '#3949ab' },
@@ -202,6 +206,9 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
     { open: false, config: rxConfig('処方') },
   );
   const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+  // セット一覧ポップオーバ（アンカー）＋選択中のセット名グループ。
+  const [setListAnchor, setSetListAnchor] = React.useState<HTMLElement | null>(null);
+  const [setGroupIdx, setSetGroupIdx] = React.useState(0);
 
   React.useEffect(() => {
     if (open) {
@@ -209,6 +216,8 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
       setPendingRx({});
       setIfDetails({});
       setConfirmDiscard(false);
+      setSetListAnchor(null);
+      setSetGroupIdx(0);
     }
   }, [open]);
 
@@ -240,6 +249,68 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
         .filter((g) => g.drugs.length > 0),
     [recent, rxDialog.config.orderType],
   );
+
+  /**
+   * セット一覧のセット名クリック → セット内容（検査・画像・処方系）を解決し「作成中のオーダ」へ一括展開する。
+   * 処方系は上部ボタンで作成した時と同じ 2 行表示・インライン編集ができるよう構造化データも積む。
+   */
+  const applySet = (def: OrderSetDef) => {
+    const resolved = resolveOrderSet(def);
+    if (resolved.length === 0) {
+      showSnackbar(`セット「${def.name}」に展開できる内容がありません`, 'warning');
+      setSetListAnchor(null);
+      return;
+    }
+    const stamp = Date.now();
+    const newOrders: Order[] = [];
+    const newRx: Record<string, { rows: PrescriptionRpRow[]; dialogDays: number }> = {};
+    resolved.forEach((r, i) => {
+      const id = `ORD-${stamp}-${i}`;
+      newOrders.push({
+        id, patientId: patient.id, patientName: patient.name,
+        type: r.type, content: r.content, schedule: r.schedule,
+        status: '指示済', startDate: todayStr(), days: r.days, doctorName,
+      });
+      if (r.rx) {
+        // 行 id はオーダ id 配下で一意にし直す（クリック再編集・React key 用）。
+        newRx[id] = {
+          rows: r.rx.rows.map((row, ri) => ({ ...row, id: `pr-${stamp}-${i}-${ri}` })),
+          dialogDays: r.rx.dialogDays,
+        };
+      }
+    });
+    setPending((prev) => [...prev, ...newOrders]);
+    setPendingRx((prev) => ({ ...prev, ...newRx }));
+    showSnackbar(`セット「${def.name}」を展開しました（${newOrders.length}件）`, 'success');
+    setSetListAnchor(null);
+  };
+
+  /**
+   * テキストオーダ（診療録作成ダイアログ流用）の入力内容を「文字」オーダへ組み立て、作成中に追加する。
+   * 内容は【タイトル】本文を基本に、面接フォーム・状態・タグを補足行として付す。
+   */
+  const registerTextOrder = (data: NewRecordData) => {
+    const startDate = data.recordedAt ? data.recordedAt.slice(0, 10) : todayStr();
+    const head = data.title.trim() ? `【${data.title.trim()}】` : '';
+    const lines: string[] = [`${head}${data.body.trim()}`.trim()];
+    if (data.interviewForm) {
+      const f = INTERVIEW_FORMS.find((x) => x.id === data.interviewForm);
+      if (f) lines.push(`面接フォーム: ${f.label}`);
+    }
+    if (data.status) {
+      const s = STATUS_COLORS.find((x) => x.id === data.status);
+      if (s) lines.push(`状態: ${s.label}`);
+    }
+    if (data.tags.length) lines.push(`タグ: ${data.tags.join('、')}`);
+    const order: Order = {
+      id: `ORD-${Date.now()}`,
+      patientId: patient.id, patientName: patient.name,
+      type: '文字', content: lines.join('\n'),
+      schedule: '', status: '指示済', startDate, days: 1, doctorName,
+    };
+    setPending((prev) => [...prev, order]);
+    setRxDialog((s) => ({ ...s, open: false }));
+  };
 
   const handleTypeClick = (b: (typeof TYPE_BUTTONS)[number]) => {
     if (b.compose) {
@@ -473,9 +544,15 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
         {/* 右: 種別ボタン＋作成中オーダ */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Stack direction="row" spacing={1} sx={{ p: 1, flexWrap: 'wrap', rowGap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Tooltip title="セット機能は未実装（モック）">
-              <span><Button size="small" variant="text" disabled>セット一覧</Button></span>
-            </Tooltip>
+            <Button
+              size="small"
+              variant="text"
+              onClick={(e) => setSetListAnchor(e.currentTarget)}
+              aria-haspopup="true"
+              aria-expanded={Boolean(setListAnchor)}
+            >
+              セット一覧 ▼
+            </Button>
             <Divider orientation="vertical" flexItem />
             {TYPE_BUTTONS.map((b) => (
               <Button
@@ -489,6 +566,45 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
               </Button>
             ))}
           </Stack>
+
+          {/* セット一覧ポップオーバ: セット名グループ（プルダウン）→ セット名リスト。共通/個人は本モックでは扱わない。 */}
+          <Popover
+            open={Boolean(setListAnchor)}
+            anchorEl={setListAnchor}
+            onClose={() => setSetListAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            PaperProps={{ sx: { width: 320 } }}
+          >
+            <Box sx={{ p: 1.5 }}>
+              <FormControl size="small" fullWidth sx={{ mb: 1 }}>
+                <InputLabel id="order-set-group-label">セット名グループ</InputLabel>
+                <Select
+                  labelId="order-set-group-label"
+                  label="セット名グループ"
+                  value={setGroupIdx}
+                  onChange={(e) => setSetGroupIdx(Number(e.target.value))}
+                >
+                  {ORDER_SET_GROUPS.map((g, i) => (
+                    <MenuItem key={g.name} value={i}>{g.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <List dense disablePadding sx={{ maxHeight: 320, overflow: 'auto' }}>
+                {ORDER_SET_GROUPS[setGroupIdx].sets.map((s) => (
+                  <ListItemButton
+                    key={s.name}
+                    divider
+                    onClick={() => applySet(s)}
+                    aria-label={`セット ${s.name} を展開`}
+                  >
+                    <ListItemText primary={s.name} />
+                    <ChevronRightIcon fontSize="small" color="action" />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Box>
+          </Popover>
 
           <Box sx={{ flex: 1, overflow: 'auto', p: 1.5 }}>
             <Typography variant="caption" color="text.secondary">作成中のオーダ</Typography>
@@ -705,13 +821,20 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
           }}
         />
       ) : rxDialog.config.kind === 'freetext' ? (
-        <TextOrderDialog
+        // テキストオーダは診療録作成ダイアログを流用（左のDO引用・前回カルテ取り込みは非表示。登録で作成中へ）。
+        <NewRecordDialog
           open={rxDialog.open}
-          orderType={rxDialog.config.orderType}
-          patient={patient}
-          doctorName={doctorName}
+          mode="inpatient"
+          patientId={patient.id}
+          titleNode={<OrderDialogTitle title="テキストオーダ作成" patient={patient} />}
+          defaultRecordedAt={`${MOCK_TODAY}T09:00`}
+          hideDoPanel
+          hideImportPrevious
+          hideTemplate
+          hideInterviewForm
+          registerLabel="登録"
+          onRegister={registerTextOrder}
           onClose={() => setRxDialog((s) => ({ ...s, open: false }))}
-          onRegister={handleRxRegister}
         />
       ) : (
         <PrescriptionDialog

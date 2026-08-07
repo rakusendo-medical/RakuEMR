@@ -9,6 +9,7 @@ import type { Order, OrderType, Patient } from '../../types';
 import { useAppStore } from '../../stores/useAppStore';
 import { TEST_ITEMS, TEST_SETS, resolveTestSetItemCodes, type TestItem } from '../../data/testSetMaster';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import { todayStr } from './orderDate';
 
 interface Props {
@@ -116,12 +117,7 @@ const TestOrderDialog: React.FC<Props> = ({
 
   return (
     <Dialog open={open} onClose={requestClose} maxWidth="lg" fullWidth PaperProps={{ sx: { height: '85vh' } }}>
-      <DialogTitle sx={{ py: 1 }}>
-        {orderType}
-        <Typography component="span" variant="body2" color="text.secondary">
-          対象患者: {patient.patientNumber ?? patient.id}　{patient.name}
-        </Typography>
-      </DialogTitle>
+      <OrderDialogTitle title={`${orderType}オーダ`} patient={patient} />
       <DialogContent dividers sx={{ p: 0, display: 'flex', minHeight: 0 }}>
         {/* 左: 検査セット／過去オーダー ＋ かな検索 */}
         <Box sx={{ width: 240, borderRight: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', minHeight: 0 }}>

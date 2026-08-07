@@ -22,6 +22,7 @@ import EctOrderDialog from './EctOrderDialog';
 import RehaOrderDialog from './RehaOrderDialog';
 import TextOrderDialog from './TextOrderDialog';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import IfSymptomPickerDialog from './IfSymptomPickerDialog';
 
 /** IF 内で使えるサブオーダの設定（IF 自身は除外）。OrderSendScreen と同じ種別を流用。 */
@@ -191,11 +192,7 @@ const IfOrderDialog: React.FC<Props> = ({ open, patient, doctorName, onClose, on
 
   return (
     <Dialog open={open} onClose={requestClose} maxWidth="lg" fullWidth PaperProps={{ sx: { height: '88vh' } }}>
-      <DialogTitle sx={{ py: 1, bgcolor: '#1e3a5f', color: '#fff' }}>
-        <Typography variant="subtitle1">
-          IFオーダ［精神科］　{patient.patientNumber ?? patient.id}：{patient.name}
-        </Typography>
-      </DialogTitle>
+      <OrderDialogTitle title="IFオーダ" patient={patient} />
       <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {/* 症状・コメント */}
         <Box sx={{ px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>

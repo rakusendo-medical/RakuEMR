@@ -14,6 +14,7 @@ import {
   type EctCategory, type EctSet, type EctSubset,
 } from '../../data/ectMaster';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import { todayStr } from './orderDate';
 
 /** 手技行（チェックのみ）。 */
@@ -184,12 +185,7 @@ const EctOrderDialog: React.FC<Props> = ({ open, orderType, patient, doctorName,
 
   return (
     <Dialog open={open} onClose={requestClose} maxWidth="lg" fullWidth PaperProps={{ sx: { height: '88vh' } }}>
-      <DialogTitle sx={{ py: 1 }}>
-        {orderType}
-        <Typography component="span" variant="body2" color="text.secondary">
-          　対象患者: {patient.patientNumber ?? patient.id}　{patient.name}
-        </Typography>
-      </DialogTitle>
+      <OrderDialogTitle title={`${orderType}オーダ`} patient={patient} />
       <DialogContent dividers sx={{ p: 0, display: 'flex', minHeight: 0 }}>
         {/* 左: ECT セット → サブセット */}
         <Box sx={{ width: 240, borderRight: '1px solid', borderColor: 'divider', overflow: 'auto' }}>

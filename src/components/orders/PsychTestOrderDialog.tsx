@@ -8,6 +8,7 @@ import {
   PSYCH_PURPOSES, PSYCH_TEST_GROUPS, PSYCH_TEST_OMAKASE, PSYCH_TEST_ADMISSION_SET,
 } from '../../data/psychTestMaster';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import { todayStr } from './orderDate';
 
 interface Props {
@@ -99,9 +100,7 @@ const PsychTestOrderDialog: React.FC<Props> = ({ open, orderType, patient, docto
 
   return (
     <Dialog open={open} onClose={requestClose} maxWidth="md" fullWidth PaperProps={{ sx: { height: '90vh' } }}>
-      <DialogTitle sx={{ py: 1, bgcolor: '#2f6ca6', color: '#fff', fontSize: '1rem' }}>
-        心理－指示箋　{patient.patientNumber ?? patient.id}：{patient.name}
-      </DialogTitle>
+      <OrderDialogTitle title="心理検査オーダ" patient={patient} />
       <DialogContent dividers sx={{ p: 0 }}>
         {/* 現在の状態像 */}
         <Stack direction="row" sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>

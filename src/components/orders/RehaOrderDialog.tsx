@@ -14,6 +14,7 @@ import {
 } from '../../data/rehaMaster';
 import { useAppStore } from '../../stores/useAppStore';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
+import OrderDialogTitle from './OrderDialogTitle';
 import { todayStr } from './orderDate';
 
 interface Props {
@@ -163,9 +164,7 @@ const RehaOrderDialog: React.FC<Props> = ({ open, orderType, patient, doctorName
 
   return (
     <Dialog open={open} onClose={requestClose} maxWidth="lg" fullWidth PaperProps={{ sx: { height: '90vh' } }}>
-      <DialogTitle sx={{ py: 1, bgcolor: '#2f6ca6', color: '#fff', fontSize: '1rem' }}>
-        治療形態　{patient.patientNumber ?? patient.id}：{patient.name}
-      </DialogTitle>
+      <OrderDialogTitle title="治療形態" patient={patient} />
       <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {/* 上部: 治療形態の切替ボタン（作業療法／服薬指導／栄養指導） */}
         <Stack direction="row" spacing={1} sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
