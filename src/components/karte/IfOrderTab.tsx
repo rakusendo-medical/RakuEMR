@@ -53,7 +53,6 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
   const addOrder = useAppStore((s) => s.addOrder);
   const executeOrder = useAppStore((s) => s.executeOrder);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
-  const nextKarteNo = useAppStore((s) => s.nextKarteNo);
   const assignKarteNos = useAppStore((s) => s.assignKarteNos);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
 
@@ -95,7 +94,9 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
     // 実施ごとに一意なキー（ダブルクリック等で同一ミリ秒に連続実施しても衝突しないようランダム要素を付与）。
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     // 実施ごとに、各オーダへカルテNoを連番発行する。
-    let n = nextKarteNo;
+    // 都度実施は何度でも押せるため、連打で再レンダー前に複数回呼ばれても採番が重複しないよう、
+    // 実行時点の最新 nextKarteNo をストアから直接取得する（レンダー時にキャプチャした値は使わない）。
+    let n = useAppStore.getState().nextKarteNo;
     const nos: Record<string, string> = {};
     // カルテ記事の日付（モック当日）。
     const d = new Date(`${MOCK_TODAY}T00:00:00`);
