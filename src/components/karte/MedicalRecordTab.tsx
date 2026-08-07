@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import {
   Box, Paper, Stack, Typography, Chip, TextField, Button, IconButton,
   Tooltip, MenuItem, Select, FormControl, InputLabel, Snackbar, Alert,
   Divider, Dialog, DialogTitle, DialogContent, DialogActions,
+  Checkbox, FormControlLabel,
 } from '@mui/material';
 import {
   Save, Print, AttachFile, AccountTree, Brush,
@@ -529,7 +530,7 @@ export default function MedicalRecordTab({
 // ===== 診療録作成ダイアログ（フリーテキスト形式）=====
 
 // 患者状態の 5 段階色（部門記録簿の患者状態色と整合）
-const STATUS_COLORS = [
+export const STATUS_COLORS = [
   { id: 'good',      label: '良好', color: '#10b981' },
   { id: 'stable',    label: '安定', color: '#3b82f6' },
   { id: 'attention', label: '注意', color: '#f59e0b' },
@@ -564,7 +565,7 @@ const RECORD_TEMPLATES = [
 ] as const;
 
 // 面接フォーム選択肢
-const INTERVIEW_FORMS = [
+export const INTERVIEW_FORMS = [
   { id: 'admission',    label: '入院面接' },
   { id: 'outpatient',   label: '外来診療' },
   { id: 'interview-1',  label: '外来面接 1' },
@@ -635,20 +636,67 @@ const DO_SECTIONS = [
 ] as const;
 type DoSectionId = typeof DO_SECTIONS[number]['id'];
 
+/** 診療録作成ダイアログの入力内容（オーダ登録モードで親へ渡す）。 */
+export interface NewRecordData {
+  recordedAt: string;
+  title: string;
+  status: string;
+  interviewForm: string;
+  tags: string[];
+  body: string;
+  /** オーダモード（orderFields）で入力する指示日（YYYY-MM-DD）。 */
+  orderDate?: string;
+  /** オーダモードの「継続する」（中止まで指示簿に表示。false=指示日のみ）。 */
+  continuous?: boolean;
+}
+
 export function NewRecordDialog({
   open,
   mode,
   patientId,
   onClose,
   onSaved,
+  hideDoPanel = false,
+  hideImportPrevious = false,
+  hideTemplate = false,
+  hideInterviewForm = false,
+  titleLabel = '診療録作成',
+  titleNode,
+  defaultRecordedAt,
+  orderFields = false,
+  registerLabel,
+  onRegister,
 }: {
   open: boolean;
   mode: KarteMode;
   patientId?: string;
   onClose: () => void;
-  onSaved: (message: string) => void;
+  onSaved?: (message: string) => void;
+  /** 左の DO引用パネルを隠す（オーダ入力のテキストオーダ等で使用）。 */
+  hideDoPanel?: boolean;
+  /** 本文の「前回カルテ取り込み」ボタンを隠す。 */
+  hideImportPrevious?: boolean;
+  /** テンプレート選択・テンプレート挿入を隠す。 */
+  hideTemplate?: boolean;
+  /** 面接フォーム選択を隠す。 */
+  hideInterviewForm?: boolean;
+  /** ダイアログ見出し（既定「診療録作成」）。 */
+  titleLabel?: string;
+  /** 見出し全体を差し替える（オーダ用の濃紺バー見出し等）。指定時は titleLabel・バッジ・×は出さない。 */
+  titleNode?: ReactNode;
+  /** 記載日時の初期値（datetime-local 形式）。既定は実日時。オーダ入力ではモック当日を渡す。 */
+  defaultRecordedAt?: string;
+  /** オーダ入力モード: タグと本文の間に「指示日」「継続する」を表示し、onRegister に orderDate/continuous を渡す。 */
+  orderFields?: boolean;
+  /** 指定するとフッターを「キャンセル／[registerLabel]」にし、診察終了・保存を出さない（オーダ登録モード）。 */
+  registerLabel?: string;
+  /** オーダ登録モードで [registerLabel] 押下時に入力内容を親へ渡す。 */
+  onRegister?: (data: NewRecordData) => void;
 }) {
-  const [recordedAt, setRecordedAt] = useState<string>(nowAsLocalInput());
+  const [recordedAt, setRecordedAt] = useState<string>(defaultRecordedAt ?? nowAsLocalInput());
+  // オーダモードの指示日（既定は記載日時の日付）・継続フラグ。
+  const [orderDate, setOrderDate] = useState<string>((defaultRecordedAt ?? nowAsLocalInput()).slice(0, 10));
+  const [continuous, setContinuous] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
   const [status, setStatus] = useState<StatusId>('');
   const [templateId, setTemplateId] = useState<string>('');
@@ -718,7 +766,9 @@ export function NewRecordDialog({
   };
 
   const reset = () => {
-    setRecordedAt(nowAsLocalInput());
+    setRecordedAt(defaultRecordedAt ?? nowAsLocalInput());
+    setOrderDate((defaultRecordedAt ?? nowAsLocalInput()).slice(0, 10));
+    setContinuous(false);
     setTitle('');
     setStatus('');
     setTemplateId('');
@@ -733,18 +783,31 @@ export function NewRecordDialog({
       setInnerSnackbar({ open: true, message: '入力内容がありません' });
       return;
     }
-    onSaved('カルテを保存しました（mock・実永続化は未実装）');
+    onSaved?.('カルテを保存しました（mock・実永続化は未実装）');
     reset();
     onClose();
   };
 
   const handleFinishExam = () => {
     if (isDirty) {
-      onSaved('保存して診察終了しました（mock）');
+      onSaved?.('保存して診察終了しました（mock）');
       reset();
     } else {
-      onSaved('診察終了処理（mock・別ストーリーで実装予定）');
+      onSaved?.('診察終了処理（mock・別ストーリーで実装予定）');
     }
+    onClose();
+  };
+
+  // オーダ登録モード: 本文必須。入力内容を親へ渡してリセット・クローズ。
+  const canRegister = body.trim() !== '';
+  const handleRegister = () => {
+    if (!canRegister || !onRegister) return;
+    // 指示日・継続は orderFields（オーダ入力）モードのときだけ渡す（通常モードへ余計な値を漏らさない）。
+    onRegister({
+      recordedAt, title, status, interviewForm, tags, body,
+      ...(orderFields ? { orderDate, continuous } : {}),
+    });
+    reset();
     onClose();
   };
 
@@ -765,10 +828,11 @@ export function NewRecordDialog({
   return (
     <>
       <Dialog open={open} onClose={handleCancel} maxWidth="lg" fullWidth>
+        {titleNode ?? (
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <NoteAdd fontSize="small" />
-            <span>診療録作成</span>
+            <span>{titleLabel}</span>
             <Chip
               size="small"
               label={mode === 'outpatient' ? '外来診療録' : '入院診療録'}
@@ -784,8 +848,10 @@ export function NewRecordDialog({
             <CloseIcon />
           </IconButton>
         </DialogTitle>
+        )}
         <DialogContent dividers sx={{ display: 'flex', gap: 1.5, p: 1.5 }}>
-          {/* ===== 左パネル: DO引用検索 ===== */}
+          {/* ===== 左パネル: DO引用検索（オーダ入力のテキストオーダ等では非表示）===== */}
+          {!hideDoPanel && (
           <Paper variant="outlined" sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', p: 1, gap: 1 }}>
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
               DO引用
@@ -855,6 +921,7 @@ export function NewRecordDialog({
               </Stack>
             </Box>
           </Paper>
+          )}
 
           {/* ===== 右パネル: フォーム ===== */}
           <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
@@ -903,41 +970,49 @@ export function NewRecordDialog({
               </Box>
             </Stack>
 
-            {/* ===== テンプレート + 面接フォーム ===== */}
+            {/* ===== テンプレート + 面接フォーム（オーダのテキストオーダ等では非表示）===== */}
+            {(!hideTemplate || !hideInterviewForm) && (
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel id="tpl-label">テンプレート</InputLabel>
-                <Select
-                  labelId="tpl-label"
-                  label="テンプレート"
-                  value={templateId}
-                  onChange={(e) => setTemplateId(e.target.value)}
-                >
-                  <MenuItem value=""><em>選択してください</em></MenuItem>
-                  {RECORD_TEMPLATES.map((t) => (
-                    <MenuItem key={t.id} value={t.id}>{t.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Button size="small" variant="outlined" disabled={!templateId} onClick={insertTemplate}>
-                テンプレート挿入
-              </Button>
-              <Box sx={{ width: 8 }} />
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel id="interview-label">面接フォーム</InputLabel>
-                <Select
-                  labelId="interview-label"
-                  label="面接フォーム"
-                  value={interviewForm}
-                  onChange={(e) => setInterviewForm(e.target.value)}
-                >
-                  <MenuItem value=""><em>選択してください</em></MenuItem>
-                  {INTERVIEW_FORMS.map((f) => (
-                    <MenuItem key={f.id} value={f.id}>{f.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {!hideTemplate && (
+                <>
+                  <FormControl size="small" sx={{ minWidth: 200 }}>
+                    <InputLabel id="tpl-label">テンプレート</InputLabel>
+                    <Select
+                      labelId="tpl-label"
+                      label="テンプレート"
+                      value={templateId}
+                      onChange={(e) => setTemplateId(e.target.value)}
+                    >
+                      <MenuItem value=""><em>選択してください</em></MenuItem>
+                      {RECORD_TEMPLATES.map((t) => (
+                        <MenuItem key={t.id} value={t.id}>{t.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button size="small" variant="outlined" disabled={!templateId} onClick={insertTemplate}>
+                    テンプレート挿入
+                  </Button>
+                </>
+              )}
+              {!hideTemplate && !hideInterviewForm && <Box sx={{ width: 8 }} />}
+              {!hideInterviewForm && (
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel id="interview-label">面接フォーム</InputLabel>
+                  <Select
+                    labelId="interview-label"
+                    label="面接フォーム"
+                    value={interviewForm}
+                    onChange={(e) => setInterviewForm(e.target.value)}
+                  >
+                    <MenuItem value=""><em>選択してください</em></MenuItem>
+                    {INTERVIEW_FORMS.map((f) => (
+                      <MenuItem key={f.id} value={f.id}>{f.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
             </Stack>
+            )}
 
             {/* ===== タグ ===== */}
             <Box>
@@ -965,21 +1040,42 @@ export function NewRecordDialog({
               </Stack>
             </Box>
 
+            {/* ===== 指示日 + 継続する（オーダ入力モードのみ・タグと本文の間）===== */}
+            {orderFields && (
+              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+                <TextField
+                  size="small"
+                  type="date"
+                  label="指示日"
+                  value={orderDate}
+                  onChange={(e) => setOrderDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ minWidth: 180 }}
+                />
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={continuous} onChange={(_, v) => setContinuous(v)} />}
+                  label={<Typography variant="body2">継続する（中止するまで指示簿に表示。無しは指示日のみ）</Typography>}
+                />
+              </Stack>
+            )}
+
             {/* ===== フリーテキスト本文 + 前回カルテ取り込み ===== */}
             <Box>
               <Stack direction="row" alignItems="center" sx={{ mb: 0.5 }}>
                 <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary', fontWeight: 600 }}>
                   本文
                 </Typography>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<HistoryIcon sx={{ fontSize: 14 }} />}
-                  onClick={importPrevious}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  前回カルテ取り込み
-                </Button>
+                {!hideImportPrevious && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<HistoryIcon sx={{ fontSize: 14 }} />}
+                    onClick={importPrevious}
+                    sx={{ fontSize: '0.7rem' }}
+                  >
+                    前回カルテ取り込み
+                  </Button>
+                )}
               </Stack>
               <TextField
                 fullWidth
@@ -1013,12 +1109,21 @@ export function NewRecordDialog({
         <DialogActions sx={{ px: 2, py: 1 }}>
           <Button onClick={handleCancel} startIcon={<CloseIcon />}>キャンセル</Button>
           <Box sx={{ flex: 1 }} />
-          <Button onClick={handleFinishExam} variant="outlined" startIcon={<ExitToApp />}>
-            診察終了
-          </Button>
-          <Button onClick={handleSave} variant="contained" color={mode === 'outpatient' ? 'success' : 'primary'} startIcon={<Save />}>
-            保存
-          </Button>
+          {registerLabel ? (
+            // オーダ登録モード: 登録のみ（診察終了・保存は出さない）。
+            <Button onClick={handleRegister} variant="contained" disabled={!canRegister || !onRegister} startIcon={<Save />}>
+              {registerLabel}
+            </Button>
+          ) : (
+            <>
+              <Button onClick={handleFinishExam} variant="outlined" startIcon={<ExitToApp />}>
+                診察終了
+              </Button>
+              <Button onClick={handleSave} variant="contained" color={mode === 'outpatient' ? 'success' : 'primary'} startIcon={<Save />}>
+                保存
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 

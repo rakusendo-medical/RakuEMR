@@ -268,6 +268,9 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   // 診療録作成ダイアログのトリガー(KarteActionBar からインクリメントで MedicalRecordTab に通知)
   const [newRecordTrigger, setNewRecordTrigger] = useState(0);
 
+  // 指示簿の IF オーダ行クリック → IFオーダタブで対象を表示する連携（seq で再クリックにも対応）。
+  const [ifFocus, setIfFocus] = useState<{ orderId: string; seq: number }>({ orderId: '', seq: 0 });
+
   if (!patient) {
     return (
       <Box sx={{ p: 3 }}>
@@ -296,6 +299,12 @@ export default function KartePage({ modeOverride }: KartePageProps) {
       return;
     }
     commitTab(nextTab);
+  };
+
+  // 指示簿の IF 行クリック → IFオーダタブへ遷移し、対象オーダを表示する。
+  const openIfOrder = (orderId: string) => {
+    setIfFocus((f) => ({ orderId, seq: f.seq + 1 }));
+    attemptTabChange('if-order');
   };
 
   const handleConfirmDiscard = () => {
@@ -516,6 +525,9 @@ export default function KartePage({ modeOverride }: KartePageProps) {
           discardSignal={discardSignal}
           onOpenOrdersTab={() => attemptTabChange('orders')}
           onOpenOrderStatusTab={() => attemptTabChange('order-status')}
+          onOpenIfOrder={openIfOrder}
+          ifFocusOrderId={ifFocus.orderId}
+          ifFocusSignal={ifFocus.seq}
           onRequestRestraintOrder={openRestraintDialog}
           recordLayout={recordLayout}
           newRecordTrigger={newRecordTrigger}
@@ -671,6 +683,9 @@ function KarteTabContent({
   discardSignal,
   onOpenOrdersTab,
   onOpenOrderStatusTab,
+  onOpenIfOrder,
+  ifFocusOrderId,
+  ifFocusSignal,
   onRequestRestraintOrder,
   recordLayout,
   newRecordTrigger,
@@ -682,6 +697,9 @@ function KarteTabContent({
   discardSignal: number;
   onOpenOrdersTab: () => void;
   onOpenOrderStatusTab: () => void;
+  onOpenIfOrder: (orderId: string) => void;
+  ifFocusOrderId: string;
+  ifFocusSignal: number;
   onRequestRestraintOrder: (title: string, editOrderId?: string) => void;
   recordLayout: 'A' | 'B';
   newRecordTrigger: number;
@@ -744,6 +762,7 @@ function KarteTabContent({
         patient={patient}
         mode={mode}
         onOpenOrderStatusTab={onOpenOrderStatusTab}
+        onOpenIfOrder={onOpenIfOrder}
       />
     );
   }
@@ -759,7 +778,7 @@ function KarteTabContent({
   }
 
   if (tabId === 'if-order') {
-    return <IfOrderTab patient={patient} mode={mode} />;
+    return <IfOrderTab patient={patient} mode={mode} focusOrderId={ifFocusOrderId} focusSignal={ifFocusSignal} />;
   }
 
   if (tabId === 'care-plan') {
