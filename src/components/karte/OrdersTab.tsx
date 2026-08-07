@@ -229,6 +229,11 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
                     key={o.id}
                     hover
                     onClick={editable ? () => setEditingId(o.id) : undefined}
+                    // キーボード操作: 臨時行は Tab で到達でき、Enter/Space で編集ダイアログを開ける。
+                    tabIndex={editable ? 0 : undefined}
+                    onKeyDown={editable ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingId(o.id); }
+                    } : undefined}
                     sx={editable ? { cursor: 'pointer' } : undefined}
                     title={editable ? 'クリックで内容を確認・変更' : undefined}
                   >
