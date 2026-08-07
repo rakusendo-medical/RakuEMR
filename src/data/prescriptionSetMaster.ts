@@ -9,7 +9,7 @@ export interface SetMedication { code: number; name: string; kana: string; }
 export interface SetPrescription { code: number; medCode: number; dose: string; unit: string; usage: string; days: number | null; }
 export interface PrescriptionSetDef { code: number; name: string; prescriptionCodes: number[]; }
 
-/** 医薬品マスタ（05・抽出）: ORCA連携コードを code とする。 */
+/** 医薬品マスタ（05・抽出）: 外部連携コードを code とする。 */
 export const SET_MEDICATIONS: SetMedication[] = [
   { code: 610453040, name: '【般】カルバマゼピン錠１００ｍｇ', kana: 'かるばまぜぴんじよう１００ＭＧ' },
   { code: 620003080, name: 'スルピリド錠５０ｍｇ「アメル」', kana: 'するぴりどじよう０５０ＭＧあめる' },
@@ -42,7 +42,7 @@ export const SET_MEDICATIONS: SetMedication[] = [
   { code: 622937401, name: 'アジルサルタン錠１０ｍｇ「トーワ」', kana: 'あじるさるたんじょう10MGとーわ' },
 ];
 
-/** 処方マスタ（06・抽出）: 医薬品CD＝ORCA連携コードを参照。 */
+/** 処方マスタ（06・抽出）: 医薬品CD＝外部連携コードを参照。 */
 export const SET_PRESCRIPTIONS: SetPrescription[] = [
   { code: 26, medCode: 620006897, dose: '3', unit: '錠', usage: '１日３回　毎食前', days: 30 },
   { code: 27, medCode: 620003080, dose: '3', unit: '錠', usage: '１日３回　毎食前', days: 30 },

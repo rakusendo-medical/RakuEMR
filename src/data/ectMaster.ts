@@ -39,7 +39,6 @@ export const ECT_ITEMS: EctItem[] = [
   { code: 32, category: '前処置', name: '前日内服薬変更 あり', kana: 'ぜんじつないふくやくへんこうあり' },
   { code: 51, category: '前処置', name: '注射用水 〈20mL〉/A', kana: 'ちゅうしゃようすい' },
   { code: 43, category: '前処置', name: 'mECT用追加薬 なし', kana: 'えむいーしーてぃーようついかやくなし' },
-  { code: 42, category: '前処置', name: 'mECT用追加薬 なし', kana: 'えむいーしーてぃーようついかやくなし' },
   { code: 33, category: '前処置', name: 'mECT用追加薬 あり', kana: 'えむいーしーてぃーようついかやくあり' },
   { code: 1, category: '前処置', name: 'テラプチク 1A 筋注', kana: 'てらぷちく' },
   { code: 34, category: '前処置', name: '当日朝薬（与薬）', kana: 'とうじつあさやくよやく' },
