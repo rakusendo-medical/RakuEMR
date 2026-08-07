@@ -22,9 +22,10 @@ test.describe('テキストオーダ 指示日・継続する', () => {
     const keep = dlg.getByRole('checkbox', { name: /継続する/ });
     await expect(keep).toBeVisible();
 
-    // タイトル・本文を入力し、継続する を ON
+    // 指示日を既定(当日)から変更し、タイトル・本文を入力（本文には「継続」の語を含めない）、継続する を ON
+    await dlg.getByLabel('指示日', { exact: true }).fill('2026-05-22');
     await dlg.getByRole('textbox', { name: 'タイトル' }).fill('経過観察依頼');
-    await dlg.getByPlaceholder('フリーテキストで記載してください').fill('夜間の睡眠状況を継続観察のこと');
+    await dlg.getByPlaceholder('フリーテキストで記載してください').fill('夜間の睡眠状況を観察のこと');
     await keep.check();
 
     // 登録 → 指示 → カルテ記事作成 → 実行
@@ -35,10 +36,11 @@ test.describe('テキストオーダ 指示日・継続する', () => {
     await karte.getByRole('button', { name: '実行', exact: true }).click();
     await expect(page.getByText(/オーダを登録しました/)).toBeVisible();
 
-    // 指示簿タブ: テキストオーダ行が「継続」で反映される（継続ありは期間が（継続））
+    // 指示簿タブ: テキストオーダ行に、指示日(2026-05-22)が期間に反映され、スケジュールが「継続」になる
     await page.getByRole('tab', { name: '指示簿' }).click();
     const row = page.getByRole('row', { name: /経過観察依頼/ });
     await expect(row).toBeVisible();
+    await expect(row).toContainText('2026-05-22');
     await expect(row).toContainText('継続');
   });
 });

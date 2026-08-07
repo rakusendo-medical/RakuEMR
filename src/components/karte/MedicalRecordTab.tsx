@@ -802,7 +802,11 @@ export function NewRecordDialog({
   const canRegister = body.trim() !== '';
   const handleRegister = () => {
     if (!canRegister || !onRegister) return;
-    onRegister({ recordedAt, title, status, interviewForm, tags, body, orderDate, continuous });
+    // 指示日・継続は orderFields（オーダ入力）モードのときだけ渡す（通常モードへ余計な値を漏らさない）。
+    onRegister({
+      recordedAt, title, status, interviewForm, tags, body,
+      ...(orderFields ? { orderDate, continuous } : {}),
+    });
     reset();
     onClose();
   };
