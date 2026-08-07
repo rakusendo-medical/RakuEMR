@@ -16,44 +16,42 @@ import {
 import LaunchIcon from '@mui/icons-material/Launch';
 import type { Order, OrderStatus, OrderType, Patient } from '../../types';
 import { ORDERS } from '../../data/mockData';
+import { useAppStore } from '../../stores/useAppStore';
 import SectionHeader from '../common/SectionHeader';
 import type { KarteMode } from './KartePage';
 
-const ORDER_TYPE_LABEL: Record<OrderType, string> = {
-  処方: '処方',
-  注射: '注射',
-  心理検査: '心理検査',
-  ECT: 'ECT',
-  リハ: 'リハ',
-  入院定時: '入院定時',
+// 指示簿の種別表示は「定期／臨時／IF／文字」にグルーピングする（オーダ内部の型はそのまま）。
+//   定期: 入院定時・治療形態(リハビリ)／臨時: 処方・注射・検査・画像・心理検査・ECT／IF: IF／文字: テキスト
+type OrderGroup = '定期' | '臨時' | 'IF' | '文字';
+const ORDER_TYPE_LABEL: Record<OrderType, OrderGroup> = {
+  入院定時: '定期',
+  リハビリ: '定期',
+  処方: '臨時',
+  注射: '臨時',
+  検査: '臨時',
+  画像: '臨時',
+  心理検査: '臨時',
+  ECT: '臨時',
   IF: 'IF',
-  文字: 'テキスト',
+  文字: '文字',
 };
 
-const ORDER_TYPE_COLORS: Record<OrderType, { bg: string; color: string }> = {
-  処方: { bg: '#dbeafe', color: '#1e40af' },
-  注射: { bg: '#fce7f3', color: '#be185d' },
-  心理検査: { bg: '#fef3c7', color: '#d97706' },
-  ECT: { bg: '#fef3c7', color: '#d97706' },
-  リハ: { bg: '#ccfbf1', color: '#0f766e' },
-  入院定時: { bg: '#dcfce7', color: '#16a34a' },
+const GROUP_COLORS: Record<OrderGroup, { bg: string; color: string }> = {
+  定期: { bg: '#dbeafe', color: '#1e40af' },
+  臨時: { bg: '#fce7f3', color: '#be185d' },
   IF: { bg: '#e0e7ff', color: '#4338ca' },
   文字: { bg: '#f1f5f9', color: '#475569' },
 };
 
-type TypeFilter = 'all' | OrderType;
+type TypeFilter = 'all' | OrderGroup;
 type StatusFilter = 'all' | OrderStatus;
 
 const TYPE_FILTERS: { key: TypeFilter; label: string }[] = [
   { key: 'all', label: '全て' },
-  { key: '処方', label: '処方' },
-  { key: '注射', label: '注射' },
-  { key: '心理検査', label: '心理検査' },
-  { key: 'ECT', label: 'ECT' },
-  { key: 'リハ', label: 'リハ' },
-  { key: '入院定時', label: '入院定時' },
+  { key: '定期', label: '定期' },
+  { key: '臨時', label: '臨時' },
   { key: 'IF', label: 'IF' },
-  { key: '文字', label: 'テキスト' },
+  { key: '文字', label: '文字' },
 ];
 
 const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
@@ -96,13 +94,18 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
+  const dynamicOrders = useAppStore((s) => s.dynamicOrders);
+  const orderKarteNos = useAppStore((s) => s.orderKarteNos);
+
+  // 指示簿は「指示済みオーダの閲覧一覧」。seed の静的 ORDERS に、オーダ入力（アクションバー起動）で
+  // 追加された dynamicOrders を合成して当該患者分を表示する（新規登録の導線は指示簿には置かない）。
   const all = useMemo(
-    () => ORDERS.filter((o) => o.patientId === patient.id),
-    [patient.id],
+    () => [...ORDERS, ...dynamicOrders].filter((o) => o.patientId === patient.id),
+    [patient.id, dynamicOrders],
   );
   const filtered = useMemo(() => {
     return all
-      .filter((o) => typeFilter === 'all' || o.type === typeFilter)
+      .filter((o) => typeFilter === 'all' || ORDER_TYPE_LABEL[o.type] === typeFilter)
       .filter((o) => statusFilter === 'all' || o.status === statusFilter)
       .slice()
       .sort((a, b) => (a.startDate < b.startDate ? 1 : a.startDate > b.startDate ? -1 : 0));
@@ -186,6 +189,7 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
           <Table size="small">
             <TableHead>
               <TableRow>
+                <TableCell sx={{ width: 84 }}>カルテNo</TableCell>
                 <TableCell sx={{ width: 110 }}>種別</TableCell>
                 <TableCell>内容</TableCell>
                 <TableCell sx={{ width: 160 }}>スケジュール</TableCell>
@@ -196,17 +200,23 @@ export default function OrdersTab({ patient, mode, onOpenOrderStatusTab }: Order
             </TableHead>
             <TableBody>
               {filtered.map((o) => {
-                const t = ORDER_TYPE_COLORS[o.type];
+                const group = ORDER_TYPE_LABEL[o.type];
+                const t = GROUP_COLORS[group];
                 return (
                   <TableRow key={o.id} hover>
                     <TableCell>
+                      <Typography variant="caption" color={orderKarteNos[o.id] ? 'text.primary' : 'text.disabled'}>
+                        {orderKarteNos[o.id] ?? '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
                       <Chip
-                        label={ORDER_TYPE_LABEL[o.type]}
+                        label={group}
                         size="small"
                         sx={{ bgcolor: t.bg, color: t.color, fontWeight: 600 }}
                       />
                     </TableCell>
-                    <TableCell>{o.content}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'pre-line' }}>{o.content}</TableCell>
                     <TableCell>{o.schedule}</TableCell>
                     <TableCell>
                       <Chip

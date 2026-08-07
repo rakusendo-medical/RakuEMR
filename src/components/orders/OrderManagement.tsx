@@ -4,20 +4,23 @@ import {
   Paper, Chip, Typography, Stack, FormControl, InputLabel, Select, MenuItem, Alert,
 } from '@mui/material';
 import { ORDERS } from '../../data/mockData';
+import { useAppStore } from '../../stores/useAppStore';
 import type { OrderType } from '../../types';
 
 const ORDER_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  '処方':     { bg: '#dbeafe', color: '#1e40af' },
+  '処方':     { bg: '#e0f2fe', color: '#0369a1' },
   '注射':     { bg: '#fce7f3', color: '#be185d' },
-  '心理検査': { bg: '#fef3c7', color: '#d97706' },
+  '検査': { bg: '#fef3c7', color: '#d97706' },
+  '画像': { bg: '#e1f5fe', color: '#0277bd' },
+  '心理検査': { bg: '#f3e5f5', color: '#6a1b9a' },
   'ECT':      { bg: '#fef3c7', color: '#d97706' },
-  'リハ':     { bg: '#ccfbf1', color: '#0f766e' },
+  'リハビリ':     { bg: '#ccfbf1', color: '#0f766e' },
   '入院定時': { bg: '#dcfce7', color: '#16a34a' },
   'IF':       { bg: '#e0e7ff', color: '#4338ca' },
   '文字':     { bg: '#f1f5f9', color: '#475569' },
 };
 
-const TYPE_OPTIONS: OrderType[] = ['処方', '注射', '心理検査', 'ECT', 'リハ', '入院定時', 'IF', '文字'];
+const TYPE_OPTIONS: OrderType[] = ['入院定時', '処方', '注射', '検査', '画像', '心理検査', 'ECT', 'リハビリ', 'IF', '文字'];
 
 interface Props {
   patientId?: string;
@@ -27,19 +30,23 @@ const OrderManagement: React.FC<Props> = ({ patientId }) => {
   const [patientFilter, setPatientFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<OrderType | 'all'>('all');
 
+  const dynamicOrders = useAppStore((s) => s.dynamicOrders);
+  // seed の静的 ORDERS と、オーダ入力で追加された dynamicOrders を合成。
+  const allOrders = useMemo(() => [...ORDERS, ...dynamicOrders], [dynamicOrders]);
+
   // 患者プルダウン候補（オーダのある患者のみ）
   const patientOptions = useMemo(() => {
     const map = new Map<string, string>();
-    ORDERS.forEach((o) => { if (!map.has(o.patientId)) map.set(o.patientId, o.patientName); });
+    allOrders.forEach((o) => { if (!map.has(o.patientId)) map.set(o.patientId, o.patientName); });
     return Array.from(map, ([id, name]) => ({ id, name }));
-  }, []);
+  }, [allOrders]);
 
   const data = useMemo(() => {
-    return ORDERS
+    return allOrders
       .filter((o) => (patientId ? o.patientId === patientId : true))
       .filter((o) => (patientId || patientFilter === 'all' ? true : o.patientId === patientFilter))
       .filter((o) => (typeFilter === 'all' ? true : o.type === typeFilter));
-  }, [patientId, patientFilter, typeFilter]);
+  }, [allOrders, patientId, patientFilter, typeFilter]);
 
   return (
     <Box>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
-  TableRow, Button, Stack, Link as MuiLink, Tabs, Tab,
+  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead,
+  TableRow, Button, Stack, Link as MuiLink, Tabs, Tab, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, MenuItem, Checkbox, FormControlLabel,
   ToggleButton, ToggleButtonGroup,
@@ -9,12 +9,14 @@ import {
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
+import IconButton from '@mui/material/IconButton';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
-import type { IsolationOrder, IsolationSubtype } from '../../types';
-import { PATIENTS, ISOLATION_ORDERS, MASTER_OBSERVATION_STATES } from '../../data/mockData';
+import type { IsolationOrder, IsolationSubtype, OrderType, Order } from '../../types';
+import { PATIENTS, ISOLATION_ORDERS, MASTER_OBSERVATION_STATES, ORDERS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import ObservationRecordDialog from '../isolation/ObservationRecordDialog';
 import { isFutureSlot, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL } from '../isolation/observationFutureBlock';
@@ -28,6 +30,23 @@ interface Props {
 
 // 7日分の固定モック(2026-05-13〜2026-05-19、当日=5/19)
 type OrderKind = '薬' | '注' | '検' | '処' | '画' | '心' | 'E';
+
+// オーダ入力（オーダ送信画面）の OrderType → 予定オーダ欄の種名1文字（参考システムマニュアル 02 看護支援 第1章第2部）。
+// 薬=処方・入院定時、注=注射、検=検査、処=処置、画=画像、心=心理検査、E=ECT。
+// リハビリ／IF／文字（テキスト）は予定オーダ欄の種名表に無いため対象外（表示しない）。
+const ORDER_KIND_OF: Partial<Record<OrderType, OrderKind>> = {
+  処方: '薬', 入院定時: '薬',
+  注射: '注', 検査: '検', 画像: '画', 心理検査: '心', ECT: 'E',
+};
+
+// OrderType の表示ラベル（内部値「文字」は「テキスト」表示）。
+const orderTypeLabel = (t: OrderType): string => (t === '文字' ? 'テキスト' : t);
+
+// 実施者（ログイン看護師・モック固定）。
+const LOGIN_NURSE = '看護 花子';
+// 指示受け候補（モック）。先頭は未選択（[未]）。
+const ACK_NURSES = ['看護 花子', '看護 太郎', '主任 山田', '看護 佐藤'];
+
 type MealStatus = '通常指示' | '臨時変更' | '欠食' | '外出・外泊' | '絶食';
 
 interface DailyRow {
@@ -482,7 +501,105 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   // ----- 隔離拘束 観察グリッド用データ（read-only 流用）-----
   const dynamicOrders = useAppStore((s) => s.dynamicIsolationOrders);
   const dynamicObservations = useAppStore((s) => s.dynamicObservationRecords);
+  // ep-10 予定オーダ連携: オーダ入力（オーダ送信画面）で作成したオーダ（非永続）。seed ORDERS と合成する。
+  const orderEntryOrders = useAppStore((s) => s.dynamicOrders);
   const patient = useMemo(() => PATIENTS.find((p) => p.id === patientId), [patientId]);
+  // 予定オーダ連携: この患者のオーダ（seed + オーダ入力で作成）を「開始日(ISO) → 種名1文字[]」に集約。
+  //   dayIso は上部の日付送り基盤（endDate ベース）を共用する。
+  //   フローシート表示範囲内（dayIso）の開始日を持つオーダのみが予定オーダ欄に現れる。
+  const orderKindsByIso = useMemo(() => {
+    const m = new Map<string, OrderKind[]>();
+    if (!patientId) return m;
+    for (const o of [...ORDERS, ...orderEntryOrders]) {
+      if (o.patientId !== patientId) continue;
+      const kind = ORDER_KIND_OF[o.type];
+      if (!kind) continue; // 種名表に無い種別（リハビリ/IF/文字）は対象外
+      const arr = m.get(o.startDate) ?? [];
+      if (!arr.includes(kind)) arr.push(kind);
+      m.set(o.startDate, arr);
+    }
+    return m;
+  }, [patientId, orderEntryOrders]);
+  // 予定オーダ「一覧」(指示状況) / 「実施確認表」用: この患者のオーダ（seed + オーダ入力）を新しい順に。
+  const patientOrders = useMemo(
+    () =>
+      [...ORDERS, ...orderEntryOrders]
+        .filter((o) => o.patientId === patientId)
+        .slice()
+        .sort((a, b) => (a.startDate < b.startDate ? 1 : a.startDate > b.startDate ? -1 : 0)),
+    [patientId, orderEntryOrders],
+  );
+  // 予定オーダ 指示状況（一覧・参照のみ）／実施確認表（日別）ダイアログの開閉。
+  const [orderListOpen, setOrderListOpen] = useState(false);
+  const [execDay, setExecDay] = useState<string | null>(null);
+  // 実施ダイアログ（実施確認表の未実施オーダをクリックで開く）。対象オーダと実施日時。
+  const orderExecutions = useAppStore((s) => s.orderExecutions);
+  const executeOrder = useAppStore((s) => s.executeOrder);
+  const orderKarteNos = useAppStore((s) => s.orderKarteNos);
+  const orderShoken = useAppStore((s) => s.orderShoken);
+  const [execTarget, setExecTarget] = useState<Order | null>(null);
+  // オーダ実施ダイアログ: 実施チェック（これが ON のときのみ [実施] 可）と、2 つの指示受け。
+  const [execChecked, setExecChecked] = useState(false);
+  const [ack1, setAck1] = useState<string | null>(null);
+  const [ack2, setAck2] = useState<string | null>(null);
+  // 実施ダイアログを開く（チェック・指示受けを初期化）。
+  const openExec = (o: Order) => { setExecTarget(o); setExecChecked(false); setAck1(null); setAck2(null); };
+
+  // 定期処方実施ダイアログ（オーダ実施ダイアログで入院定時の行をクリックすると開く）。
+  const [rxExecOpen, setRxExecOpen] = useState(false);
+  const [rxExecutor, setRxExecutor] = useState(LOGIN_NURSE);   // 実施者（ログイン者）
+  const [rxAckPerson, setRxAckPerson] = useState('');          // 指示受け者（オーダ実施で決めた人、無ければ空白）
+  const [rxDoctorNote, setRxDoctorNote] = useState('');        // 医師より
+  const [rxRemark, setRxRemark] = useState('');                // 備考（自由入力）
+  const [rxDatetime, setRxDatetime] = useState('');            // 実施日時（現在日時が初期値）
+  const [rxSpecialReport, setRxSpecialReport] = useState(false); // 特記報告
+  // 現在日時を datetime-local 用文字列（YYYY-MM-DDTHH:mm）で返す。
+  const nowLocalStr = (): string => {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  const openRxExec = () => {
+    setRxExecutor(LOGIN_NURSE);
+    setRxAckPerson(ack1 ?? ack2 ?? '');
+    // 医師より＝オーダ発行時にカルテ記事作成で入力した所見（医師コメント）。
+    setRxDoctorNote(execTarget ? (orderShoken[execTarget.id] ?? '') : '');
+    setRxRemark('');
+    setRxSpecialReport(false);
+    setRxDatetime(nowLocalStr());
+    setRxExecOpen(true);
+  };
+  // 入院定時 content を [1][2]… の薬剤明細に分解（末尾の「N日分／継続」は用法として共有）。
+  const parseRxItems = (o: Order): { drugs: string[]; usage: string } => {
+    const lines = o.content.split('\n').map((s) => s.trim()).filter(Boolean);
+    let days = '';
+    const drugs: string[] = [];
+    lines.forEach((ln) => {
+      if (/^(\d+日分|継続)$/.test(ln)) { days = ln; return; }
+      drugs.push(ln.replace(/^Rp\d+[　\s]*/, '').replace(/^[　\s]+/, ''));
+    });
+    const usage = [o.schedule, days].filter(Boolean).join('　');
+    return { drugs, usage };
+  };
+
+  // オーダが実施済か（seed の status か、実施記録があるか）。
+  const isExecuted = (o: Order): boolean => o.status === '実施済' || !!orderExecutions[o.id];
+
+  // 予定オーダの実施回数（1日N回）を用法/内容から推定（既定1）。
+  const dosesPerDay = (o: Order): number => {
+    const m = `${o.schedule} ${o.content}`.match(/1日(\d+)回/);
+    return m ? Number(m[1]) : 1;
+  };
+  // オーダが対象日(iso)に実施予定か。処方系は開始日〜日数、単発（検査/ECT/IF/文字/日数0）は開始日のみ。
+  const RX_TYPES: OrderType[] = ['処方', '注射', '入院定時'];
+  const activeOnDay = (o: Order, iso: string): boolean => {
+    if (iso < o.startDate) return false;
+    const start = new Date(`${o.startDate}T00:00:00`).getTime();
+    const cur = new Date(`${iso}T00:00:00`).getTime();
+    const offset = Math.round((cur - start) / 86_400_000);
+    if (o.days > 0) return offset < o.days;           // 日数指定 = 開始日〜(日数-1)
+    return RX_TYPES.includes(o.type) ? true : offset === 0; // 継続処方=窓内すべて／単発=開始日のみ
+  };
   // 患者の指示集合（マスタ + dynamic、同 id は dynamic 優先）
   const orders = useMemo<IsolationOrder[]>(() => {
     if (!patientId) return [];
@@ -1131,6 +1248,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>予定オーダ</Typography>
                   <Button
                     size="small" variant="outlined"
+                    onClick={() => setOrderListOpen(true)}
                     sx={{ fontSize: '0.6rem', minWidth: 0, px: 1, py: 0, lineHeight: 1.5, color: '#1e40af', borderColor: '#1e40af' }}
                   >
                     一覧
@@ -1138,25 +1256,55 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
                 </Stack>
               </TableCell>
               <TableCell sx={stickySubCell} />
-              {rows.map((d, i) => (
-                <TableCell key={i} sx={dayCellSx(d.isToday)}>
+              {rows.map((d, i) => {
+                const iso = dayIso[i];
+                // 静的モックの種名 ＋ オーダ入力連携で得た種名 を合成（同一種名は1文字に集約＝マニュアル準拠）。
+                const derived = orderKindsByIso.get(iso) ?? [];
+                const kinds: OrderKind[] = [...d.orderKinds];
+                derived.forEach((k) => { if (!kinds.includes(k)) kinds.push(k); });
+                // 実施状況: その日の実オーダを種名別に集計（全件実施済でグレー、1件でも実施でセル背景オレンジ）。
+                const dayOrders = patientOrders.filter((o) => o.startDate === iso);
+                const kindStat = new Map<OrderKind, { total: number; done: number }>();
+                dayOrders.forEach((o) => {
+                  const k = ORDER_KIND_OF[o.type];
+                  if (!k) return;
+                  const s = kindStat.get(k) ?? { total: 0, done: 0 };
+                  s.total += 1; if (isExecuted(o)) s.done += 1;
+                  kindStat.set(k, s);
+                });
+                const anyDone = dayOrders.some(isExecuted);
+                const kindColor = (k: OrderKind): string => {
+                  const s = kindStat.get(k);
+                  return s && s.done === s.total ? '#94a3b8' : ORDER_COLOR[k].fg; // 全件実施済→グレー
+                };
+                return (
+                <TableCell
+                  key={i}
+                  onClick={() => setExecDay(iso)}
+                  sx={{
+                    ...dayCellSx(d.isToday),
+                    ...(anyDone && { bgcolor: '#fff7ed' }), // 実施オーダあり→オレンジ背景（マニュアル準拠）
+                    cursor: 'pointer', '&:hover': { bgcolor: '#eef2ff' },
+                  }}
+                >
                   <Stack direction="row" spacing={0} justifyContent="center" sx={{ flexWrap: 'wrap' }}>
-                    {d.orderKinds.map((k, idx) => (
+                    {kinds.map((k, idx) => (
                       <React.Fragment key={`${k}-${idx}`}>
                         <Typography
                           component="span"
-                          sx={{ fontSize: '0.75rem', fontWeight: 700, color: ORDER_COLOR[k].fg }}
+                          sx={{ fontSize: '0.75rem', fontWeight: 700, color: kindColor(k) }}
                         >
                           {k}
                         </Typography>
-                        {idx < d.orderKinds.length - 1 && (
+                        {idx < kinds.length - 1 && (
                           <Typography component="span" sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>／</Typography>
                         )}
                       </React.Fragment>
                     ))}
                   </Stack>
                 </TableCell>
-              ))}
+                );
+              })}
             </TableRow>
             {/* 検査結果 */}
             <TableRow>
@@ -1799,6 +1947,355 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
           });
         }}
       />
+
+      {/* 予定オーダ「一覧」= 指示状況ダイアログ（参照のみ。マニュアル準拠：DO・新規指示不可） */}
+      <Dialog open={orderListOpen} onClose={() => setOrderListOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ py: 1 }}>
+          予定オーダ 指示状況（参照）
+          <Typography component="span" variant="body2" color="text.secondary">
+            　{patient ? `${patient.patientNumber ?? patient.id}　${patient.name}` : ''}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            参照のみ可能です（DO・新規指示はできません）。オーダの作成はカルテの「オーダー入力」から行います。
+          </Typography>
+          {patientOrders.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">オーダはありません。</Typography>
+          ) : (
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ width: 110 }}>開始日</TableCell>
+                  <TableCell sx={{ width: 90 }}>種別</TableCell>
+                  <TableCell>内容</TableCell>
+                  <TableCell sx={{ width: 80 }}>状態</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {patientOrders.map((o) => (
+                  <TableRow key={o.id} hover>
+                    <TableCell>{o.startDate}</TableCell>
+                    <TableCell><Chip size="small" label={orderTypeLabel(o.type)} /></TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', whiteSpace: 'pre-line' }}>{o.content}</TableCell>
+                    <TableCell>{o.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOrderListOpen(false)}>閉じる</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 予定オーダ セルクリック = 実施確認表ダイアログ（1週間カレンダー・実施日に実施回数。当日は右端） */}
+      <Dialog open={execDay !== null} onClose={() => setExecDay(null)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ py: 1 }}>
+          実施確認表
+          <Typography component="span" variant="body2" color="text.secondary">
+            　{dayIso[0]?.replace(/-/g, '/')} 〜 {dayIso[dayIso.length - 1]?.replace(/-/g, '/')}（当日: 右端）
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          {(() => {
+            // 予定オーダ欄の種名（薬/注/検/E）を持つ型のみ対象（IF・リハビリ・文字は実施確認表に出さない）。
+            // ※IF は頓用のため、指示時点では出さず、IFオーダタブで実施した各サブオーダが実施済として並ぶ。
+            const rows = patientOrders.filter(
+              (o) => ORDER_KIND_OF[o.type] && dayIso.some((iso) => activeOnDay(o, iso)),
+            );
+            if (rows.length === 0) {
+              return <Typography variant="body2" color="text.secondary">この期間のオーダはありません。</Typography>;
+            }
+            return (
+              <>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  実施予定日に実施回数（1日N回）を表示します。未実施の回数をクリックすると実施できます。
+                </Typography>
+                <Table size="small" sx={{ '& td, & th': { px: 0.75 } }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ width: 84 }}>種別</TableCell>
+                      <TableCell sx={{ minWidth: 240 }}>内容</TableCell>
+                      {DAILY.map((d, i) => (
+                        <TableCell key={i} align="center" sx={{ width: 52, bgcolor: d.isToday ? '#eff6ff' : undefined }}>
+                          <Typography variant="caption" fontWeight={700}>{d.date.slice(5)}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>（{d.weekday}）</Typography>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((o) => {
+                      const done = isExecuted(o);
+                      const n = dosesPerDay(o);
+                      return (
+                        <TableRow key={o.id}>
+                          <TableCell><Chip size="small" label={orderTypeLabel(o.type)} /></TableCell>
+                          <TableCell sx={{ fontSize: '0.78rem', whiteSpace: 'pre-line', verticalAlign: 'top', py: 0.5 }}>{o.content}</TableCell>
+                          {dayIso.map((iso, i) => {
+                            const active = activeOnDay(o, iso);
+                            return (
+                              <TableCell key={i} align="center"
+                                onClick={() => { if (active && !done) openExec(o); }}
+                                sx={{
+                                  cursor: active && !done ? 'pointer' : 'default',
+                                  bgcolor: DAILY[i].isToday ? '#eff6ff' : undefined,
+                                  '&:hover': active && !done ? { bgcolor: '#dbeafe' } : undefined,
+                                }}
+                              >
+                                {active ? (
+                                  <Typography variant="body2" sx={{ fontWeight: 700, color: done ? '#94a3b8' : '#dc2626' }}>
+                                    {n}
+                                  </Typography>
+                                ) : (
+                                  <Typography variant="caption" color="text.disabled">—</Typography>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </>
+            );
+          })()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExecDay(null)}>閉じる</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* オーダ実施ダイアログ（実施確認表の未実施オーダから起動。参考システム実機準拠）
+          患者／内容(カルテNo＋医薬品)／予定日／伝票(指示医)／印刷／指示受け(2つ)／実施(チェック) の一覧。
+          実施チェックが ON のときのみ [実施] 可能。 */}
+      <Dialog open={execTarget !== null} onClose={() => setExecTarget(null)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ py: 1, bgcolor: '#2f6ca6', color: '#fff', fontSize: '1rem' }}>オーダ実施</DialogTitle>
+        <DialogContent dividers sx={{ p: 1.5 }}>
+          {execTarget && (
+            <>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#eaf2fa' }}>
+                      <TableCell sx={{ fontWeight: 700, width: 150 }}>患者</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>内容</TableCell>
+                      <TableCell sx={{ fontWeight: 700, width: 110 }} align="center">予定日</TableCell>
+                      <TableCell sx={{ fontWeight: 700, width: 150 }} align="center">伝票(指示医)</TableCell>
+                      <TableCell sx={{ fontWeight: 700, width: 56 }} align="center">印刷</TableCell>
+                      <TableCell sx={{ fontWeight: 700, width: 120 }} align="center">指示受け</TableCell>
+                      <TableCell sx={{ fontWeight: 700, width: 56 }} align="center">実施</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(() => {
+                      // 入院定時は「印刷」欄より左（患者/内容/予定日/伝票）クリックで定期処方実施ダイアログを開く。
+                      const rxClick = execTarget.type === '入院定時';
+                      const rxCellSx = { verticalAlign: 'top' as const, ...(rxClick && { cursor: 'pointer', '&:hover': { bgcolor: '#eef5fb' } }) };
+                      const onRx = rxClick ? openRxExec : undefined;
+                      return (
+                    <TableRow>
+                      {/* 患者: 病棟 + 患者名 + 年齢 */}
+                      <TableCell sx={rxCellSx} onClick={onRx}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {patient?.wardName ?? patient?.roomNumber ?? ''}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {patient?.name ?? ''}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          （{patient?.age ?? '—'}）
+                        </Typography>
+                      </TableCell>
+                      {/* 内容: カルテNo + 医薬品/検査内容 */}
+                      <TableCell sx={rxCellSx} onClick={onRx}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {orderKarteNos[execTarget.id] ?? '（カルテNo未発行）'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                          {execTarget.content}
+                        </Typography>
+                      </TableCell>
+                      {/* 予定日: 待ち + 実施予定日 */}
+                      <TableCell align="center" sx={rxCellSx} onClick={onRx}>
+                        <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 700 }} display="block">
+                          待ち
+                        </Typography>
+                        <Typography variant="body2">{execTarget.startDate}</Typography>
+                      </TableCell>
+                      {/* 伝票(指示医): オーダ名 + 指示医 */}
+                      <TableCell align="center" sx={rxCellSx} onClick={onRx}>
+                        <Typography variant="body2">{orderTypeLabel(execTarget.type)}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          （{execTarget.doctorName}）
+                        </Typography>
+                      </TableCell>
+                      {/* 印刷 */}
+                      <TableCell align="center" sx={{ verticalAlign: 'top' }}>
+                        <IconButton size="small" aria-label="印刷"
+                          onClick={() => showSnackbar('伝票を印刷しました', 'success')}>
+                          <PrintOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                      {/* 指示受け: 2 つ。リストから指示受け者を選ぶ（未選択＝[未]） */}
+                      <TableCell align="center" sx={{ verticalAlign: 'top' }}>
+                        <Stack spacing={0.5}>
+                          {[{ v: ack1, set: setAck1, n: 1 }, { v: ack2, set: setAck2, n: 2 }].map(({ v, set, n }) => (
+                            <TextField
+                              key={n} select size="small" variant="standard"
+                              value={v ?? ''}
+                              onChange={(e) => set(e.target.value || null)}
+                              inputProps={{ 'aria-label': `指示受け${n}` }}
+                              SelectProps={{ displayEmpty: true }}
+                              sx={{ minWidth: 96 }}
+                            >
+                              <MenuItem value=""><em style={{ color: '#c62828' }}>［未］</em></MenuItem>
+                              {ACK_NURSES.map((name) => (
+                                <MenuItem key={name} value={name}>{name}</MenuItem>
+                              ))}
+                            </TextField>
+                          ))}
+                        </Stack>
+                      </TableCell>
+                      {/* 実施: チェックボックス */}
+                      <TableCell align="center" sx={{ verticalAlign: 'top' }}>
+                        <Checkbox size="small" checked={execChecked}
+                          onChange={(e) => setExecChecked(e.target.checked)}
+                          inputProps={{ 'aria-label': '実施' }} />
+                      </TableCell>
+                    </TableRow>
+                      );
+                    })()}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {/* 凡例（参考システム実機準拠） */}
+              <Stack direction="row" spacing={2} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 0.5 }}>
+                {[
+                  { c: '#f5e79e', l: '実施日未定オーダ' },
+                  { c: '#f5c6c6', l: '未印刷' },
+                  { c: '#c62828', l: '他所で編集中' },
+                  { c: '#d4a017', l: '未署名' },
+                ].map((x) => (
+                  <Stack key={x.l} direction="row" spacing={0.5} alignItems="center">
+                    <Box sx={{ width: 14, height: 14, bgcolor: x.c, border: '1px solid', borderColor: 'divider' }} />
+                    <Typography variant="caption" color="text.secondary">{x.l}</Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            disabled={!execChecked}
+            onClick={() => {
+              if (execTarget) {
+                executeOrder(execTarget.id, LOGIN_NURSE);
+                showSnackbar(`「${orderTypeLabel(execTarget.type)}：${execTarget.content}」を実施しました`, 'success');
+              }
+              setExecTarget(null);
+            }}
+          >
+            実施
+          </Button>
+          <Button onClick={() => setExecTarget(null)}>閉じる</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 定期処方実施ダイアログ（オーダ実施ダイアログで入院定時の行をクリックで起動。参考システム実機準拠）
+          実施者(ログイン)／実施日時(現在日時)／指示受け者(オーダ実施で決めた人)／医師より／備考、
+          前回処方｜今回処方＋中止薬剤。下部＝特記報告・実施・中止・指示箋印刷・閉じる。 */}
+      <Dialog open={rxExecOpen} onClose={() => setRxExecOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ py: 1, bgcolor: '#2f6ca6', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          定期処方実施
+          <Button size="small" onClick={() => setRxExecOpen(false)} sx={{ color: '#fff' }}>← 戻る</Button>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 1.5 }}>
+          {execTarget && (
+            <>
+              {/* 上段フォーム */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: '90px 1fr 90px 1fr', gap: 1, alignItems: 'center', mb: 1.5 }}>
+                <Typography variant="body2" sx={{ bgcolor: '#eaf2fa', px: 1, py: 0.75 }}>実施者</Typography>
+                <TextField select size="small" value={rxExecutor} onChange={(e) => setRxExecutor(e.target.value)}
+                  inputProps={{ 'aria-label': '実施者' }}>
+                  {ACK_NURSES.map((name) => (<MenuItem key={name} value={name}>{name}</MenuItem>))}
+                </TextField>
+                <Typography variant="body2" sx={{ bgcolor: '#eaf2fa', px: 1, py: 0.75 }}>実施日時</Typography>
+                <TextField type="datetime-local" size="small" value={rxDatetime}
+                  onChange={(e) => setRxDatetime(e.target.value)}
+                  InputLabelProps={{ shrink: true }} inputProps={{ 'aria-label': '実施日時' }} />
+
+                <Typography variant="body2" sx={{ bgcolor: '#eaf2fa', px: 1, py: 0.75 }}>指示受け者</Typography>
+                <TextField size="small" value={rxAckPerson} onChange={(e) => setRxAckPerson(e.target.value)}
+                  placeholder="（指示受けなし）" inputProps={{ 'aria-label': '指示受け者' }} />
+                {/* 医師より: 医師がオーダ発行時に「備考」へ入力したコメントの読取専用表示（実施者への申し送り）。
+                    マニュアル（基本システム編 第5章 オーダリング p.1016/1171-1172/1174）準拠。 */}
+                <Typography variant="body2" sx={{ bgcolor: '#eaf2fa', px: 1, py: 0.75 }}>医師より</Typography>
+                <TextField size="small" value={rxDoctorNote}
+                  InputProps={{ readOnly: true }} placeholder="（医師コメントなし）"
+                  inputProps={{ 'aria-label': '医師より' }} />
+
+                <Typography variant="body2" sx={{ bgcolor: '#eaf2fa', px: 1, py: 0.75 }}>備考</Typography>
+                <TextField size="small" value={rxRemark} onChange={(e) => setRxRemark(e.target.value)}
+                  sx={{ gridColumn: '2 / 5' }} inputProps={{ 'aria-label': '備考' }} />
+              </Box>
+
+              {/* 前回処方 ｜ 今回処方＋中止薬剤 */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                {/* 前回処方 */}
+                <Box sx={{ border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="body2" align="center" sx={{ bgcolor: '#eaf2fa', fontWeight: 700, py: 0.5 }}>前回処方</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ p: 1.5 }}>前回処方はありません。</Typography>
+                </Box>
+                {/* 今回処方 ＋ 中止薬剤 */}
+                <Box sx={{ border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="body2" align="center" sx={{ bgcolor: '#eaf2fa', fontWeight: 700, py: 0.5 }}>今回処方</Typography>
+                  <Box sx={{ p: 1 }}>
+                    {parseRxItems(execTarget).drugs.map((d, i) => (
+                      <Box key={i} sx={{ mb: 1 }}>
+                        <Stack direction="row" spacing={1}>
+                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 700 }}>[{i + 1}]</Typography>
+                          <Typography variant="body2" sx={{ color: 'primary.main' }}>{d}</Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" align="right" display="block">
+                          {parseRxItems(execTarget).usage || '　'}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                  <Typography variant="body2" align="center" sx={{ bgcolor: '#eaf2fa', fontWeight: 700, py: 0.5 }}>中止薬剤</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ p: 1.5 }}>中止薬剤はありません。</Typography>
+                </Box>
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2 }}>
+          <FormControlLabel sx={{ mr: 'auto' }}
+            control={<Checkbox size="small" checked={rxSpecialReport} onChange={(e) => setRxSpecialReport(e.target.checked)} inputProps={{ 'aria-label': '特記報告' }} />}
+            label={<Typography variant="body2">特記報告</Typography>} />
+          <Button variant="contained" onClick={() => {
+            if (execTarget) {
+              executeOrder(execTarget.id, rxExecutor);
+              showSnackbar(`「入院定時：${execTarget.content}」を実施しました`, 'success');
+            }
+            setRxExecOpen(false);
+            setExecTarget(null);
+          }}>実施</Button>
+          <Button color="error" onClick={() => {
+            showSnackbar('入院定時を中止しました', 'info');
+            setRxExecOpen(false);
+            setExecTarget(null);
+          }}>中止</Button>
+          <Button onClick={() => showSnackbar('指示箋を印刷しました', 'success')}>指示箋印刷</Button>
+          <Button onClick={() => setRxExecOpen(false)}>閉じる</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 隔離拘束 観察記録ダイアログ（セルクリックで起動・既存 ep-07 ダイアログを流用） */}
       {obsDialog && patient && (

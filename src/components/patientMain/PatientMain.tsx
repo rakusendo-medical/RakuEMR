@@ -6,18 +6,23 @@ import {
 } from '@mui/material';
 import { ArrowBack, NoteAdd, Receipt, MeetingRoom } from '@mui/icons-material';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { PATIENTS, ORDERS, NURSING_RECORDS, generateVitalSigns, generateFlowsheetDaily } from '../../data/mockData';
+import { PATIENTS, ORDERS, NURSING_RECORDS, LOGIN_DOCTOR, generateVitalSigns, generateFlowsheetDaily } from '../../data/mockData';
 import StatusBadge from '../common/StatusBadge';
 import FlowsheetView from '../flowsheet/Flowsheet';
 import NursingRecordView from '../nursing/NursingRecord';
 import OrderManagement from '../orders/OrderManagement';
+import OrderEntryDialog from '../orders/OrderEntryDialog';
 import { useAppStore } from '../../stores/useAppStore';
 
 const PatientMain: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { selectedPatient, setSelectedPatient } = useAppStore();
+  const dynamicOrders = useAppStore((s) => s.dynamicOrders);
+  const addOrder = useAppStore((s) => s.addOrder);
+  const showSnackbar = useAppStore((s) => s.showSnackbar);
   const [tab, setTab] = useState(0);
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
 
   const patient = selectedPatient || PATIENTS.find((p) => p.id === patientId);
 
@@ -30,7 +35,7 @@ const PatientMain: React.FC = () => {
     );
   }
 
-  const patientOrders = ORDERS.filter((o) => o.patientId === patient.id);
+  const patientOrders = [...ORDERS, ...dynamicOrders].filter((o) => o.patientId === patient.id);
   const patientNursingRecords = NURSING_RECORDS.filter((r) => r.patientId === patient.id);
 
   return (
@@ -125,7 +130,7 @@ const PatientMain: React.FC = () => {
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
             <Button variant="contained" onClick={() => setTab(3)}>フローシート表示</Button>
             <Button variant="contained" color="secondary" startIcon={<NoteAdd />}>看護記録作成</Button>
-            <Button variant="contained" sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }} startIcon={<Receipt />}>オーダ入力</Button>
+            <Button variant="contained" sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }} startIcon={<Receipt />} onClick={() => setOrderDialogOpen(true)}>オーダ入力</Button>
             <Button variant="contained" color="error" startIcon={<MeetingRoom />} onClick={() => navigate('/admission')}>入退院管理</Button>
             <Button variant="outlined" onClick={() => navigate(`/karte/${patient.id}`, { state: { from: 'patient-list' } satisfies KartePageLocationState })}>カルテを開く</Button>
           </Stack>
@@ -135,6 +140,18 @@ const PatientMain: React.FC = () => {
       {tab === 1 && <OrderManagement patientId={patient.id} />}
       {tab === 2 && <NursingRecordView patientId={patient.id} />}
       {tab === 3 && <FlowsheetView patientId={patient.id} />}
+
+      <OrderEntryDialog
+        open={orderDialogOpen}
+        patient={patient}
+        doctorName={LOGIN_DOCTOR}
+        onClose={() => setOrderDialogOpen(false)}
+        onSubmit={(order) => {
+          addOrder(order);
+          setOrderDialogOpen(false);
+          showSnackbar('オーダを登録しました', 'success');
+        }}
+      />
     </Box>
   );
 };

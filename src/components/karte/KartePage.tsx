@@ -30,8 +30,9 @@ import {
   ViewAgenda as LayoutStackIcon,
   ViewColumn as LayoutSideBySideIcon,
   KeyboardArrowUp as ScrollTopIcon,
+  NotificationsActive as IfOrderIcon,
 } from '@mui/icons-material';
-import { PATIENTS } from '../../data/mockData';
+import { PATIENTS, LOGIN_DOCTOR } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import type { Patient } from '../../types';
 import KartePatientHeader from './KartePatientHeader';
@@ -43,10 +44,13 @@ import ClinicalInfoPanel from './ClinicalInfoPanel';
 import LifeHistoryTimeline from './LifeHistoryTimeline';
 import OrdersTab from './OrdersTab';
 import OrderStatusTab from './OrderStatusTab';
+import IfOrderTab from './IfOrderTab';
 import NursingProcessTab from './NursingProcessTab';
 import ScheduleTab from './ScheduleTab';
 import AdmissionOrderDialog from '../admission/AdmissionOrderDialog';
 import DischargeOrderDialog from '../admission/DischargeOrderDialog';
+import OrderSendScreen from '../orders/OrderSendScreen';
+import RehaOrderDialog from '../orders/RehaOrderDialog';
 import RestraintOrderDialog from '../isolation/RestraintOrderDialog';
 import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
 
@@ -82,6 +86,7 @@ const TABS: TabDef[] = [
   { id: 'flowsheet', label: 'フローシート・隔離拘束', hash: 'flowsheet', icon: <FlowsheetIcon fontSize="small" /> },
   { id: 'orders', label: '指示簿', hash: 'orders', icon: <OrdersIcon fontSize="small" /> },
   { id: 'order-status', label: '指示状況', hash: 'order-status', icon: <OrderStatusIcon fontSize="small" /> },
+  { id: 'if-order', label: 'IFオーダ', hash: 'if-order', icon: <IfOrderIcon fontSize="small" /> },
   {
     id: 'care-plan',
     label: '看護過程',
@@ -228,6 +233,15 @@ export default function KartePage({ modeOverride }: KartePageProps) {
   const [admissionOrderOpen, setAdmissionOrderOpen] = useState(false);
   const [dischargeOrderOpen, setDischargeOrderOpen] = useState(false);
 
+  // ===== ep-11 us-53: オーダ入力（新規オーダ作成）=====
+  const [orderEntryOpen, setOrderEntryOpen] = useState(false);
+  const [treatmentFormOpen, setTreatmentFormOpen] = useState(false);
+  const addOrder = useAppStore((s) => s.addOrder);
+  const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
+  const nextKarteNo = useAppStore((s) => s.nextKarteNo);
+  const assignKarteNos = useAppStore((s) => s.assignKarteNos);
+  const showSnackbar = useAppStore((s) => s.showSnackbar);
+
   // ===== us-36 サブ B: 隔離拘束指示 =====
   // ActionBar 経由起動（既定タイトル「隔離開始」）と RestraintOrderLinks 経由起動（タイトル指定）の両経路を
   // 同一 state で管理する。
@@ -321,6 +335,16 @@ export default function KartePage({ modeOverride }: KartePageProps) {
     if (actionId === 'nursing-record') {
       // ep-10 既存 NursingRecordDialog を新規入力モードで開く（案 b: 流用）
       setNursingRecordOpen(true);
+      return;
+    }
+    if (actionId === 'order-input') {
+      // ep-11 us-53: 新規オーダ作成ダイアログを開く
+      setOrderEntryOpen(true);
+      return;
+    }
+    if (actionId === 'treatment-form') {
+      // ep-11 us-61: リハビリ（治療形態）はオーダではないため専用ボタンから直接開く
+      setTreatmentFormOpen(true);
       return;
     }
     if (actionId === 'new-record') {
@@ -548,6 +572,53 @@ export default function KartePage({ modeOverride }: KartePageProps) {
         onClose={() => setDischargeOrderOpen(false)}
       />
 
+      {/* ep-11 us-55: オーダ送信画面。ActionBar「オーダー入力」から起動 */}
+      <OrderSendScreen
+        open={orderEntryOpen}
+        patient={patient}
+        doctorName={LOGIN_DOCTOR}
+        onClose={() => setOrderEntryOpen(false)}
+        onSubmit={(orders) => {
+          orders.forEach((o) => addOrder(o));
+          setOrderEntryOpen(false);
+          showSnackbar(`オーダを登録しました（${orders.length}件）`, 'success');
+        }}
+      />
+
+      {/* ep-11 us-61: 治療形態（リハビリ＝作業療法/服薬指導/栄養指導）。ActionBar「治療形態」から起動 */}
+      <RehaOrderDialog
+        open={treatmentFormOpen}
+        orderType="リハビリ"
+        patient={patient}
+        doctorName={LOGIN_DOCTOR}
+        onClose={() => setTreatmentFormOpen(false)}
+        onRegister={(order) => {
+          // 定期オーダとして指示簿へ残し（種別「定期」）、カルテ記事も作成（カルテNo発行）。
+          const no = `NO.${nextKarteNo}`;
+          assignKarteNos({ [order.id]: no }, nextKarteNo + 1);
+          const dateStr = order.startDate.replace(/-/g, '/');
+          const d = new Date(`${order.startDate}T00:00:00`);
+          const dow = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+          appendMedicalRecord(patient.id, {
+            id: `MR-${no}`,
+            date: dateStr,
+            dayOfWeek: dow,
+            category: '医師記録',
+            author: LOGIN_DOCTOR,
+            authorRole: '医師',
+            content: `【定期オーダ指示】\n${order.content}`,
+            tags: ['オーダー'],
+            orderNumber: no,
+            timestamp: `${dateStr} 10:00`,
+            likes: 0,
+            comments: 0,
+          });
+          addOrder(order);
+          setTreatmentFormOpen(false);
+          showSnackbar(`治療形態（${order.schedule}）を指示しました`, 'success');
+        }}
+      />
+
       {/* us-36 サブ B: 隔離拘束指示ダイアログ。ActionBar / 診療録カードの RestraintOrderLinks 双方の起動先 */}
       <RestraintOrderDialog
         open={restraintDialog.open}
@@ -685,6 +756,10 @@ function KarteTabContent({
         onOpenOrdersTab={onOpenOrdersTab}
       />
     );
+  }
+
+  if (tabId === 'if-order') {
+    return <IfOrderTab patient={patient} mode={mode} />;
   }
 
   if (tabId === 'care-plan') {
