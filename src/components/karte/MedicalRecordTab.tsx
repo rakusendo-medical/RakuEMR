@@ -1075,7 +1075,7 @@ export function NewRecordDialog({
           <Box sx={{ flex: 1 }} />
           {registerLabel ? (
             // オーダ登録モード: 登録のみ（診察終了・保存は出さない）。
-            <Button onClick={handleRegister} variant="contained" disabled={!canRegister} startIcon={<Save />}>
+            <Button onClick={handleRegister} variant="contained" disabled={!canRegister || !onRegister} startIcon={<Save />}>
               {registerLabel}
             </Button>
           ) : (

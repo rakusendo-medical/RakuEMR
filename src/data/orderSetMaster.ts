@@ -17,7 +17,8 @@ export type OrderSetEntry =
   // 画像: 画像マスタ（IMAGING_GROUPS）のグループ名＋セット名で1オーダを生成する。
   | { kind: '画像'; group: string; setName: string }
   // 処方系: 処方セットマスタ（PRESCRIPTION_SETS）のコードから1オーダを生成する。入院定時のみ dialogDays を使う。
-  | { kind: '処方' | '注射' | '入院定時'; setCode: number; dialogDays?: number };
+  //   注射は処方セット（resolveSetDrugs）では解決できないため対象外（必要時は注射セット解決を別途実装）。
+  | { kind: '処方' | '入院定時'; setCode: number; dialogDays?: number };
 
 /** セット名（リストの1項目）。クリックで entries を一括展開する。 */
 export interface OrderSetDef { name: string; entries: OrderSetEntry[]; }
@@ -123,7 +124,7 @@ function resolveImagingEntry(groupName: string, setName: string): ResolvedSetOrd
 
 /** 処方セットコード → 処方系オーダ（用法で Rp 採番。作成中の2行表示・編集用の構造化データも返す）。 */
 function resolveRxEntry(
-  type: '処方' | '注射' | '入院定時', setCode: number, dialogDaysOpt?: number,
+  type: '処方' | '入院定時', setCode: number, dialogDaysOpt?: number,
 ): ResolvedSetOrder | null {
   const drugs = resolveSetDrugs(setCode);
   if (drugs.length === 0) return null;
