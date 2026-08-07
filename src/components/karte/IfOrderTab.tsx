@@ -44,8 +44,9 @@ const sectionOf = (t: OrderType) => SECTION[t] ?? { label: t, bg: '#eef2f6', fg:
 /**
  * ep-11 us-60: カルテ「IFオーダ」タブ（参考システム実機に準拠）。
  * 左＝症状（登録済み IF オーダ一覧）、右＝選択した IF オーダの内容（種別ごとに色分けセクション）。
- * IF は頓用のため、症状が出たら該当サブオーダにチェックして [実施] すると、実オーダとして発行し
- * その場で実施済にする（フローシート予定オーダ・指示簿へ実施済で反映）。
+ * IF は頓用（都度実施）のため、症状が出たら該当サブオーダにチェックして [実施] すると、
+ * 実オーダを発行して即時実施済にし、各オーダのカルテ記事を作成する（フローシート予定オーダ・指示簿へ反映）。
+ * IF オーダ自体（左の症状エントリ）は待機のまま残り、実施ボタンは何度でも押せる（実施済にはしない）。
  */
 const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => {
   const entries = useAppStore((s) => s.ifOrders[patient.id]) ?? [];
@@ -68,12 +69,11 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
 
   // 指示簿から遷移してきたとき、対象オーダ id が一覧にあれば選択・表示する。
   React.useEffect(() => {
+    // focusSignal の変化（＝指示簿からの遷移。同じ id の再クリックでも increment される）で再適用する。
     if (focusOrderId && entries.some((e) => e.id === focusOrderId)) {
       setSelectedId(focusOrderId);
     }
-    // focusSignal の変化で再適用（同じ id の再クリックにも対応）。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSignal]);
+  }, [focusSignal, focusOrderId, entries]);
   React.useEffect(() => {
     if (selected) setCheckedIds(new Set(selected.orders.map((o) => o.id)));
     else setCheckedIds(new Set());
@@ -92,7 +92,8 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
   const handleExecute = () => {
     if (!selected) return;
     const at = nowStr();
-    const stamp = Date.now();
+    // 実施ごとに一意なキー（ダブルクリック等で同一ミリ秒に連続実施しても衝突しないようランダム要素を付与）。
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     // 実施ごとに、各オーダへカルテNoを連番発行する。
     let n = nextKarteNo;
     const nos: Record<string, string> = {};
@@ -190,20 +191,32 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
                     <Typography variant="body2" sx={{ color: s.fg, fontWeight: 700, flex: 1 }}>
                       ［{s.label}］
                     </Typography>
-                    <IconButton size="small" aria-label={`削除 ${s.label}`}>
+                    {/* 削除は本モックでは表示のみ（非活性）。 */}
+                    <IconButton size="small" aria-label={`削除 ${s.label}`} disabled>
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
                   </Stack>
                   <Box sx={{ p: 1 }}>
                     {g.orders.map((o) => (
                       <Stack key={o.id} direction="row" alignItems="flex-start" spacing={0.5} sx={{ mb: 0.25 }}>
-                        <Checkbox size="small" sx={{ p: 0.25 }} checked={checkedIds.has(o.id)}                          onChange={() => toggle(o.id)} inputProps={{ 'aria-label': `実施対象 ${o.content}` }} />
+                        <Checkbox
+                          size="small"
+                          sx={{ p: 0.25 }}
+                          checked={checkedIds.has(o.id)}
+                          onChange={() => toggle(o.id)}
+                          inputProps={{ 'aria-label': `実施対象 ${o.content}` }}
+                        />
                         <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{o.content}</Typography>
                       </Stack>
                     ))}
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
                       <Typography variant="caption" color="text.secondary">備考</Typography>
-                      <TextField size="small" variant="standard" fullWidth                        inputProps={{ 'aria-label': `備考 ${s.label}` }} />
+                      <TextField
+                        size="small"
+                        variant="standard"
+                        fullWidth
+                        inputProps={{ 'aria-label': `備考 ${s.label}` }}
+                      />
                     </Stack>
                   </Box>
                 </Box>
@@ -223,7 +236,7 @@ const IfOrderTab: React.FC<Props> = ({ patient, focusOrderId, focusSignal }) => 
             label={<Typography variant="caption">看護記録の作成</Typography>} />
           <Box sx={{ flex: 1 }} />
           <Typography variant="caption" color="text.secondary">実施日: {todayStr()}</Typography>
-          <Button size="small" variant="outlined"            onClick={() => showSnackbar('処方チェック: 問題ありません', 'success')}>処方チェック</Button>
+          <Button size="small" variant="outlined" onClick={() => showSnackbar('処方チェック: 問題ありません', 'success')}>処方チェック</Button>
           <Button size="small" variant="contained" disabled={!canExecute} onClick={handleExecute}>実施</Button>
         </Stack>
       </Box>
