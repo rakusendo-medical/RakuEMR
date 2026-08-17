@@ -213,7 +213,7 @@ function ConvertTo-ConfigObject {
         foreach ($item in $InputObject) {
             $null = $list.Add((ConvertTo-ConfigObject -InputObject $item))
         }
-        return , $list.ToArray()
+        return $list.ToArray()
     }
 
     return $InputObject
@@ -1061,13 +1061,14 @@ function Format-MonitorTimeSpan {
     if ($null -eq $TimeSpan) { return '-' }
     $span = [TimeSpan] $TimeSpan
 
+    # [int] へのキャストは銀行家丸めになり 1.5 → 2 となるため、必ず Floor で切り捨てる。
     if ($span.TotalDays -ge 1) {
-        return ('{0}日{1}時間' -f [int] $span.TotalDays, $span.Hours)
+        return ('{0}日{1}時間' -f [Math]::Floor($span.TotalDays), $span.Hours)
     }
     if ($span.TotalHours -ge 1) {
-        return ('{0}時間{1}分' -f [int] $span.TotalHours, $span.Minutes)
+        return ('{0}時間{1}分' -f [Math]::Floor($span.TotalHours), $span.Minutes)
     }
-    return ('{0}分' -f [int] $span.TotalMinutes)
+    return ('{0}分' -f [Math]::Floor($span.TotalMinutes))
 }
 
 #endregion

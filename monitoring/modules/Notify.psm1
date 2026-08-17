@@ -58,7 +58,7 @@ function ConvertTo-MonitorAlert {
         }
     }
 
-    return , $alerts.ToArray()
+    return $alerts.ToArray()
 }
 
 function Get-EvaluatedScope {
@@ -86,7 +86,7 @@ function Get-EvaluatedScope {
         if (-not $scopes.Contains($scope)) { $null = $scopes.Add($scope) }
     }
 
-    return , ([string[]] $scopes.ToArray())
+    return [string[]] $scopes.ToArray()
 }
 
 function Get-NotificationPlan {
