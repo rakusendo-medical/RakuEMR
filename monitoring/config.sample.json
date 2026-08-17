@@ -155,6 +155,19 @@
           "excludeVolumes": ["A:", "B:"]
         },
 
+        "resource": {
+          "__": "RES: CPU / メモリ使用率。主にダッシュボードの「リソース」ブロック表示用。",
+          "enabled": true,
+          "__cpuWarningPercent": "CPU 使用率がこの値以上で Warning。0 で通知しない（既定）。瞬間値での通知は誤検知が多く、通知の信頼性を下げるため既定は無効。",
+          "cpuWarningPercent": 0,
+          "__cpuCriticalPercent": "CPU 使用率がこの値以上で Critical。0 で通知しない。",
+          "cpuCriticalPercent": 0,
+          "__memoryWarningPercent": "メモリ使用率がこの値以上で Warning。0 で通知しない。",
+          "memoryWarningPercent": 0,
+          "__memoryCriticalPercent": "メモリ使用率がこの値以上で Critical。0 で通知しない。",
+          "memoryCriticalPercent": 0
+        },
+
         "backup": {
           "__": "BKP: バックアップ鮮度。日次。『成功しているか不明』を潰すための最重要項目。",
           "enabled": true,
@@ -375,6 +388,13 @@
           "criticalFreeGB": 40,
           "excludeVolumes": ["A:", "B:"]
         },
+        "resource": {
+          "enabled": true,
+          "cpuWarningPercent": 0,
+          "cpuCriticalPercent": 0,
+          "memoryWarningPercent": 0,
+          "memoryCriticalPercent": 0
+        },
         "backup": { "enabled": false, "paths": [] },
         "database": { "enabled": false },
         "defender": {
@@ -464,6 +484,13 @@
           "warningFreeGB": 20,
           "criticalFreeGB": 8,
           "excludeVolumes": ["A:", "B:"]
+        },
+        "resource": {
+          "enabled": true,
+          "cpuWarningPercent": 0,
+          "cpuCriticalPercent": 0,
+          "memoryWarningPercent": 0,
+          "memoryCriticalPercent": 0
         },
         "backup": { "enabled": false, "paths": [] },
         "database": { "enabled": false },

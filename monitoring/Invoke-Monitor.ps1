@@ -26,6 +26,9 @@
     .PARAMETER SkipNotification
     通知を送らない。動作確認用。
 
+    .PARAMETER SkipDashboard
+    ダッシュボードを生成しない。動作確認用。
+
     .PARAMETER SendSummary
     サイクルにかかわらず日次サマリを送る。
 
@@ -54,6 +57,9 @@ param(
     [switch] $SkipNotification,
 
     [Parameter()]
+    [switch] $SkipDashboard,
+
+    [Parameter()]
     [switch] $SendSummary
 )
 
@@ -62,11 +68,13 @@ $ErrorActionPreference = 'Stop'
 $moduleRoot = Join-Path $PSScriptRoot 'modules'
 Import-Module (Join-Path $moduleRoot 'Common.psm1') -Force -DisableNameChecking
 Import-Module (Join-Path $moduleRoot 'Notify.psm1') -Force -DisableNameChecking
+Import-Module (Join-Path $moduleRoot 'Dashboard.psm1') -Force -DisableNameChecking
 
 # チェックの登録表。Cycles に含まれるサイクルで実行される。
 $checkRegistry = @(
     [pscustomobject]@{ Id = 'SVC'; Module = 'Check-Service.psm1'; Function = 'Invoke-ServiceCheck'; Cycles = @('Fast', 'Hourly', 'Daily', 'All') }
     [pscustomobject]@{ Id = 'DSK'; Module = 'Check-Disk.psm1'; Function = 'Invoke-DiskCheck'; Cycles = @('Hourly', 'Daily', 'All') }
+    [pscustomobject]@{ Id = 'RES'; Module = 'Check-Resource.psm1'; Function = 'Invoke-ResourceCheck'; Cycles = @('Hourly', 'Daily', 'All') }
     [pscustomobject]@{ Id = 'BKP'; Module = 'Check-Backup.psm1'; Function = 'Invoke-BackupCheck'; Cycles = @('Daily', 'All') }
     [pscustomobject]@{ Id = 'DB'; Module = 'Check-Database.psm1'; Function = 'Invoke-DatabaseCheck'; Cycles = @('Daily', 'All') }
     [pscustomobject]@{ Id = 'DEF'; Module = 'Check-Defender.psm1'; Function = 'Invoke-DefenderCheck'; Cycles = @('Daily', 'All') }
@@ -204,6 +212,22 @@ try {
 
         if ($Cycle -eq 'Daily' -or $SendSummary) {
             $null = Publish-MonitorDailySummary -CheckResult $merged -NotificationConfig $config.notification -Confirm:$false
+        }
+    }
+
+    # ダッシュボードは補助。生成に失敗しても監視本体は成功として扱う。
+    if (-not $SkipDashboard) {
+        try {
+            $openAlerts = @()
+            $notificationState = Get-NotificationState
+            foreach ($key in $notificationState.Keys) { $openAlerts += $notificationState[$key] }
+
+            $null = Write-MonitorDashboard -CheckResult $merged -DashboardConfig $config.dashboard `
+                -OpenAlert $openAlerts -TargetOrder @($targets | ForEach-Object { [string] $_.name }) -Confirm:$false
+        }
+        catch {
+            Write-MonitorLog -Level 'Error' -Category 'dashboard' -Message (
+                'ダッシュボードの生成に失敗しました: {0}' -f $_.Exception.Message)
         }
     }
 
