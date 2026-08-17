@@ -8,7 +8,7 @@ import { EventAvailable as EventAvailableIcon, Search as SearchIcon, ContentCopy
 import type { Patient, WardId } from '../../types';
 import {
   ROOMS, MEDICAL_INSTITUTIONS, REFERRAL_ROUTES_ADMIT_BASE, REFERRAL_ROUTES_ADMIT_OPTIONAL,
-  ADMIT_FORM_TYPES, ADMIT_DOCS_BY_FORM, THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES,
+  ADMIT_FORM_TYPES, THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES,
 } from '../../data/mockData';
 import type { AdmitFormType } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
@@ -82,7 +82,6 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const [roomUndecided, setRoomUndecided] = React.useState<boolean>(false);
   const [memo, setMemo] = React.useState('');
   const [admitForm, setAdmitForm] = React.useState<AdmitFormType>('任意入院');
-  const [docs, setDocs] = React.useState<Set<string>>(new Set());
   const [referralId, setReferralId] = React.useState<string>('');
   const [route, setRoute] = React.useState<string>('直接入院');
   const [reason, setReason] = React.useState('');
@@ -120,7 +119,6 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       setRoomUndecided(editing ? editing.roomNumber === '—' : false);
       setMemo('');
       setAdmitForm('任意入院');
-      setDocs(new Set(ADMIT_DOCS_BY_FORM['任意入院'].slice(0, 3)));
       // 治療歴から複写の優先順: 直近退院の紹介医療機関 → 入院時の紹介元
       const th = THERAPY_HISTORY_SAMPLES.find((t) => t.patientId === patient.id);
       setReferralId(th?.lastDischargeReferralId ?? th?.admitReferralId ?? '');
@@ -138,10 +136,7 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     }
   }, [open, patient, editingOrderId]);
 
-  // 入院形態が変わったら入院時文書チェックリストを差し替え
-  React.useEffect(() => {
-    setDocs(new Set(ADMIT_DOCS_BY_FORM[admitForm].slice(0, 2)));
-  }, [admitForm]);
+  // 入院時文書は現時点では電子カルテで取り扱わないため、入院形態連動の文書チェックは削除（2026-08-17）。
 
   // 入院日が変わったら自動食事開始時間帯を再設定（モック: 当日入院は次の利用可能スロット、翌日以降は朝食）
   React.useEffect(() => {
@@ -187,14 +182,6 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const referralRoutes = optionalFeatures.medicalProtection
     ? [...REFERRAL_ROUTES_ADMIT_BASE, REFERRAL_ROUTES_ADMIT_OPTIONAL]
     : [...REFERRAL_ROUTES_ADMIT_BASE];
-
-  const toggleDoc = (d: string) =>
-    setDocs((s) => {
-      const n = new Set(s);
-      if (n.has(d)) n.delete(d);
-      else n.add(d);
-      return n;
-    });
 
   const handleCopyFromTherapy = () => {
     const th = THERAPY_HISTORY_SAMPLES.find((t) => t.patientId === patient.id);
@@ -470,20 +457,7 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
               )}
             </Stack>
 
-            <Box>
-              <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-                入院時文書（入院形態「{admitForm}」に紐づくチェック）
-              </Typography>
-              <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
-                {ADMIT_DOCS_BY_FORM[admitForm].map((d) => (
-                  <FormControlLabel
-                    key={d}
-                    control={<Checkbox checked={docs.has(d)} onChange={() => toggleDoc(d)} />}
-                    label={d}
-                  />
-                ))}
-              </Stack>
-            </Box>
+            {/* 入院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17） */}
 
             <Divider />
             <Box>

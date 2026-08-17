@@ -17,9 +17,7 @@ interface Props {
   onConfirmed: (orderId: string) => void;
 }
 
-const DISCHARGE_DOCS = [
-  '退院サマリ', '紹介状', '転院連絡票', '訪問看護指示書',
-];
+// 退院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17）。
 
 const HOSPITALS = ['—', '〇〇医院', '△△クリニック', '□□総合病院'];
 const OUTCOMES = ['治癒', '軽快', '転院', '死亡', '中止'];
@@ -52,7 +50,6 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const [originalMealEndAt, setOriginalMealEndAt] = React.useState<string>(initialDischarge);
   const [outcome, setOutcome] = React.useState<string>('治癒');
   const [memo, setMemo] = React.useState('');
-  const [docs, setDocs] = React.useState<Set<string>>(new Set(DISCHARGE_DOCS.slice(0, 2)));
   const [hospital, setHospital] = React.useState('—');
   const [reason, setReason] = React.useState('');
   const [orderText, setOrderText] = React.useState('');
@@ -73,7 +70,6 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
       setOriginalMealEndAt(init);
       setOutcome('治癒');
       setMemo('');
-      setDocs(new Set(DISCHARGE_DOCS.slice(0, 2)));
       setHospital('—');
       setReason('');
       setOrderText('');
@@ -103,14 +99,6 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const pendingOrders = PENDING_ORDERS_SAMPLES.filter(
     (p) => p.patientId === order.patientId && (p.category === '入院専用' || p.category === '移動' || p.category === '給食' || p.category === 'リハビリ'),
   );
-
-  const toggleDoc = (d: string) =>
-    setDocs((s) => {
-      const n = new Set(s);
-      if (n.has(d)) n.delete(d);
-      else n.add(d);
-      return n;
-    });
 
   const startConfirmation = () => {
     if (futureDate) {
@@ -241,20 +229,7 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
 
             <TextField size="small" label="メモ" multiline rows={2} value={memo} onChange={(e) => setMemo(e.target.value)} />
 
-            <Box>
-              <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-                退院時文書（期限管理マスタ設定）
-              </Typography>
-              <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
-                {DISCHARGE_DOCS.map((d) => (
-                  <FormControlLabel
-                    key={d}
-                    control={<Checkbox checked={docs.has(d)} onChange={() => toggleDoc(d)} />}
-                    label={d}
-                  />
-                ))}
-              </Stack>
-            </Box>
+            {/* 退院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17） */}
 
             <Stack direction="row" spacing={1.5}>
               <FormControl size="small" sx={{ minWidth: 200 }}>
