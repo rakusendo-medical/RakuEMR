@@ -181,7 +181,8 @@ function Get-SqlConnectionString {
         接続文字列を組み立てる。純粋関数。
 
         .DESCRIPTION
-        SQL 認証のパスワードは引数で受け取り、設定ファイルには保存しない。
+        SQL 認証を使う場合の資格情報は PSCredential で受け取る。設定ファイルには保存しない。
+        接続文字列を組み立てる都合上、内部で一度だけ平文に展開する。
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -193,12 +194,8 @@ function Get-SqlConnectionString {
         [bool] $UseIntegratedSecurity = $true,
 
         [Parameter()]
-        [AllowEmptyString()]
-        [string] $UserId = '',
-
-        [Parameter()]
-        [AllowEmptyString()]
-        [string] $Password = '',
+        [AllowNull()]
+        [pscredential] $Credential = $null,
 
         [Parameter()]
         [int] $ConnectTimeoutSeconds = 10
@@ -214,8 +211,11 @@ function Get-SqlConnectionString {
         $builder['Integrated Security'] = $true
     }
     else {
-        $builder['User ID'] = $UserId
-        $builder['Password'] = $Password
+        if ($null -eq $Credential) {
+            throw 'SQL 認証を指定した場合は資格情報が必要です。'
+        }
+        $builder['User ID'] = $Credential.UserName
+        $builder['Password'] = $Credential.GetNetworkCredential().Password
     }
 
     return $builder.ConnectionString
@@ -295,20 +295,17 @@ function Get-DatabaseData {
     $connectTimeout = [int] (Get-ConfigValue -InputObject $Setting -Name 'connectTimeoutSeconds' -Default 10)
     $queryTimeout = [int] (Get-ConfigValue -InputObject $Setting -Name 'queryTimeoutSeconds' -Default 30)
 
-    $userId = ''
-    $password = ''
+    $credential = $null
     if (-not $useIntegrated) {
         $credentialName = [string] (Get-ConfigValue -InputObject $Setting -Name 'credentialName' -Default '')
         $credential = Get-MonitorCredential -Name $credentialName
         if ($null -eq $credential) {
             throw ('SQL 認証の資格情報 "{0}" を取得できません。Install-Credentials.ps1 で登録してください。' -f $credentialName)
         }
-        $userId = $credential.UserName
-        $password = $credential.GetNetworkCredential().Password
     }
 
     $connectionString = Get-SqlConnectionString -ServerInstance $serverInstance `
-        -UseIntegratedSecurity $useIntegrated -UserId $userId -Password $password `
+        -UseIntegratedSecurity $useIntegrated -Credential $credential `
         -ConnectTimeoutSeconds $connectTimeout
 
     # ローカル対象なら収集サーバ自身から接続する。リモート対象は対象サーバ上で実行し、

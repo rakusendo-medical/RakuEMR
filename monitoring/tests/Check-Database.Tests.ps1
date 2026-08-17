@@ -196,11 +196,19 @@ Describe 'Get-SqlConnectionString' {
     }
 
     It 'SQL 認証の接続文字列を組み立てる' {
+        # ConvertTo-SecureString -AsPlainText は使わない（静的解析で弾かれる書き方を
+        # テストコードにも持ち込まないため）。SecureString へ 1 文字ずつ追加する。
+        $credential = New-Object System.Management.Automation.PSCredential('monitor', (New-TestSecureString))
         $connectionString = Get-SqlConnectionString -ServerInstance '192.168.252.210\YAYOI' `
-            -UseIntegratedSecurity $false -UserId 'monitor' -Password 'p@ss'
+            -UseIntegratedSecurity $false -Credential $credential
 
         $connectionString | Should -Match 'User ID=monitor'
         $connectionString | Should -Not -Match 'Integrated Security=True'
+    }
+
+    It 'SQL 認証で資格情報が無ければ例外にする（平文フォールバックをしない）' {
+        { Get-SqlConnectionString -ServerInstance '.\YAYOI' -UseIntegratedSecurity $false -Credential $null } |
+            Should -Throw
     }
 
     It 'SqlConnectionStringBuilder が利用できる（sqlcmd / SqlServer モジュール非依存の確認）' {

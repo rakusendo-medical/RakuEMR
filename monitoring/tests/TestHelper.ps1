@@ -173,3 +173,26 @@ function New-TestBackupSnapshot {
         Error           = $ErrorMessage
     }
 }
+
+function New-TestSecureString {
+    <#
+        .SYNOPSIS
+        テスト用のダミー SecureString を作る。
+
+        .DESCRIPTION
+        ConvertTo-SecureString -AsPlainText は静的解析で弾かれる書き方なので使わない。
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
+        Justification = 'テスト用のモックデータを生成して返すだけのファクトリ関数。')]
+    [CmdletBinding()]
+    [OutputType([securestring])]
+    param(
+        [Parameter()]
+        [string] $Text = 'dummy-password'
+    )
+
+    $secure = New-Object System.Security.SecureString
+    foreach ($character in $Text.ToCharArray()) { $secure.AppendChar($character) }
+    $secure.MakeReadOnly()
+    return $secure
+}
