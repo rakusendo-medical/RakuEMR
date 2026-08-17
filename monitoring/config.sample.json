@@ -314,6 +314,8 @@
         "credentialName": "ilo-yayoi",
         "__skipCertificateCheck": "自己署名証明書を許容する場合のみ true。既定は false（検証あり）。",
         "skipCertificateCheck": false,
+        "__treatUnreachableAsUnknown": "iLO に到達できないときの扱い。true で Unknown として通知する（既定）。false にすると Skipped 扱いになり通知しない。どちらでも他項目の監視は継続する。",
+        "treatUnreachableAsUnknown": true,
         "__timeoutSeconds": "Redfish 呼び出しのタイムアウト（秒）。",
         "timeoutSeconds": 30,
         "__endpoints": "Redfish のスキーマは機種・ファーム世代で差があるため設定可能にしている。null または空文字でその項目をスキップする。",
@@ -415,6 +417,7 @@
         "address": "192.168.252.221",
         "credentialName": "ilo-hvhost",
         "skipCertificateCheck": false,
+        "treatUnreachableAsUnknown": true,
         "timeoutSeconds": 30,
         "endpoints": {
           "system": "/redfish/v1/Systems/1",

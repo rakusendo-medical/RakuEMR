@@ -75,6 +75,7 @@ $checkRegistry = @(
     [pscustomobject]@{ Id = 'WU'; Module = 'Check-WindowsUpdate.psm1'; Function = 'Invoke-WindowsUpdateCheck'; Cycles = @('Daily', 'All') }
     [pscustomobject]@{ Id = 'CAL'; Module = 'Check-RdsLicense.psm1'; Function = 'Invoke-RdsLicenseCheck'; Cycles = @('Daily', 'All') }
     [pscustomobject]@{ Id = 'VM'; Module = 'Check-HyperV.psm1'; Function = 'Invoke-HyperVCheck'; Cycles = @('Daily', 'All') }
+    [pscustomobject]@{ Id = 'HW'; Module = 'Check-Hardware.psm1'; Function = 'Invoke-HardwareCheck'; Cycles = @('Hourly', 'Daily', 'All') }
 )
 
 function Get-ActiveCheck {
