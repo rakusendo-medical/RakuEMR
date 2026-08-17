@@ -196,3 +196,25 @@ function New-TestSecureString {
     $secure.MakeReadOnly()
     return $secure
 }
+
+function Get-MonitorScriptToken {
+    <#
+        .SYNOPSIS
+        スクリプトをトークン解析して返す。
+
+        .DESCRIPTION
+        品質チェックを文字列一致で書くと、コメントや説明文まで拾って誤検知する。
+        誤検知するテストは無視されるようになるため、必ずトークンで判定する。
+    #>
+    [CmdletBinding()]
+    [OutputType([object[]])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path
+    )
+
+    $content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    $errors = $null
+    $tokens = [System.Management.Automation.PSParser]::Tokenize($content, [ref] $errors)
+    return @($tokens)
+}
