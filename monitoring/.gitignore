@@ -1,7 +1,5 @@
 # 実行時に生成されるもの
 config.json
 logs/
-state/
-
-# state 配下は実行時生成だが、ディレクトリの存在は保ちたい
+state/*
 !state/.gitkeep
