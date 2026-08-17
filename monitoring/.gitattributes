@@ -1,0 +1,6 @@
+# Windows サーバへ配置する成果物。PowerShell 5.1 が日本語を正しく読むには
+# UTF-8 BOM 付き・CRLF である必要があるため、Git による改行変換を無効にする。
+*.ps1  -text
+*.psm1 -text
+*.psd1 -text
+*.json -text

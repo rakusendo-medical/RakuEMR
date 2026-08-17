@@ -1,0 +1,506 @@
+﻿{
+  "__": "===================================================================",
+  "__file": "監視ツール設定サンプル。config.json にコピーして環境値へ書き換えて使う。",
+  "__comment_syntax": "JSON にコメント構文が無いため、'__' で始まるキーを注釈として扱う。読込時に自動で除去されるので削除しても残しても動作は変わらない。",
+  "__encoding": "このファイルは UTF-8（BOM 付き）で保存すること。BOM が無いと PowerShell 5.1 が日本語を文字化けさせる。",
+  "__placeholders": "IP・パス・宛先などは仮の値。確定後に差し替える。ハードコードはしていないため、本ファイルの変更だけで反映される。",
+
+  "general": {
+    "__stateDirectory": "判定履歴・通知抑制状態の保存先。monitoring からの相対パスまたは絶対パス。",
+    "stateDirectory": "state",
+    "__logDirectory": "ログ出力先。monitoring からの相対パスまたは絶対パス。",
+    "logDirectory": "logs",
+    "__logRetentionDays": "この日数を超えたログファイルを削除する。0 で削除しない。",
+    "logRetentionDays": 30,
+    "__logLevel": "Debug / Info / Warn / Error。通常は Info。",
+    "logLevel": "Info"
+  },
+
+  "notification": {
+    "__enabled": "false にすると一切通知しない。導入時の試験でのみ false にすること。",
+    "enabled": true,
+    "__channel": "smtp | backlog | none。通知経路の切替。",
+    "channel": "smtp",
+    "__minimumLevel": "この深刻度以上を通知する。Warning / Unknown / Critical。既定は Warning。",
+    "minimumLevel": "Warning",
+    "__renotifyIntervalHours": "同一事象が継続している間の再通知間隔（時間）。フラッピングによる通知の洪水を防ぐ。",
+    "renotifyIntervalHours": 6,
+    "__notifyOnResolve": "異常が解消したときに『解消しました』通知を送るか。",
+    "notifyOnResolve": true,
+    "__subjectPrefix": "メール件名 / Backlog 課題名の先頭に付ける文字列。",
+    "subjectPrefix": "[監視]",
+    "__maxFindingsPerMail": "1 通に載せる検知事項の最大件数。超過分は件数のみ表示。",
+    "maxFindingsPerMail": 50,
+
+    "__dailySummary": "日次サマリ。異常ゼロでも必ず 1 通送る。『今日も届いた＝監視は生きている』を成立させるための要。",
+    "dailySummary": {
+      "__enabled": "false にしないこと。無効化すると監視ツール自体の停止に気づけなくなる。",
+      "enabled": true,
+      "__includeAllChecks": "true で全チェックの判定結果一覧を本文に載せる。",
+      "includeAllChecks": true
+    },
+
+    "smtp": {
+      "__server": "SMTP サーバのホスト名または IP。内部 DNS が無いため IP 指定を推奨。",
+      "server": "192.168.252.250",
+      "__port": "SMTP ポート。25 / 587 / 465 など。",
+      "port": 25,
+      "__useSsl": "STARTTLS / SSL を使うか。",
+      "useSsl": false,
+      "__from": "差出人アドレス。",
+      "from": "monitor@example.local",
+      "__to": "宛先アドレス（配列）。運用 3 名全員を入れること。1 名だけだと不在時に気づけない。",
+      "to": [
+        "admin1@example.local",
+        "admin2@example.local",
+        "admin3@example.local"
+      ],
+      "__useCredential": "SMTP 認証を使うか。true の場合 credentialName の資格情報を使用する。",
+      "useCredential": false,
+      "__credentialName": "Install-Credentials.ps1 で登録した資格情報名。平文パスワードはここに書かないこと。",
+      "credentialName": "smtp",
+      "__timeoutSeconds": "送信タイムアウト（秒）。",
+      "timeoutSeconds": 30
+    },
+
+    "backlog": {
+      "__spaceUrl": "Backlog スペースの URL。例: https://example.backlog.jp",
+      "spaceUrl": "https://example.backlog.jp",
+      "__projectKey": "課題を起票するプロジェクトキー。",
+      "projectKey": "INFRA",
+      "__issueTypeId": "課題種別 ID。Backlog の API /api/v2/projects/:key/issueTypes で確認する。",
+      "issueTypeId": 0,
+      "__priorityId": "優先度 ID。2=高 / 3=中 / 4=低。",
+      "priorityId": 3,
+      "__criticalPriorityId": "Critical / Unknown 検知時の優先度 ID。",
+      "criticalPriorityId": 2,
+      "__apiKeyCredentialName": "Install-Credentials.ps1 で登録した API キーの資格情報名。API キーを直接書かないこと。",
+      "apiKeyCredentialName": "backlog",
+      "__assigneeId": "担当者のユーザー ID。null で未割当。",
+      "assigneeId": null,
+      "__timeoutSeconds": "API 呼び出しのタイムアウト（秒）。",
+      "timeoutSeconds": 30
+    }
+  },
+
+  "dashboard": {
+    "__enabled": "ダッシュボード HTML を生成するか。ダッシュボードは補助であり、通知の代わりにはならない。",
+    "enabled": true,
+    "__outputPath": "生成する HTML の出力先。共有フォルダの絶対パスを指定する。日本語パスも可。",
+    "outputPath": "D:\\リモートデスクトップ\\監視\\status.html",
+    "__refreshSeconds": "ブラウザの自動リロード間隔（秒）。0 で自動リロードしない。",
+    "refreshSeconds": 300,
+    "__historyDays": "折れ線グラフに表示する日数。履歴は state/history.json に保存する（DB は使わない）。",
+    "historyDays": 7,
+    "__title": "ダッシュボードのタイトル。",
+    "title": "サーバ監視ダッシュボード"
+  },
+
+  "__targets": "監視対象。ホストの OS もゲスト VM も等しく監視対象に含めること。ホストが未パッチだとゲストが無事でも意味がない。",
+  "targets": [
+    {
+      "__name": "対象の表示名。通知・ダッシュボード・状態ファイルのキーになるため、後から変更しないこと。",
+      "name": "YAYOI-SV",
+      "__description": "自由記述。",
+      "description": "弥生会計サーバ（物理・HPE ProLiant）",
+      "__address": "接続先。内部 DNS が無いため IP 指定を推奨。mode=local なら未使用。",
+      "address": "192.168.252.210",
+      "__enabled": "false でこの対象を丸ごと監視対象外にする。",
+      "enabled": true,
+      "__roles": "参考情報のタグ。sql / yayoi / hyperv-host / rds / guest など。",
+      "roles": ["sql", "yayoi", "physical"],
+
+      "connection": {
+        "__mode": "local | remote。local は本スクリプトが動いているサーバ自身。remote は WinRM 経由。",
+        "mode": "local",
+        "__credentialName": "mode=remote のとき使うローカル管理者資格情報の名前。ワークグループのため各サーバのローカル資格情報が必要。",
+        "credentialName": null,
+        "__useSsl": "WinRM over HTTPS を使うか。",
+        "useSsl": false,
+        "__port": "WinRM ポート。null で既定（5985 / 5986）。",
+        "port": null
+      },
+
+      "checks": {
+        "service": {
+          "__": "SVC: サービス稼働監視。15 分間隔。停止していたら即通知。",
+          "enabled": true,
+          "__required": "停止していたら Critical にするサービス名。表示名ではなくサービス名（短い方）を指定する。弥生関連の正確なサービス名は導入時に services.msc で確認して差し替える。",
+          "required": [
+            "MSSQL$YAYOI",
+            "SQLAgent$YAYOI",
+            "w32time",
+            "WinDefend"
+          ],
+          "__optional": "停止していたら Warning にとどめるサービス名。",
+          "optional": [
+            "SQLBrowser"
+          ],
+          "__treatMissingAsCritical": "サービスが存在しない場合に Critical とするか。false なら Unknown。",
+          "treatMissingAsCritical": true
+        },
+
+        "disk": {
+          "__": "DSK: ディスク空き容量。1 時間間隔。",
+          "enabled": true,
+          "__warningFreePercent": "空き率がこの値を下回ったら Warning。",
+          "warningFreePercent": 20,
+          "__criticalFreePercent": "空き率がこの値を下回ったら Critical。",
+          "criticalFreePercent": 10,
+          "__warningFreeGB": "空き容量がこの値（GB）を下回ったら Warning。0 または null で無効。大容量ボリュームで率だけでは検知が遅れるのを補う。",
+          "warningFreeGB": 50,
+          "__criticalFreeGB": "空き容量がこの値（GB）を下回ったら Critical。0 または null で無効。",
+          "criticalFreeGB": 20,
+          "__excludeVolumes": "監視から除外するドライブレター。",
+          "excludeVolumes": ["A:", "B:"]
+        },
+
+        "backup": {
+          "__": "BKP: バックアップ鮮度。日次。『成功しているか不明』を潰すための最重要項目。",
+          "enabled": true,
+          "__paths": "監視するバックアップ出力先。複数指定可。パスは導入時に確定値へ差し替える。",
+          "paths": [
+            {
+              "__name": "通知に出す表示名。",
+              "name": "弥生会計バックアップ",
+              "__path": "バックアップ出力先フォルダ。UNC も可。日本語パス可。",
+              "path": "D:\\Backup\\弥生",
+              "__filePattern": "対象ファイルのワイルドカード。",
+              "filePattern": "*.*",
+              "__recurse": "サブフォルダも対象にするか。",
+              "recurse": true,
+              "__maxAgeHours": "最新ファイルがこの時間より古ければ通知。24 時間で日次バックアップの欠落を検知する。",
+              "maxAgeHours": 24,
+              "__criticalAgeHours": "この時間より古ければ Critical。",
+              "criticalAgeHours": 48,
+              "__minFileCount": "ファイル数がこれ未満なら通知。0 で無効。",
+              "minFileCount": 1,
+              "__minTotalSizeMB": "合計サイズがこれ未満なら通知（中身が空のバックアップの検知）。0 で無効。",
+              "minTotalSizeMB": 10,
+              "__minLatestSizeMB": "最新ファイルのサイズがこれ未満なら通知。0 で無効。",
+              "minLatestSizeMB": 1
+            }
+          ]
+        },
+
+        "database": {
+          "__": "LDF / RCV / DBC: SQL Server の状態。日次。sqlcmd も SqlServer モジュールも使わず System.Data.SqlClient で接続する。",
+          "enabled": true,
+          "__serverInstance": "接続先。ローカル既定は '.\\YAYOI'。リモートなら '192.168.252.210\\YAYOI'。",
+          "serverInstance": ".\\YAYOI",
+          "__useIntegratedSecurity": "true で Windows 認証。false なら credentialName の SQL 認証を使う。",
+          "useIntegratedSecurity": true,
+          "__credentialName": "SQL 認証を使う場合の資格情報名。",
+          "credentialName": null,
+          "__connectTimeoutSeconds": "接続タイムアウト（秒）。",
+          "connectTimeoutSeconds": 10,
+          "__queryTimeoutSeconds": "クエリタイムアウト（秒）。",
+          "queryTimeoutSeconds": 30,
+          "__excludeDatabases": "監視対象外の DB 名。システム DB は既定で除外する。",
+          "excludeDatabases": ["master", "model", "msdb", "tempdb"],
+          "__ldfWarningRatio": "ldf / mdf 比がこの値を超えたら Warning。",
+          "ldfWarningRatio": 2.0,
+          "__ldfCriticalRatio": "ldf / mdf 比がこの値を超えたら Critical。今回の障害（mdf 23.9GB に対し ldf 368.8GB）を踏まえ 3 倍を既定とする。",
+          "ldfCriticalRatio": 3.0,
+          "__ldfIgnoreBelowMB": "ldf がこのサイズ未満なら比率判定をしない。小規模 DB での誤検知を防ぐ。",
+          "ldfIgnoreBelowMB": 512,
+          "__ldfWarningSizeGB": "比率に関係なく ldf 単体がこのサイズ（GB）を超えたら Warning。0 で無効。",
+          "ldfWarningSizeGB": 50,
+          "__expectedRecoveryModel": "期待する復旧モデル。これ以外を検出したら通知。",
+          "expectedRecoveryModel": "SIMPLE",
+          "__expectedCollation": "期待する照合順序。これ以外を検出したら通知。",
+          "expectedCollation": "Japanese_CI_AS"
+        },
+
+        "defender": {
+          "__": "DEF: Defender。日次。リアルタイム保護が無効・定義が古い状態を検知する。",
+          "enabled": true,
+          "__requireRealTimeProtection": "リアルタイム保護が無効なら Critical。",
+          "requireRealTimeProtection": true,
+          "__requireTamperProtection": "改ざん防止が無効なら Warning。",
+          "requireTamperProtection": true,
+          "__signatureWarningAgeDays": "定義がこの日数より古ければ Warning。",
+          "signatureWarningAgeDays": 3,
+          "__signatureCriticalAgeDays": "定義がこの日数より古ければ Critical。",
+          "signatureCriticalAgeDays": 7
+        },
+
+        "timeSync": {
+          "__": "NTP: 時刻同期。日次。同期ソース・最終同期時刻・オフセット実測値を見る。",
+          "enabled": true,
+          "__forbidFreeRunning": "同期ソースが Free-running / Local CMOS Clock なら通知する。",
+          "forbidFreeRunning": true,
+          "__warningOffsetSeconds": "オフセットがこの秒数を超えたら Warning。",
+          "warningOffsetSeconds": 5,
+          "__criticalOffsetSeconds": "オフセットがこの秒数を超えたら Critical。今回 2 台で 1 分 28 秒ずれていた事象を踏まえ 30 秒を既定とする。",
+          "criticalOffsetSeconds": 30,
+          "__maxSyncAgeHours": "最終同期がこの時間より古ければ通知。",
+          "maxSyncAgeHours": 48
+        },
+
+        "eventLog": {
+          "__": "EVT: イベントログ。1 時間間隔。System / Application の Error・Critical。",
+          "enabled": true,
+          "__logNames": "対象ログ。",
+          "logNames": ["System", "Application"],
+          "__levels": "対象レベル。1=Critical, 2=Error。",
+          "levels": [1, 2],
+          "__lookbackHours": "遡って集計する時間。実行間隔よりやや長めにして取りこぼしを防ぐ。",
+          "lookbackHours": 2,
+          "__maxEventsPerLog": "1 ログあたりの取得上限。",
+          "maxEventsPerLog": 200,
+          "__warningCount": "件数がこれ以上で Warning。",
+          "warningCount": 1,
+          "__criticalCount": "件数がこれ以上で Critical。",
+          "criticalCount": 20,
+          "__ignore": "既知で無害なイベントの除外条件。providerName は前方一致ではなくワイルドカード一致。",
+          "ignore": [
+            {
+              "__eventId": "除外するイベント ID。",
+              "eventId": 10016,
+              "__logName": "対象ログ名。null で全ログ。",
+              "logName": "System",
+              "__providerName": "プロバイダ名（ワイルドカード可）。null で全プロバイダ。",
+              "providerName": null,
+              "__reason": "除外理由。必ず書くこと。理由不明の除外は後で誰も判断できなくなる。",
+              "reason": "DCOM 権限の既知の警告。業務影響なしと確認済み。"
+            }
+          ]
+        },
+
+        "windowsUpdate": {
+          "__": "WU: Windows Update 最終適用日。日次。踏み台サーバで 7 年 4 か月未適用だった事象への対策。",
+          "enabled": true,
+          "__warningAgeDays": "最終適用からこの日数を超えたら Warning。",
+          "warningAgeDays": 30,
+          "__criticalAgeDays": "最終適用からこの日数を超えたら Critical。",
+          "criticalAgeDays": 45
+        },
+
+        "rdsLicense": {
+          "__": "CAL: RDS デバイス CAL。日次。Win32_TSLicenseKeyPack から発行数・残数を取得する。RD ライセンスサーバ上でのみ有効化する。",
+          "enabled": false,
+          "__warningRemainingPercent": "残数の割合がこれを下回ったら Warning。",
+          "warningRemainingPercent": 20,
+          "__criticalRemainingPercent": "残数の割合がこれを下回ったら Critical。CAL 20 本が枯渇した事象を踏まえ 10% を既定とする。",
+          "criticalRemainingPercent": 10,
+          "__minRemainingCount": "残数の実数がこれを下回ったら Critical。割合だけでは本数が少ないときに検知が遅れる。",
+          "minRemainingCount": 2,
+          "__includeKeyPackTypes": "集計対象のキーパック種別 ID。空配列で全種別。6=デバイス CAL の一時/永続を含む構成が多い。",
+          "includeKeyPackTypes": []
+        },
+
+        "hyperV": {
+          "__": "VM: Hyper-V。日次。Hyper-V ホスト上でのみ有効化する。",
+          "enabled": false,
+          "__expectedRunningVms": "常時稼働しているべき VM 名。停止していたら Critical。",
+          "expectedRunningVms": ["BASTION-VM"],
+          "__warnOnAnyCheckpoint": "チェックポイントが 1 つでも残っていたら通知する。残存チェックポイントはディスク肥大の原因になるため既定で true。",
+          "warnOnAnyCheckpoint": true,
+          "__checkpointCriticalAgeDays": "チェックポイントがこの日数以上残っていたら Critical。",
+          "checkpointCriticalAgeDays": 7,
+          "__minHostFreeMemoryGB": "ホストの空きメモリがこれを下回ったら Warning。0 で無効。",
+          "minHostFreeMemoryGB": 4
+        }
+      },
+
+      "__hardware": "HW: iLO Redfish によるハードウェア監視。OS 標準の WMI では温度・ファンを安定して取得できないため iLO を使う。ゲスト VM では enabled=false にすること。",
+      "hardware": {
+        "__enabled": "ハードウェア監視を行うか。",
+        "enabled": true,
+        "__address": "iLO の IP アドレスまたはホスト名。",
+        "address": "192.168.252.220",
+        "__credentialName": "Install-Credentials.ps1 で登録した iLO の資格情報名。平文で書かないこと。",
+        "credentialName": "ilo-yayoi",
+        "__skipCertificateCheck": "自己署名証明書を許容する場合のみ true。既定は false（検証あり）。",
+        "skipCertificateCheck": false,
+        "__timeoutSeconds": "Redfish 呼び出しのタイムアウト（秒）。",
+        "timeoutSeconds": 30,
+        "__endpoints": "Redfish のスキーマは機種・ファーム世代で差があるため設定可能にしている。null または空文字でその項目をスキップする。",
+        "endpoints": {
+          "__system": "全体ヘルス。",
+          "system": "/redfish/v1/Systems/1",
+          "__thermal": "温度・ファン。",
+          "thermal": "/redfish/v1/Chassis/1/Thermal",
+          "__power": "電源。",
+          "power": "/redfish/v1/Chassis/1/Power",
+          "__storage": "ストレージコントローラ（RAID・物理ディスク）。",
+          "storage": "/redfish/v1/Systems/1/SmartStorage/ArrayControllers",
+          "__eventLog": "ハードウェアログ（IML）。",
+          "eventLog": "/redfish/v1/Systems/1/LogServices/IML/Entries"
+        },
+        "__thresholds": "Redfish が返す UpperThresholdCritical / UpperThresholdNonCritical を優先し、返らない場合に下記の既定値を使う。",
+        "thresholds": {
+          "__defaultTemperatureWarningCelsius": "温度の警告閾値（Redfish が閾値を返さない場合）。",
+          "defaultTemperatureWarningCelsius": 70,
+          "__defaultTemperatureCriticalCelsius": "温度の危険閾値（Redfish が閾値を返さない場合）。",
+          "defaultTemperatureCriticalCelsius": 85,
+          "__eventLogLookbackHours": "IML から取得する期間（時間）。",
+          "eventLogLookbackHours": 24,
+          "__eventLogMaxEntries": "IML の取得上限件数。",
+          "eventLogMaxEntries": 100
+        }
+      }
+    },
+
+    {
+      "name": "HV-HOST",
+      "description": "Hyper-V ホスト（物理・HPE ProLiant）",
+      "address": "192.168.252.211",
+      "enabled": true,
+      "roles": ["hyperv-host", "physical"],
+
+      "connection": {
+        "__mode": "収集サーバから見てリモート。ワークグループのため WinRM の TrustedHosts 設定とローカル資格情報が必要（README 参照）。",
+        "mode": "remote",
+        "credentialName": "hv-host-admin",
+        "useSsl": false,
+        "port": null
+      },
+
+      "checks": {
+        "service": {
+          "enabled": true,
+          "required": ["vmms", "w32time", "WinDefend"],
+          "optional": [],
+          "treatMissingAsCritical": true
+        },
+        "disk": {
+          "enabled": true,
+          "warningFreePercent": 20,
+          "criticalFreePercent": 10,
+          "warningFreeGB": 100,
+          "criticalFreeGB": 40,
+          "excludeVolumes": ["A:", "B:"]
+        },
+        "backup": { "enabled": false, "paths": [] },
+        "database": { "enabled": false },
+        "defender": {
+          "enabled": true,
+          "requireRealTimeProtection": true,
+          "requireTamperProtection": true,
+          "signatureWarningAgeDays": 3,
+          "signatureCriticalAgeDays": 7
+        },
+        "timeSync": {
+          "enabled": true,
+          "forbidFreeRunning": true,
+          "warningOffsetSeconds": 5,
+          "criticalOffsetSeconds": 30,
+          "maxSyncAgeHours": 48
+        },
+        "eventLog": {
+          "enabled": true,
+          "logNames": ["System", "Application"],
+          "levels": [1, 2],
+          "lookbackHours": 2,
+          "maxEventsPerLog": 200,
+          "warningCount": 1,
+          "criticalCount": 20,
+          "ignore": []
+        },
+        "windowsUpdate": { "enabled": true, "warningAgeDays": 30, "criticalAgeDays": 45 },
+        "rdsLicense": { "enabled": false },
+        "hyperV": {
+          "enabled": true,
+          "expectedRunningVms": ["BASTION-VM"],
+          "warnOnAnyCheckpoint": true,
+          "checkpointCriticalAgeDays": 7,
+          "minHostFreeMemoryGB": 4
+        }
+      },
+
+      "hardware": {
+        "enabled": true,
+        "address": "192.168.252.221",
+        "credentialName": "ilo-hvhost",
+        "skipCertificateCheck": false,
+        "timeoutSeconds": 30,
+        "endpoints": {
+          "system": "/redfish/v1/Systems/1",
+          "thermal": "/redfish/v1/Chassis/1/Thermal",
+          "power": "/redfish/v1/Chassis/1/Power",
+          "storage": "/redfish/v1/Systems/1/SmartStorage/ArrayControllers",
+          "eventLog": "/redfish/v1/Systems/1/LogServices/IML/Entries"
+        },
+        "thresholds": {
+          "defaultTemperatureWarningCelsius": 70,
+          "defaultTemperatureCriticalCelsius": 85,
+          "eventLogLookbackHours": 24,
+          "eventLogMaxEntries": 100
+        }
+      }
+    },
+
+    {
+      "name": "BASTION-VM",
+      "description": "踏み台サーバ（Hyper-V ゲスト VM・RD セッションホスト / RD ライセンスサーバ）",
+      "address": "192.168.252.212",
+      "enabled": true,
+      "roles": ["rds", "guest"],
+
+      "connection": {
+        "mode": "remote",
+        "credentialName": "bastion-admin",
+        "useSsl": false,
+        "port": null
+      },
+
+      "checks": {
+        "service": {
+          "enabled": true,
+          "__required": "RDS 関連。TermService=リモートデスクトップサービス、TermServLicensing=RD ライセンス、SessionEnv=RD 構成、UmRdpService=RD デバイスリダイレクタ。",
+          "required": ["TermService", "TermServLicensing", "SessionEnv", "w32time", "WinDefend"],
+          "optional": ["UmRdpService"],
+          "treatMissingAsCritical": true
+        },
+        "disk": {
+          "enabled": true,
+          "warningFreePercent": 20,
+          "criticalFreePercent": 10,
+          "warningFreeGB": 20,
+          "criticalFreeGB": 8,
+          "excludeVolumes": ["A:", "B:"]
+        },
+        "backup": { "enabled": false, "paths": [] },
+        "database": { "enabled": false },
+        "defender": {
+          "enabled": true,
+          "requireRealTimeProtection": true,
+          "requireTamperProtection": true,
+          "signatureWarningAgeDays": 3,
+          "signatureCriticalAgeDays": 7
+        },
+        "timeSync": {
+          "enabled": true,
+          "forbidFreeRunning": true,
+          "warningOffsetSeconds": 5,
+          "criticalOffsetSeconds": 30,
+          "maxSyncAgeHours": 48
+        },
+        "eventLog": {
+          "enabled": true,
+          "logNames": ["System", "Application"],
+          "levels": [1, 2],
+          "lookbackHours": 2,
+          "maxEventsPerLog": 200,
+          "warningCount": 1,
+          "criticalCount": 20,
+          "ignore": []
+        },
+        "windowsUpdate": { "enabled": true, "warningAgeDays": 30, "criticalAgeDays": 45 },
+        "rdsLicense": {
+          "enabled": true,
+          "warningRemainingPercent": 20,
+          "criticalRemainingPercent": 10,
+          "minRemainingCount": 2,
+          "includeKeyPackTypes": []
+        },
+        "hyperV": { "enabled": false }
+      },
+
+      "__hardware_guest": "ゲスト VM にハードウェア監視は適用しない。温度・ファン・電源はホスト側（HV-HOST）で取得する。",
+      "hardware": { "enabled": false }
+    }
+  ]
+}
