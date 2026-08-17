@@ -68,6 +68,7 @@ $checkRegistry = @(
     [pscustomobject]@{ Id = 'SVC'; Module = 'Check-Service.psm1'; Function = 'Invoke-ServiceCheck'; Cycles = @('Fast', 'Hourly', 'Daily', 'All') }
     [pscustomobject]@{ Id = 'DSK'; Module = 'Check-Disk.psm1'; Function = 'Invoke-DiskCheck'; Cycles = @('Hourly', 'Daily', 'All') }
     [pscustomobject]@{ Id = 'BKP'; Module = 'Check-Backup.psm1'; Function = 'Invoke-BackupCheck'; Cycles = @('Daily', 'All') }
+    [pscustomobject]@{ Id = 'DB'; Module = 'Check-Database.psm1'; Function = 'Invoke-DatabaseCheck'; Cycles = @('Daily', 'All') }
 )
 
 function Get-ActiveCheck {

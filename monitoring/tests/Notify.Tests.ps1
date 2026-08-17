@@ -11,7 +11,10 @@ BeforeAll {
             .SYNOPSIS
             テスト用のチェック結果を作る。
         #>
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
+        Justification = 'テスト用のモックデータを生成して返すだけのファクトリ関数。')]
         [CmdletBinding()]
+        [OutputType([object[]])]
         param(
             [Parameter()]
             [string] $DiskLevel = 'Warning'

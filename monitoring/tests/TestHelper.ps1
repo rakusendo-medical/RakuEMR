@@ -66,6 +66,8 @@ function New-TestVolume {
         .SYNOPSIS
         Win32_LogicalDisk 相当のモックオブジェクトを作る。
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
+        Justification = 'テスト用のモックデータを生成して返すだけのファクトリ関数。')]
     [CmdletBinding()]
     [OutputType([psobject])]
     param(
@@ -96,6 +98,8 @@ function New-TestService {
         .SYNOPSIS
         Win32_Service 相当のモックオブジェクトを作る。
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
+        Justification = 'テスト用のモックデータを生成して返すだけのファクトリ関数。')]
     [CmdletBinding()]
     [OutputType([psobject])]
     param(
@@ -126,6 +130,8 @@ function New-TestBackupSnapshot {
         .SYNOPSIS
         Get-BackupSnapshot 相当のモックオブジェクトを作る。
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
+        Justification = 'テスト用のモックデータを生成して返すだけのファクトリ関数。')]
     [CmdletBinding()]
     [OutputType([psobject])]
     param(
