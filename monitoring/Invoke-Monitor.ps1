@@ -69,6 +69,12 @@ $checkRegistry = @(
     [pscustomobject]@{ Id = 'DSK'; Module = 'Check-Disk.psm1'; Function = 'Invoke-DiskCheck'; Cycles = @('Hourly', 'Daily', 'All') }
     [pscustomobject]@{ Id = 'BKP'; Module = 'Check-Backup.psm1'; Function = 'Invoke-BackupCheck'; Cycles = @('Daily', 'All') }
     [pscustomobject]@{ Id = 'DB'; Module = 'Check-Database.psm1'; Function = 'Invoke-DatabaseCheck'; Cycles = @('Daily', 'All') }
+    [pscustomobject]@{ Id = 'DEF'; Module = 'Check-Defender.psm1'; Function = 'Invoke-DefenderCheck'; Cycles = @('Daily', 'All') }
+    [pscustomobject]@{ Id = 'NTP'; Module = 'Check-TimeSync.psm1'; Function = 'Invoke-TimeSyncCheck'; Cycles = @('Daily', 'All') }
+    [pscustomobject]@{ Id = 'EVT'; Module = 'Check-EventLog.psm1'; Function = 'Invoke-EventLogCheck'; Cycles = @('Hourly', 'Daily', 'All') }
+    [pscustomobject]@{ Id = 'WU'; Module = 'Check-WindowsUpdate.psm1'; Function = 'Invoke-WindowsUpdateCheck'; Cycles = @('Daily', 'All') }
+    [pscustomobject]@{ Id = 'CAL'; Module = 'Check-RdsLicense.psm1'; Function = 'Invoke-RdsLicenseCheck'; Cycles = @('Daily', 'All') }
+    [pscustomobject]@{ Id = 'VM'; Module = 'Check-HyperV.psm1'; Function = 'Invoke-HyperVCheck'; Cycles = @('Daily', 'All') }
 )
 
 function Get-ActiveCheck {
