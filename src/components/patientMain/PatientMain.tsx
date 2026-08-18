@@ -12,6 +12,8 @@ import FlowsheetView from '../flowsheet/Flowsheet';
 import NursingRecordView from '../nursing/NursingRecord';
 import OrderManagement from '../orders/OrderManagement';
 import OrderEntryDialog from '../orders/OrderEntryDialog';
+// 看護記録の作成入口は ep-10 の NursingRecordDialog に統一する
+import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
 import { useAppStore } from '../../stores/useAppStore';
 
 const PatientMain: React.FC = () => {
@@ -23,6 +25,7 @@ const PatientMain: React.FC = () => {
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const [tab, setTab] = useState(0);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [nursingRecordOpen, setNursingRecordOpen] = useState(false);
 
   const patient = selectedPatient || PATIENTS.find((p) => p.id === patientId);
 
@@ -129,7 +132,7 @@ const PatientMain: React.FC = () => {
           </Grid>
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
             <Button variant="contained" onClick={() => setTab(3)}>フローシート表示</Button>
-            <Button variant="contained" color="secondary" startIcon={<NoteAdd />}>看護記録作成</Button>
+            <Button variant="contained" color="secondary" startIcon={<NoteAdd />} onClick={() => setNursingRecordOpen(true)}>看護記録作成</Button>
             <Button variant="contained" sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }} startIcon={<Receipt />} onClick={() => setOrderDialogOpen(true)}>オーダ入力</Button>
             <Button variant="contained" color="error" startIcon={<MeetingRoom />} onClick={() => navigate('/admission')}>入退院管理</Button>
             <Button variant="outlined" onClick={() => navigate(`/karte/${patient.id}`, { state: { from: 'patient-list' } satisfies KartePageLocationState })}>カルテを開く</Button>
@@ -140,6 +143,17 @@ const PatientMain: React.FC = () => {
       {tab === 1 && <OrderManagement patientId={patient.id} />}
       {tab === 2 && <NursingRecordView patientId={patient.id} />}
       {tab === 3 && <FlowsheetView patientId={patient.id} />}
+
+      <NursingRecordDialog
+        open={nursingRecordOpen}
+        patientId={patient.id}
+        initialMode="new"
+        onClose={() => setNursingRecordOpen(false)}
+        onSaved={({ title }) => {
+          showSnackbar(`看護記録「${title}」を登録しました`, 'success');
+          setNursingRecordOpen(false);
+        }}
+      />
 
       <OrderEntryDialog
         open={orderDialogOpen}

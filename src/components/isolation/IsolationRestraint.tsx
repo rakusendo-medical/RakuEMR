@@ -21,7 +21,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import RestraintOrderDialog from './RestraintOrderDialog';
 import SignInputDialog from './SignInputDialog';
 import IsolationFilterDialog from './IsolationFilterDialog';
-import RestraintNursingRecordStub from './RestraintNursingRecordStub';
+import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
 import ObservationBulkDialog from './ObservationBulkDialog';
 import ObservationRecordDialog from './ObservationRecordDialog';
 import IsolationHistoryView from './IsolationHistoryView';
@@ -254,7 +254,14 @@ const IsolationOrderListTab: React.FC = () => {
     open: false, title: '隔離開始',
   });
   const [signDialog, setSignDialog] = useState<{ open: boolean; orderId: string; kind: IsolationConfirmSignKind } | null>(null);
-  const [nursingDialog, setNursingDialog] = useState<{ open: boolean; phase: '開始' | '終了'; patientName: string } | null>(null);
+  const [nursingDialog, setNursingDialog] = useState<{
+    open: boolean; phase: '開始' | '終了';
+    orderId: string; patientId: string; patientName: string; defaultDate?: string;
+  } | null>(null);
+  // 本画面で作成した看護記録の指示への紐付け（指示 id → 開始/終了ごとの NursingRecord id）。
+  // ※ IsolationOrder が持つ linkedNursingRecordId は開始/終了の区別を持たないため、
+  //    モックでは本画面内のオーバーレイとして保持し、[未]→[済] の切替に使う。
+  const [nursingLinks, setNursingLinks] = useState<Record<string, Partial<Record<'開始' | '終了', string>>>>({});
   const [bedMoveTarget, setBedMoveTarget] = useState<BedMoveTarget | null>(null);
 
   // 期間=操作日初期化（再表示）
@@ -315,7 +322,9 @@ const IsolationOrderListTab: React.FC = () => {
   // 看護(開始/終了)セル
   const renderNursingCell = (row: IsolationListRow, phase: '開始' | '終了') => {
     const karteDone = phase === '開始' ? row.karteStartDone : row.karteEndDone;
-    const nursingDone = phase === '開始' ? row.nursingStartDone : row.nursingEndDone;
+    const nursingDone =
+      (phase === '開始' ? row.nursingStartDone : row.nursingEndDone) ||
+      !!nursingLinks[row.order.id]?.[phase];
     if (row.isOther) return <Typography variant="caption" color="text.disabled">—</Typography>;
     return (
       <Tooltip title={karteDone ? '' : 'カルテ未のため看護記録は登録できません'}>
@@ -326,7 +335,14 @@ const IsolationOrderListTab: React.FC = () => {
             color={nursingDone ? 'success' : 'inherit'}
             onClick={(e) => {
               e.stopPropagation();
-              setNursingDialog({ open: true, phase, patientName: row.order.patientName });
+              setNursingDialog({
+                open: true,
+                phase,
+                orderId: row.order.id,
+                patientId: row.order.patientId,
+                patientName: row.order.patientName,
+                defaultDate: (phase === '開始' ? row.order.startDatetime : row.order.endDatetime)?.slice(0, 10) || undefined,
+              });
             }}
             sx={{ minWidth: 36, py: 0, px: 0.5, fontSize: '0.65rem' }}
           >
@@ -568,14 +584,20 @@ const IsolationOrderListTab: React.FC = () => {
           }}
         />
       )}
+      {/* 看護記録の作成入口は ep-10 の NursingRecordDialog に統一（旧 ep-06 用の簡易モックは廃止） */}
       {nursingDialog && (
-        <RestraintNursingRecordStub
+        <NursingRecordDialog
           open={nursingDialog.open}
-          phase={nursingDialog.phase}
-          patientName={nursingDialog.patientName}
+          patientId={nursingDialog.patientId}
+          defaultDate={nursingDialog.defaultDate}
+          initialMode="new"
           onClose={() => setNursingDialog(null)}
-          onSubmit={({ kind }) => {
-            showSnackbar(`看護記録（${nursingDialog.phase}・${kind}）を登録しました（モック）`, 'success');
+          onSaved={({ recordId }) => {
+            setNursingLinks((prev) => ({
+              ...prev,
+              [nursingDialog.orderId]: { ...prev[nursingDialog.orderId], [nursingDialog.phase]: recordId },
+            }));
+            showSnackbar(`看護記録（${nursingDialog.phase}）を登録しました（${nursingDialog.patientName}）`, 'success');
             setNursingDialog(null);
           }}
         />

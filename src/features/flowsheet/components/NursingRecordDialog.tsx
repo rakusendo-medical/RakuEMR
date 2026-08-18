@@ -23,8 +23,11 @@ interface Props {
   defaultDate?: ISODate;
   initialMode?: Mode;
   onClose: () => void;
-  /** 登録／更新の完了後に呼ばれる（呼び出し元でグリッド表示へ反映する等に使う）。mode は登録='new'／更新='edit'。 */
-  onSaved?: (info: { title: string; recordedAt: ISODateTime; mode: 'new' | 'edit' }) => void;
+  /**
+   * 登録／更新の完了後に呼ばれる（呼び出し元でグリッド表示へ反映する等に使う）。mode は登録='new'／更新='edit'。
+   * recordId は登録／更新された NursingRecord の id（隔離拘束一覧など、指示へ紐付けたい呼び出し元が使う）。
+   */
+  onSaved?: (info: { title: string; recordedAt: ISODateTime; mode: 'new' | 'edit'; recordId: string }) => void;
 }
 
 const FORM_LABELS: Record<RecordFormType, string> = {
@@ -196,21 +199,23 @@ const NursingRecordDialog: React.FC<Props> = ({
 
     const shift: ShiftType = resolveShift(recordedAt.slice(11, 16), property.shiftStartTimes);
 
+    let savedId: string;
     if (existing && mode === 'edit') {
       updateRecord(existing.id, {
         title, recordedAt, shift, formType: form, body,
         connections, reportTargets: reports.map((r) => ({ staffId: r.staffId, role: r.role })),
         tags, isPublished,
       });
+      savedId = existing.id;
     } else {
-      addRecord({
+      savedId = addRecord({
         patientId,
         title, recordedAt, shift, formType: form, body,
         connections, reportTargets: reports.map((r) => ({ staffId: r.staffId, role: r.role })),
         tags, isPublished,
-      });
+      }).id;
     }
-    onSaved?.({ title, recordedAt, mode: existing && mode === 'edit' ? 'edit' : 'new' });
+    onSaved?.({ title, recordedAt, mode: existing && mode === 'edit' ? 'edit' : 'new', recordId: savedId });
     onClose();
   };
 
