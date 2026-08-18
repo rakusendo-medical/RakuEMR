@@ -99,7 +99,6 @@ const MOCK_RECORDS: TimelineRecord[] = [
   { id: 'kr45', date: '2026/02/06', dayOfWeek: '金', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '入院時オリエンテーション実施。病棟の生活規則・持ち物制限を説明。表情硬く視線が合いにくい。危険物の持ち込みなし。', tags: ['看護記録'],              timestamp: '2026/02/06 11:40' },
 ];
 
-
 // ===== オーダーをタイムラインレコードへ変換 =====
 
 const ORDER_TYPE_DESCRIPTION: Record<Order['type'], string> = {
@@ -168,7 +167,7 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
 
 /**
  * 日付サイドバーの記録種別バッジの並び順（固定）。
- * ここに無い種別（部門記録の追加など）は後ろに五十音順で続く。
+ * ここに無い種別（部門記録の追加など）は後ろに文字コード順で続く。
  */
 const SIDEBAR_CATEGORY_ORDER: string[] = ['医師記録', '看護記録', '入退院記録', 'オーダー'];
 
