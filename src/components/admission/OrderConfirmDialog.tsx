@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Stack, Typography, Box, Checkbox, FormControlLabel,
+  Button, Stack, Typography, Box, Checkbox,
   FormControl, Select, MenuItem, Link as MuiLink,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton,
 } from '@mui/material';
@@ -30,13 +30,11 @@ const formatCancelTimestamp = (): string => {
 const OrderConfirmDialog: React.FC<Props> = ({ open, kind, orders, onClose, onConfirm }) => {
   const [checked, setChecked] = React.useState<Set<string>>(new Set());
   const [rehabOutcome, setRehabOutcome] = React.useState<string>('');
-  const [printCancellationSheet, setPrintCancellationSheet] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
       setChecked(new Set());
       setRehabOutcome('');
-      setPrintCancellationSheet(false);
     }
   }, [open]);
 
@@ -159,17 +157,8 @@ const OrderConfirmDialog: React.FC<Props> = ({ open, kind, orders, onClose, onCo
           </MuiLink>
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5 }}>
-        <FormControlLabel
-          control={
-            <Checkbox
-              size="small"
-              checked={printCancellationSheet}
-              onChange={(_, v) => setPrintCancellationSheet(v)}
-            />
-          }
-          label={<Typography variant="body2">中止箋・削除箋を印刷する</Typography>}
-        />
+      {/* 中止箋・削除箋の印刷機能は不要のため削除（2026-08-18） */}
+      <DialogActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5 }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography variant="body2">リハビリ転帰区分:</Typography>
           <FormControl size="small" sx={{ width: 110 }} error={needsRehabOutcome}>

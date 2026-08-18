@@ -313,13 +313,10 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     finalizeAdmission();
   };
 
-  // 引数型は DeleteReasonDialog の onConfirm 定義に合わせる（印刷フラグはモックのため未使用）
+  // 引数型は DeleteReasonDialog の onConfirm 定義に合わせる（中止箋・削除箋の印刷機能は 2026-08-18 に廃止）
   const handleDeleteConfirmed = (params: {
     category: string;
     reason: string;
-    printDeleteOrderSheet: boolean;
-    printMoveDeleteSheet?: boolean;
-    printMealDeleteSheet?: boolean;
   }) => {
     setDeleteReasonOpen(false);
     if (editingOrderId) {

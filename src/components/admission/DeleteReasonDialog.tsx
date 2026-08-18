@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Stack, FormControl, InputLabel, Select, MenuItem,
-  TextField, FormControlLabel, Checkbox, Alert,
+  TextField, Alert,
 } from '@mui/material';
 import { DELETE_REASON_CATEGORIES } from '../../data/mockData';
 
@@ -11,29 +11,21 @@ interface Props {
   /** 退院指示中止時は「削除コメント」表記、入院指示中止時は「削除理由」表記 */
   variant?: 'admit' | 'discharge';
   onClose: () => void;
+  // 中止箋・削除箋（削除指示箋／移動削除箋／食事指示削除箋）の印刷機能は不要のため削除（2026-08-18）。
   onConfirm: (params: {
     category: string;
     reason: string;
-    printDeleteOrderSheet: boolean;
-    printMoveDeleteSheet?: boolean;
-    printMealDeleteSheet?: boolean;
   }) => void;
 }
 
 const DeleteReasonDialog: React.FC<Props> = ({ open, variant = 'admit', onClose, onConfirm }) => {
   const [category, setCategory] = React.useState<string>('');
   const [reason, setReason] = React.useState<string>('');
-  const [printDeleteOrderSheet, setPrintDeleteOrderSheet] = React.useState(false);
-  const [printMoveDeleteSheet, setPrintMoveDeleteSheet] = React.useState(false);
-  const [printMealDeleteSheet, setPrintMealDeleteSheet] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
       setCategory('');
       setReason('');
-      setPrintDeleteOrderSheet(false);
-      setPrintMoveDeleteSheet(false);
-      setPrintMealDeleteSheet(false);
     }
   }, [open]);
 
@@ -63,22 +55,7 @@ const DeleteReasonDialog: React.FC<Props> = ({ open, variant = 'admit', onClose,
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <FormControlLabel
-            control={<Checkbox checked={printDeleteOrderSheet} onChange={(_, v) => setPrintDeleteOrderSheet(v)} />}
-            label="削除指示箋を印刷する"
-          />
-          {variant === 'discharge' && (
-            <>
-              <FormControlLabel
-                control={<Checkbox checked={printMoveDeleteSheet} onChange={(_, v) => setPrintMoveDeleteSheet(v)} />}
-                label="移動削除箋を印刷する"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={printMealDeleteSheet} onChange={(_, v) => setPrintMealDeleteSheet(v)} />}
-                label="食事指示削除箋を印刷する"
-              />
-            </>
-          )}
+          {/* 削除指示箋／移動削除箋／食事指示削除箋の印刷機能は不要のため削除（2026-08-18） */}
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -87,13 +64,7 @@ const DeleteReasonDialog: React.FC<Props> = ({ open, variant = 'admit', onClose,
           variant="contained"
           color="error"
           disabled={!category}
-          onClick={() => onConfirm({
-            category,
-            reason,
-            printDeleteOrderSheet,
-            printMoveDeleteSheet: variant === 'discharge' ? printMoveDeleteSheet : undefined,
-            printMealDeleteSheet: variant === 'discharge' ? printMealDeleteSheet : undefined,
-          })}
+          onClick={() => onConfirm({ category, reason })}
         >
           中止する
         </Button>
