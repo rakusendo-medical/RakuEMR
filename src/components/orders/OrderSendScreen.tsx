@@ -22,7 +22,7 @@ import PsychTestOrderDialog from './PsychTestOrderDialog';
 import ImagingOrderDialog from './ImagingOrderDialog';
 import EctOrderDialog from './EctOrderDialog';
 import IfOrderDialog from './IfOrderDialog';
-import { NewRecordDialog, STATUS_COLORS, INTERVIEW_FORMS, type NewRecordData } from '../karte/MedicalRecordTab';
+import { NewRecordDialog, INTERVIEW_FORMS, type NewRecordData } from '../karte/MedicalRecordTab';
 import ConfirmDiscardDialog from './ConfirmDiscardDialog';
 import OrderDialogTitle from './OrderDialogTitle';
 import OrderKarteRecordDialog from './OrderKarteRecordDialog';
@@ -225,7 +225,7 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
 
   /**
    * テキストオーダ（診療録作成ダイアログ流用）の入力内容を「文字」オーダへ組み立て、作成中に追加する。
-   * 内容は【タイトル】本文を基本に、面接フォーム・状態・タグを補足行として付す。
+   * 内容は【タイトル】本文を基本に、面接フォーム・タグを補足行として付す。
    */
   const registerTextOrder = (data: NewRecordData) => {
     const startDate = data.orderDate || (data.recordedAt ? data.recordedAt.slice(0, 10) : todayStr());
@@ -234,10 +234,6 @@ const OrderSendScreen: React.FC<Props> = ({ open, patient, doctorName, onClose, 
     if (data.interviewForm) {
       const f = INTERVIEW_FORMS.find((x) => x.id === data.interviewForm);
       if (f) lines.push(`面接フォーム: ${f.label}`);
-    }
-    if (data.status) {
-      const s = STATUS_COLORS.find((x) => x.id === data.status);
-      if (s) lines.push(`状態: ${s.label}`);
     }
     if (data.tags.length) lines.push(`タグ: ${data.tags.join('、')}`);
     const order: Order = {

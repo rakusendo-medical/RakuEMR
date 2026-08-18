@@ -590,16 +590,6 @@ export default function MedicalRecordTab({
 
 // ===== 診療録作成ダイアログ（フリーテキスト形式）=====
 
-// 患者状態の 5 段階色（部門記録簿の患者状態色と整合）
-export const STATUS_COLORS = [
-  { id: 'good',      label: '良好', color: '#10b981' },
-  { id: 'stable',    label: '安定', color: '#3b82f6' },
-  { id: 'attention', label: '注意', color: '#f59e0b' },
-  { id: 'alert',     label: '警戒', color: '#f97316' },
-  { id: 'critical',  label: '重要', color: '#dc2626' },
-] as const;
-type StatusId = typeof STATUS_COLORS[number]['id'] | '';
-
 // 記載テンプレート
 const RECORD_TEMPLATES = [
   {
@@ -701,7 +691,6 @@ type DoSectionId = typeof DO_SECTIONS[number]['id'];
 export interface NewRecordData {
   recordedAt: string;
   title: string;
-  status: string;
   interviewForm: string;
   tags: string[];
   body: string;
@@ -759,7 +748,6 @@ export function NewRecordDialog({
   const [orderDate, setOrderDate] = useState<string>((defaultRecordedAt ?? nowAsLocalInput()).slice(0, 10));
   const [continuous, setContinuous] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
-  const [status, setStatus] = useState<StatusId>('');
   const [templateId, setTemplateId] = useState<string>('');
   const [interviewForm, setInterviewForm] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
@@ -792,7 +780,7 @@ export function NewRecordDialog({
   };
 
   const isDirty =
-    title !== '' || status !== '' || templateId !== '' || interviewForm !== '' ||
+    title !== '' || templateId !== '' || interviewForm !== '' ||
     tags.length > 0 || body !== '';
 
   const insertTemplate = useCallback(() => {
@@ -831,7 +819,6 @@ export function NewRecordDialog({
     setOrderDate((defaultRecordedAt ?? nowAsLocalInput()).slice(0, 10));
     setContinuous(false);
     setTitle('');
-    setStatus('');
     setTemplateId('');
     setInterviewForm('');
     setTags([]);
@@ -865,7 +852,7 @@ export function NewRecordDialog({
     if (!canRegister || !onRegister) return;
     // 指示日・継続は orderFields（オーダ入力）モードのときだけ渡す（通常モードへ余計な値を漏らさない）。
     onRegister({
-      recordedAt, title, status, interviewForm, tags, body,
+      recordedAt, title, interviewForm, tags, body,
       ...(orderFields ? { orderDate, continuous } : {}),
     });
     reset();
@@ -986,7 +973,7 @@ export function NewRecordDialog({
 
           {/* ===== 右パネル: フォーム ===== */}
           <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
-            {/* ===== 記載日 + タイトル + 状態 ===== */}
+            {/* ===== 記載日 + タイトル ===== */}
             <Stack direction="row" spacing={1.5} alignItems="flex-end" flexWrap="wrap">
               <TextField
                 size="small"
@@ -1004,31 +991,6 @@ export function NewRecordDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 sx={{ flex: 1, minWidth: 240 }}
               />
-              <Box>
-                <Typography variant="caption" sx={{ display: 'block', mb: 0.25, color: 'text.secondary' }}>
-                  状態
-                </Typography>
-                <Stack direction="row" spacing={0.5}>
-                  {STATUS_COLORS.map((s) => {
-                    const selected = status === s.id;
-                    return (
-                      <Tooltip key={s.id} title={s.label}>
-                        <IconButton
-                          size="small"
-                          onClick={() => setStatus(selected ? '' : s.id)}
-                          sx={{
-                            width: 28,
-                            height: 28,
-                            bgcolor: s.color,
-                            border: selected ? '2px solid #1e3a5f' : '2px solid transparent',
-                            '&:hover': { bgcolor: s.color, opacity: 0.85 },
-                          }}
-                        />
-                      </Tooltip>
-                    );
-                  })}
-                </Stack>
-              </Box>
             </Stack>
 
             {/* ===== テンプレート + 面接フォーム（オーダのテキストオーダ等では非表示）===== */}
