@@ -291,7 +291,7 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
 
         {date > TODAY && (
           <Alert severity="info" sx={{ mt: 1 }}>
-            未来日 ({date}) のため、現在時刻より未来の時刻は登録できません（未来日は登録不可）。
+            未来日 ({date}) のため、この日のバイタルは登録できません（未来日は登録不可）。
           </Alert>
         )}
       </DialogContent>
