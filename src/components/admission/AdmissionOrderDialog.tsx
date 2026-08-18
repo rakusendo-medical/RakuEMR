@@ -115,7 +115,7 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       const editRoomBeds = ROOMS.find((r) => r.wardId === editWard && r.roomNumber === editRoom)?.beds ?? [];
       setToWard(editWard);
       setToRoom(editRoom);
-      setToBed(editRoomBeds.some((b) => b.bed === editBed && !b.disabled && !b.patientId) ? editBed : '');
+      setToBed(editRoomBeds.some((b) => b.bed === editBed && b.bedStatus !== 'unavailable' && !b.patientId) ? editBed : '');
       setRoomUndecided(editing ? editing.roomNumber === '—' : false);
       setMemo('');
       setAdmitForm('任意入院');
@@ -161,7 +161,7 @@ const AdmissionOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
 
   const wardRooms = ROOMS.filter((r) => r.wardId === toWard);
   const room = wardRooms.find((r) => r.roomNumber === toRoom);
-  const availableBeds = room ? room.beds.filter((b) => !b.disabled && !b.patientId) : [];
+  const availableBeds = room ? room.beds.filter((b) => b.bedStatus !== 'unavailable' && !b.patientId) : [];
   const futureDate = new Date(admitAt) > new Date();
   const todayHHMM = (() => {
     const d = new Date();

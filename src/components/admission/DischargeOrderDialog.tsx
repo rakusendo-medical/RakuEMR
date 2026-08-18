@@ -8,7 +8,7 @@ import { Search as SearchIcon, ContentCopy as ContentCopyIcon } from '@mui/icons
 import type { Patient } from '../../types';
 import {
   MEDICAL_INSTITUTIONS, REFERRAL_ROUTES_DISCHARGE_BASE, REFERRAL_ROUTES_DISCHARGE_OPTIONAL,
-  THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES,
+  THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES, isAbsent,
 } from '../../data/mockData';
 import type { DischargeCategory } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
@@ -125,7 +125,7 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   if (!patient) return null;
 
   const futureDate = new Date(dischargeAt) > new Date();
-  const isOuting = patient.status === 'outing';
+  const isOuting = isAbsent(patient.flags); // 不在（外出 or 外泊）＝バッジで判定
   const mealChanged = mealEndAt !== originalMealEndAt;
   const mealEditable = hasMealOnDay(dischargeAt);
   const pendingOrders = PENDING_ORDERS_SAMPLES.filter(

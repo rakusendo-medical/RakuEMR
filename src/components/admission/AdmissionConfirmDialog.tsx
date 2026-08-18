@@ -118,7 +118,7 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
 
   const wardRooms = ROOMS.filter((r) => r.wardId === toWard);
   const room = wardRooms.find((r) => r.roomNumber === toRoom);
-  const availableBeds = room ? room.beds.filter((b) => !b.disabled && !b.patientId) : [];
+  const availableBeds = room ? room.beds.filter((b) => b.bedStatus !== 'unavailable' && !b.patientId) : [];
 
   const futureDate = new Date(admitAt) > new Date();
   const mealChanged = mealAt !== originalMealAt;

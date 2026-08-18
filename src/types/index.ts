@@ -8,19 +8,28 @@ export const WARD_LABELS: Record<WardId, string> = {
 };
 
 /** 患者ステータス */
+// ① Dr が患者を観察した状態（占有ベッドの患者のみが持つ）。
+//   外出（outing）・空床（empty）は ② バッジ／③ 病床ステータス側へ分離済み（2026-08-18）。
 export type PatientStatus =
   | "stable"
   | "observation"
   | "unstable"
-  | "critical"
-  | "outing"
-  | "empty";
+  | "critical";
 
 export interface StatusConfig {
   label: string;
   color: string;
   bgColor: string;
   muiColor: "success" | "warning" | "error" | "info" | "default";
+}
+
+// ③ 病床ステータス（患者がいない=非占有ベッドの状態）。占有は「患者の有無」で判定する。
+export type BedStatus = "empty" | "unavailable"; // 空床 / 使用不可
+
+export interface BedStatusConfig {
+  label: string;
+  color: string;
+  bgColor: string;
 }
 
 /** ベッド/患者付与の運用フラグ（複数同時付与可） */
@@ -55,13 +64,14 @@ export interface Bed {
   bed: string;
   patientId: string | null;
   patientName: string | null;
-  status: PatientStatus;
+  /** ① Dr 観察ステータス（占有＝患者ありのときのみ） */
+  status?: PatientStatus;
+  /** ③ 病床ステータス（非占有＝患者なしのときのみ。空床／使用不可） */
+  bedStatus?: BedStatus;
   gender: Gender | null;
   age: number | null;
-  /** 運用フラグ（隔離・拘束・外出・外泊・要報告・預り金 など、複数付与可） */
+  /** ② 運用フラグ／バッジ（隔離・拘束・外出・外泊・要報告・預り金 など、複数付与可・各 on/off） */
   flags?: BedFlag[];
-  /** マスタで使用不可指定されたベッド（網掛け表示・操作不可） */
-  disabled?: boolean;
   /** 移動予定が登録されている場合 */
   hasScheduledMove?: boolean;
 }
@@ -101,7 +111,10 @@ export interface Patient {
   wardId: WardId;
   roomNumber: string;
   bedLabel: string;
+  /** ① Dr 観察ステータス（安定/観察中/不安定/重症） */
   status: PatientStatus;
+  /** ② 運用フラグ／バッジ（外出/外泊/隔離/拘束/要報告/預り金 など。不在＝外出 or 外泊 の判定にも使う） */
+  flags?: BedFlag[];
   admitDate: string;
   doctorName: string;
   diagnosis?: string;

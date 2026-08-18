@@ -6,7 +6,7 @@ import {
 } from '@mui/icons-material';
 import type { WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
-import { ADMISSION_ORDERS, PATIENTS, ROOMS } from '../../data/mockData';
+import { ADMISSION_ORDERS, PATIENTS, ROOMS, isAbsent } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
 interface Props {
@@ -119,12 +119,12 @@ const WardMapSidebar: React.FC<Props> = ({
   }, [ward, pendingOrders]);
 
   // 不在者
-  const absent = PATIENTS.filter((p) => p.wardId === ward && p.status === 'outing');
+  const absent = PATIENTS.filter((p) => p.wardId === ward && isAbsent(p.flags));
 
   // 入院者情報(病棟集計)
   const wardPatients = PATIENTS.filter((p) => p.wardId === ward);
   const wardRooms = ROOMS.filter((r) => r.wardId === ward);
-  const totalBeds = wardRooms.reduce((sum, r) => sum + r.beds.filter((b) => !b.disabled).length, 0);
+  const totalBeds = wardRooms.reduce((sum, r) => sum + r.beds.filter((b) => b.bedStatus !== 'unavailable').length, 0);
   const occupiedBeds = wardRooms.reduce(
     (sum, r) => sum + r.beds.filter((b) => b.patientId).length, 0,
   );

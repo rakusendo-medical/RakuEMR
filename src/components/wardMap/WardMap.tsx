@@ -113,7 +113,7 @@ const WardMap: React.FC = () => {
   }, [navigate, setSelectedPatient, setWardMapNavigation, wardOrderedPatientIds]);
 
   const handleBedClick = (bed: Bed) => {
-    if (bed.disabled) return;
+    if (bed.bedStatus === 'unavailable') return;
     if (!bed.patientId) return;
     setBedMenuPatientId(bed.patientId);
   };
@@ -300,39 +300,40 @@ const WardMap: React.FC = () => {
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 }, flex: 1 }}>
                   {room.beds.map((bed) => {
                     const isMenuActive = bed.patientId === bedMenuPatientId;
+                    const isUnavailable = bed.bedStatus === 'unavailable'; // ③ 使用不可
                     return (
                       <Box
                         key={bed.bed}
                         onClick={() => handleBedClick(bed)}
                         onDoubleClick={() => {
-                          if (bed.disabled || !bed.patientId) return;
+                          if (isUnavailable || !bed.patientId) return;
                           navigateToKarte(bed.patientId);
                         }}
                         sx={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                           px: 1.5, py: 1, minHeight: 56, borderBottom: '1px solid #f1f5f9',
-                          cursor: bed.disabled ? 'not-allowed' : (bed.patientId ? 'pointer' : 'default'),
+                          cursor: isUnavailable ? 'not-allowed' : (bed.patientId ? 'pointer' : 'default'),
                           position: 'relative',
-                          bgcolor: bed.disabled
+                          bgcolor: isUnavailable
                             ? 'transparent'
                             : (isMenuActive ? '#eff6ff' : 'transparent'),
-                          '&:hover': bed.disabled
+                          '&:hover': isUnavailable
                             ? {}
                             : (bed.patientId ? { bgcolor: '#f0f7ff' } : {}),
                           // 使用不可ベッドのグレー網掛け
-                          backgroundImage: bed.disabled
+                          backgroundImage: isUnavailable
                             ? 'repeating-linear-gradient(45deg, #e2e8f0 0 6px, #f1f5f9 6px 12px)'
                             : undefined,
-                          color: bed.disabled ? 'text.disabled' : undefined,
+                          color: isUnavailable ? 'text.disabled' : undefined,
                         }}
                       >
                         <Stack direction="row" spacing={1.2} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
                           <Box sx={{
                             width: 28, height: 28, borderRadius: 1,
-                            bgcolor: bed.disabled
+                            bgcolor: isUnavailable
                               ? '#cbd5e1'
                               : (bed.patientId ? (bed.gender === 'M' ? '#dbeafe' : '#fce7f3') : '#f1f5f9'),
-                            color: bed.disabled
+                            color: isUnavailable
                               ? '#fff'
                               : (bed.patientId ? (bed.gender === 'M' ? 'primary.main' : '#be185d') : 'text.disabled'),
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -342,8 +343,8 @@ const WardMap: React.FC = () => {
                           </Box>
                           <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-                              <Typography variant="body2" fontWeight={bed.patientId ? 600 : 400} color={bed.disabled ? 'text.disabled' : (bed.patientId ? 'text.primary' : 'text.disabled')} noWrap>
-                                {bed.disabled ? '使用不可' : (bed.patientName || '空床')}
+                              <Typography variant="body2" fontWeight={bed.patientId ? 600 : 400} color={isUnavailable ? 'text.disabled' : (bed.patientId ? 'text.primary' : 'text.disabled')} noWrap>
+                                {isUnavailable ? '使用不可' : (bed.patientName || '空床')}
                               </Typography>
                               {bed.patientId && (
                                 <IconButton
@@ -366,7 +367,8 @@ const WardMap: React.FC = () => {
                             <Chip icon={<MoveDownIcon sx={{ fontSize: 12 }} />} label="移動予定" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ecfeff', color: '#0e7490' }} />
                           )}
                           <BedFlagIcons flags={bed.flags} />
-                          {!bed.disabled && <StatusBadge status={bed.status} />}
+                          {/* ① Dr観察ステータスは占有（患者あり）時のみ。空床/使用不可（③病床ステータス）は左の氏名欄に表示 */}
+                          {bed.patientId && bed.status && <StatusBadge status={bed.status} />}
                         </Stack>
                       </Box>
                     );
@@ -378,15 +380,25 @@ const WardMap: React.FC = () => {
         })}
         </Grid>
 
-        {/* 凡例: ステータス + 運用フラグ */}
+        {/* 凡例: ①ステータス（Dr観察）／③病床ステータス／②バッジ の3系統 */}
         <Stack spacing={0.75} sx={{ mt: 2 }}>
-          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
+          {/* ① Dr観察ステータス（占有ベッド） */}
+          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5 }} alignItems="center">
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>ステータス:</Typography>
             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
               <Stack key={key} direction="row" spacing={0.5} alignItems="center">
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: cfg.color }} />
                 <Typography variant="caption" color="text.secondary">{cfg.label}</Typography>
               </Stack>
             ))}
+          </Stack>
+          {/* ③ 病床ステータス（非占有ベッド） */}
+          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5 }} alignItems="center">
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>病床:</Typography>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Box sx={{ width: 16, height: 8, borderRadius: 0.5, bgcolor: '#f1f5f9', border: '1px solid #cbd5e1' }} />
+              <Typography variant="caption" color="text.secondary">空床</Typography>
+            </Stack>
             <Stack direction="row" spacing={0.5} alignItems="center">
               <Box sx={{
                 width: 16, height: 8, borderRadius: 0.5,
@@ -395,7 +407,11 @@ const WardMap: React.FC = () => {
               <Typography variant="caption" color="text.secondary">使用不可</Typography>
             </Stack>
           </Stack>
-          <BedFlagLegend />
+          {/* ② バッジ（隔離/拘束/外出/外泊/要報告/預り金・各on/off） */}
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>バッジ:</Typography>
+            <BedFlagLegend />
+          </Stack>
         </Stack>
         </Box>
         {/* 右サイドバー: 入院予定者 / 不在者 / 入院者情報（いずれも選択中病棟スコープ） */}
