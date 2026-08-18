@@ -16,6 +16,8 @@ import { ORDERS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import RestraintOrderLinks from '../isolation/RestraintOrderLinks';
 import type { KarteMode } from './KartePage';
+// 記録種別の色は src/theme/recordCategoryColors.ts で一元管理する（色コードをここに直書きしないこと）。
+import { getRecordCategoryColor } from '../../theme/recordCategoryColors';
 
 // ===== 集約タイムラインのレコード型 =====
 
@@ -30,7 +32,6 @@ interface TimelineRecord {
   date: string;        // YYYY/MM/DD
   dayOfWeek: string;
   category: RecordCategory;
-  categoryColor: string;
   author: string;
   authorRole: string;
   content: string;
@@ -41,22 +42,15 @@ interface TimelineRecord {
   cancelled?: boolean;
 }
 
-const CATEGORY_COLORS: Record<RecordCategory, string> = {
-  '医師記録': '#1e40af',
-  '看護記録': '#c2410c',
-  '入退院記録': '#b91c1c',
-  'オーダー': '#0891b2',
-};
-
 const MOCK_RECORDS: TimelineRecord[] = [
-  { id: 'kr1',  date: '2026/03/10', dayOfWeek: '月', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '定期回診。状態安定。処方継続。',                                                                          tags: [],                          timestamp: '2026/03/10 10:30' },
-  { id: 'kr2',  date: '2026/03/10', dayOfWeek: '月', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '山本 看護師',   authorRole: '',     content: '朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。',                tags: ['看護記録'],                timestamp: '2026/03/10 09:00' },
-  { id: 'kr3',  date: '2026/03/09', dayOfWeek: '日', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'リスパダール 2mg → 3mg に増量指示。経過観察継続。',                                                          tags: [],                          orderNumber: 'NO.827', timestamp: '2026/03/09 13:45' },
-  { id: 'kr4',  date: '2026/03/09', dayOfWeek: '日', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '中田 看護師',   authorRole: '',     content: '午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。',                                  tags: ['看護記録', 'クリニカルパス'], orderNumber: 'NO.827', timestamp: '2026/03/09 14:00' },
-  { id: 'kr6',  date: '2026/03/07', dayOfWeek: '金', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。',                                          tags: [],                          timestamp: '2026/03/07 15:00' },
-  { id: 'kr7',  date: '2026/03/06', dayOfWeek: '木', category: '入退院記録', categoryColor: CATEGORY_COLORS['入退院記録'], author: '田村 医師',     authorRole: '医師D', content: '【精神科】退院環境調整の指示。当院病棟・101号室・身長167.8cm・体重72.0kg。',                                tags: [],                          orderNumber: 'NO.837', timestamp: '2026/03/06 17:23' },
-  { id: 'kr8',  date: '2026/03/05', dayOfWeek: '水', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                      tags: ['カンファ'],                timestamp: '2026/03/05 16:00' },
-  { id: 'kr9',  date: '2026/03/04', dayOfWeek: '火', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '佐々木 看護師', authorRole: '',     content: '作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。',                      tags: ['看護記録'],                timestamp: '2026/03/04 14:00' },
+  { id: 'kr1',  date: '2026/03/10', dayOfWeek: '月', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '定期回診。状態安定。処方継続。',                                                                          tags: [],                          timestamp: '2026/03/10 10:30' },
+  { id: 'kr2',  date: '2026/03/10', dayOfWeek: '月', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。',                tags: ['看護記録'],                timestamp: '2026/03/10 09:00' },
+  { id: 'kr3',  date: '2026/03/09', dayOfWeek: '日', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: 'リスパダール 2mg → 3mg に増量指示。経過観察継続。',                                                          tags: [],                          orderNumber: 'NO.827', timestamp: '2026/03/09 13:45' },
+  { id: 'kr4',  date: '2026/03/09', dayOfWeek: '日', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。',                                  tags: ['看護記録', 'クリニカルパス'], orderNumber: 'NO.827', timestamp: '2026/03/09 14:00' },
+  { id: 'kr6',  date: '2026/03/07', dayOfWeek: '金', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。',                                          tags: [],                          timestamp: '2026/03/07 15:00' },
+  { id: 'kr7',  date: '2026/03/06', dayOfWeek: '木', category: '入退院記録', author: '田村 医師',     authorRole: '医師D', content: '【精神科】退院環境調整の指示。当院病棟・101号室・身長167.8cm・体重72.0kg。',                                tags: [],                          orderNumber: 'NO.837', timestamp: '2026/03/06 17:23' },
+  { id: 'kr8',  date: '2026/03/05', dayOfWeek: '水', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                      tags: ['カンファ'],                timestamp: '2026/03/05 16:00' },
+  { id: 'kr9',  date: '2026/03/04', dayOfWeek: '火', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。',                      tags: ['看護記録'],                timestamp: '2026/03/04 14:00' },
 ];
 
 // ===== オーダーをタイムラインレコードへ変換 =====
@@ -86,7 +80,6 @@ function ordersToTimeline(patientId: string): TimelineRecord[] {
         date: dateStr,
         dayOfWeek,
         category: 'オーダー',
-        categoryColor: CATEGORY_COLORS['オーダー'],
         author: o.doctorName,
         authorRole: '医師',
         content: `[${ORDER_TYPE_DESCRIPTION[o.type]}] ${o.content}（${o.schedule}・${o.days}日分）`,
@@ -164,7 +157,6 @@ export default function MedicalRecordTab({
       date: r.date,
       dayOfWeek: r.dayOfWeek,
       category: r.category as RecordCategory,
-      categoryColor: CATEGORY_COLORS[r.category as RecordCategory] ?? CATEGORY_COLORS['医師記録'],
       author: r.author,
       authorRole: r.authorRole,
       content: r.content,
@@ -367,10 +359,10 @@ export default function MedicalRecordTab({
                         {dayStr}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 0.2, ml: 'auto' }}>
-                        {hasDoctor && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: CATEGORY_COLORS['医師記録'] }} />}
-                        {hasNursing && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: CATEGORY_COLORS['看護記録'] }} />}
-                        {hasAdmission && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: CATEGORY_COLORS['入退院記録'] }} />}
-                        {hasOrder && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: CATEGORY_COLORS['オーダー'] }} />}
+                        {hasDoctor && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('医師記録') }} />}
+                        {hasNursing && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('看護記録') }} />}
+                        {hasAdmission && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('入退院記録') }} />}
+                        {hasOrder && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('オーダー') }} />}
                       </Box>
                     </Box>
                   );
@@ -444,7 +436,7 @@ export default function MedicalRecordTab({
                                 }}
                               />
                             ))}
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: record.categoryColor }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: getRecordCategoryColor(record.category) }}>
                               {record.category}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
