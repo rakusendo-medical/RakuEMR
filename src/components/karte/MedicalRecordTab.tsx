@@ -42,16 +42,63 @@ interface TimelineRecord {
   cancelled?: boolean;
 }
 
+/**
+ * 集約タイムラインのモック記事（約 30 日分・精神科入院の経過を想定）。
+ * 既定の期間フィルタ「最近の30日分」で日付サイドバーの俯瞰が確認できるよう、
+ * 複数種別が同日に並ぶ日を含めてある。
+ */
 const MOCK_RECORDS: TimelineRecord[] = [
-  { id: 'kr1',  date: '2026/03/10', dayOfWeek: '月', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '定期回診。状態安定。処方継続。',                                                                          tags: [],                          timestamp: '2026/03/10 10:30' },
-  { id: 'kr2',  date: '2026/03/10', dayOfWeek: '月', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。',                tags: ['看護記録'],                timestamp: '2026/03/10 09:00' },
-  { id: 'kr3',  date: '2026/03/09', dayOfWeek: '日', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: 'リスパダール 2mg → 3mg に増量指示。経過観察継続。',                                                          tags: [],                          orderNumber: 'NO.827', timestamp: '2026/03/09 13:45' },
-  { id: 'kr4',  date: '2026/03/09', dayOfWeek: '日', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。',                                  tags: ['看護記録', 'クリニカルパス'], orderNumber: 'NO.827', timestamp: '2026/03/09 14:00' },
-  { id: 'kr6',  date: '2026/03/07', dayOfWeek: '金', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。',                                          tags: [],                          timestamp: '2026/03/07 15:00' },
-  { id: 'kr7',  date: '2026/03/06', dayOfWeek: '木', category: '入退院記録', author: '田村 医師',     authorRole: '医師D', content: '【精神科】退院環境調整の指示。当院病棟・101号室・身長167.8cm・体重72.0kg。',                                tags: [],                          orderNumber: 'NO.837', timestamp: '2026/03/06 17:23' },
-  { id: 'kr8',  date: '2026/03/05', dayOfWeek: '水', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                      tags: ['カンファ'],                timestamp: '2026/03/05 16:00' },
-  { id: 'kr9',  date: '2026/03/04', dayOfWeek: '火', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。',                      tags: ['看護記録'],                timestamp: '2026/03/04 14:00' },
+  // --- 直近 1 週間 ---
+  { id: 'kr1',  date: '2026/03/10', dayOfWeek: '火', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '定期回診。状態安定。処方継続。',                                                                          tags: [],                            timestamp: '2026/03/10 10:30' },
+  { id: 'kr2',  date: '2026/03/10', dayOfWeek: '火', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。',                tags: ['看護記録'],                  timestamp: '2026/03/10 09:00' },
+  { id: 'kr3',  date: '2026/03/09', dayOfWeek: '月', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: 'リスペリドン 2mg → 3mg に増量指示。経過観察継続。',                                                      tags: [],                            orderNumber: 'NO.827', timestamp: '2026/03/09 13:45' },
+  { id: 'kr4',  date: '2026/03/09', dayOfWeek: '月', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。',                                tags: ['看護記録', 'クリニカルパス'], orderNumber: 'NO.827', timestamp: '2026/03/09 14:00' },
+  { id: 'kr6',  date: '2026/03/07', dayOfWeek: '土', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。',                                      tags: [],                            timestamp: '2026/03/07 15:00' },
+  { id: 'kr7',  date: '2026/03/06', dayOfWeek: '金', category: '入退院記録', author: '田村 医師',     authorRole: '医師D', content: '【精神科】退院環境調整の指示。当院病棟・101号室・身長167.8cm・体重72.0kg。',                              tags: [],                            orderNumber: 'NO.837', timestamp: '2026/03/06 17:23' },
+  { id: 'kr8',  date: '2026/03/05', dayOfWeek: '木', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                    tags: ['カンファ'],                  timestamp: '2026/03/05 16:00' },
+  { id: 'kr9',  date: '2026/03/04', dayOfWeek: '水', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。',                    tags: ['看護記録'],                  timestamp: '2026/03/04 14:00' },
+  // --- 3 月上旬 ---
+  { id: 'kr10', date: '2026/03/03', dayOfWeek: '火', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '外泊に向けた持参薬の説明を実施。用法・用量とも復唱でき、理解良好。',                                      tags: ['看護記録', '外出/外泊'],     timestamp: '2026/03/03 16:00' },
+  { id: 'kr11', date: '2026/03/02', dayOfWeek: '月', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '定期回診。試験外出後の状態悪化なし。次週の外泊を許可する。',                                              tags: ['外出/外泊'],                 timestamp: '2026/03/02 10:05' },
+  { id: 'kr12', date: '2026/03/02', dayOfWeek: '月', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: 'バイタル: 体温36.3℃、血圧124/76、脈拍72。朝食全量摂取。夜間の中途覚醒なし。',                            tags: ['看護記録'],                  timestamp: '2026/03/02 09:10' },
+  { id: 'kr13', date: '2026/03/01', dayOfWeek: '日', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '日曜レクリエーション参加。他患者と協調して活動できた。活動後の疲労訴えなし。',                            tags: ['看護記録'],                  timestamp: '2026/03/01 19:00' },
+  // --- 2 月下旬 ---
+  { id: 'kr14', date: '2026/02/28', dayOfWeek: '土', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '試験外出（2時間・付き添いなし）実施。帰棟時の表情良好、特記事項なし。',                                  tags: ['看護記録', '外出/外泊'],     timestamp: '2026/02/28 13:15' },
+  { id: 'kr15', date: '2026/02/27', dayOfWeek: '金', category: '入退院記録', author: '田村 医師',     authorRole: '医師D', content: '【精神科】医療保護入院から任意入院へ入院形態を変更。本人の同意書を取得。',                                tags: [],                            orderNumber: 'NO.821', timestamp: '2026/02/27 17:00' },
+  { id: 'kr16', date: '2026/02/27', dayOfWeek: '金', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '回診。精神症状は安定。退院に向けて試験外出・外泊の検討を開始する。',                                      tags: [],                            timestamp: '2026/02/27 11:20' },
+  { id: 'kr17', date: '2026/02/26', dayOfWeek: '木', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '服薬自己管理を1日分へ拡大。飲み忘れなし、残薬数一致。',                                                  tags: ['看護記録'],                  timestamp: '2026/02/26 10:00' },
+  { id: 'kr18', date: '2026/02/25', dayOfWeek: '水', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '家族面談。退院後の同居環境と服薬管理について説明。訪問看護の導入を提案した。',                            tags: ['退院支援'],                  timestamp: '2026/02/25 15:00' },
+  { id: 'kr19', date: '2026/02/25', dayOfWeek: '水', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '家族面談に同席。母より「夜間の対応が不安」との発言あり。訪問看護の役割を補足説明した。',                  tags: ['看護記録', '退院支援'],      timestamp: '2026/02/25 15:40' },
+  { id: 'kr20', date: '2026/02/24', dayOfWeek: '火', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '作業療法参加。革細工を選択。集中して30分継続でき、中断なく完遂した。',                                    tags: ['看護記録'],                  timestamp: '2026/02/24 14:30' },
+  { id: 'kr21', date: '2026/02/23', dayOfWeek: '月', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '定期回診。幻聴はほぼ消失。行動範囲を院内自由へ拡大する。',                                                tags: ['行動範囲'],                  timestamp: '2026/02/23 10:00' },
+  { id: 'kr22', date: '2026/02/23', dayOfWeek: '月', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: 'バイタル: 体温36.6℃、血圧126/78、脈拍74。日中の傾眠なし。',                                              tags: ['看護記録'],                  timestamp: '2026/02/23 09:05' },
+  { id: 'kr23', date: '2026/02/21', dayOfWeek: '土', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '病棟内の自由行動範囲を確認。単独での院内散歩が許可された旨を本人へ伝達し、同意を得た。',                  tags: ['看護記録', '行動範囲'],      timestamp: '2026/02/21 11:00' },
+  { id: 'kr24', date: '2026/02/20', dayOfWeek: '金', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '回診。睡眠は6時間程度確保できている。ブロチゾラムを定時から頓用へ変更。',                                tags: [],                            orderNumber: 'NO.815', timestamp: '2026/02/20 10:20' },
+  { id: 'kr25', date: '2026/02/20', dayOfWeek: '金', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '消灯後の入眠良好。頓服の使用なし。巡視時いびきあり、呼吸状態問題なし。',                                  tags: ['看護記録'],                  timestamp: '2026/02/20 22:30' },
+  // --- 2 月中旬 ---
+  { id: 'kr26', date: '2026/02/19', dayOfWeek: '木', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '作業療法初回参加。塗り絵に取り組む。20分程度で疲労の訴えあり、途中休憩を挟んだ。',                        tags: ['看護記録'],                  timestamp: '2026/02/19 14:00' },
+  { id: 'kr27', date: '2026/02/18', dayOfWeek: '水', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '多職種カンファレンス。作業療法の導入と退院後の生活支援について検討した。',                                tags: ['カンファ'],                  timestamp: '2026/02/18 16:00' },
+  { id: 'kr28', date: '2026/02/18', dayOfWeek: '水', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: 'カンファレンスの内容を本人へ説明。作業療法への参加に同意が得られた。',                                    tags: ['看護記録', 'カンファ'],      timestamp: '2026/02/18 16:45' },
+  { id: 'kr29', date: '2026/02/17', dayOfWeek: '火', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '体重測定 70.4kg。入院時より0.8kg減。食事摂取量は8〜10割で安定している。',                                tags: ['看護記録'],                  timestamp: '2026/02/17 09:15' },
+  { id: 'kr30', date: '2026/02/16', dayOfWeek: '月', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '定期回診。幻聴の頻度は減少。病識の芽生えあり。現行処方を継続する。',                                      tags: [],                            timestamp: '2026/02/16 10:10' },
+  { id: 'kr31', date: '2026/02/16', dayOfWeek: '月', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '服薬自己管理へ移行する準備として、看護師管理のもと1回分の自己管理を開始した。',                          tags: ['看護記録'],                  timestamp: '2026/02/16 13:00' },
+  { id: 'kr32', date: '2026/02/15', dayOfWeek: '日', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '日中の活動性が向上。談話室でテレビを視聴し、他患者と短時間の会話あり。',                                  tags: ['看護記録'],                  timestamp: '2026/02/15 20:00' },
+  { id: 'kr33', date: '2026/02/14', dayOfWeek: '土', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果。WBC 6200、CRP 0.1、肝機能・腎機能に異常なし。プロラクチン軽度上昇、経過観察とする。',      tags: [],                            timestamp: '2026/02/14 09:50' },
+  { id: 'kr34', date: '2026/02/13', dayOfWeek: '金', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '入浴介助。自力で洗身可能。皮膚トラブルなし。入浴中の言動に異常なし。',                                    tags: ['看護記録'],                  timestamp: '2026/02/13 10:30' },
+  { id: 'kr35', date: '2026/02/12', dayOfWeek: '木', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '採血・心電図をオーダー。錐体外路症状の有無を確認、現時点で振戦・アカシジアなし。',                        tags: [],                            orderNumber: 'NO.808', timestamp: '2026/02/12 11:00' },
+  { id: 'kr36', date: '2026/02/12', dayOfWeek: '木', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '採血を実施。穿刺時の拒否なく協力的。実施後の気分不良なし。',                                              tags: ['看護記録'],                  timestamp: '2026/02/12 08:40' },
+  // --- 2 月上旬（入院期） ---
+  { id: 'kr37', date: '2026/02/10', dayOfWeek: '火', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '面会（母）。面会中は穏やかに会話。面会後にやや落ち着かない様子があり、経過観察とした。',                  tags: ['看護記録'],                  timestamp: '2026/02/10 15:20' },
+  { id: 'kr38', date: '2026/02/09', dayOfWeek: '月', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '定期回診。幻聴は残存するが興奮は軽減。リスペリドンを3mg/日へ増量。',                                      tags: [],                            orderNumber: 'NO.803', timestamp: '2026/02/09 10:00' },
+  { id: 'kr39', date: '2026/02/09', dayOfWeek: '月', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: 'バイタル: 体温36.4℃、血圧132/84、脈拍78。朝食8割摂取。',                                                tags: ['看護記録'],                  timestamp: '2026/02/09 09:00' },
+  { id: 'kr40', date: '2026/02/08', dayOfWeek: '日', category: '看護記録',  author: '中田 看護師',   authorRole: '',     content: '消灯前に「壁の向こうから声が聞こえる」との訴えあり。傾聴のうえ頓服の希望はなし。付き添いで居室へ誘導。',  tags: ['看護記録'],                  timestamp: '2026/02/08 21:10' },
+  { id: 'kr41', date: '2026/02/07', dayOfWeek: '土', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '不眠の訴えが継続。ブロチゾラム0.25mg 就寝前を追加する。',                                                tags: [],                            timestamp: '2026/02/07 14:00' },
+  { id: 'kr42', date: '2026/02/07', dayOfWeek: '土', category: '看護記録',  author: '佐々木 看護師', authorRole: '',     content: '夜間、入眠まで2時間程度を要する。中途覚醒2回。日中の傾眠はなし。',                                        tags: ['看護記録'],                  timestamp: '2026/02/07 06:30' },
+  { id: 'kr43', date: '2026/02/06', dayOfWeek: '金', category: '入退院記録', author: '田村 医師',     authorRole: '医師D', content: '【精神科】医療保護入院。当院第１病棟・101号室へ入院。身長167.8cm・体重71.2kg。家族同意取得済み。',       tags: [],                            orderNumber: 'NO.801', timestamp: '2026/02/06 09:20' },
+  { id: 'kr44', date: '2026/02/06', dayOfWeek: '金', category: '医師記録',  author: '田村 医師',     authorRole: '医師D', content: '入院時診察。不眠・被害妄想・興奮の訴えあり。急性増悪と判断しリスペリドン2mg/日で開始。',                  tags: [],                            timestamp: '2026/02/06 10:15' },
+  { id: 'kr45', date: '2026/02/06', dayOfWeek: '金', category: '看護記録',  author: '山本 看護師',   authorRole: '',     content: '入院時オリエンテーション実施。病棟の生活規則・持ち物制限を説明。表情硬く視線が合いにくい。危険物の持ち込みなし。', tags: ['看護記録'],              timestamp: '2026/02/06 11:40' },
 ];
+
 
 // ===== オーダーをタイムラインレコードへ変換 =====
 
@@ -119,6 +166,23 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
   'all': '全件',
 };
 
+/**
+ * 日付サイドバーの記録種別バッジの並び順（固定）。
+ * ここに無い種別（部門記録の追加など）は後ろに五十音順で続く。
+ */
+const SIDEBAR_CATEGORY_ORDER: string[] = ['医師記録', '看護記録', '入退院記録', 'オーダー'];
+
+/**
+ * その日に存在する記録種別を、表示順を固定したうえで重複なく列挙する。
+ * 同じ種別の記事がその日に何件あってもバッジは 1 つにまとめる（俯瞰目的のため件数は出さない）。
+ */
+function distinctCategories(records: TimelineRecord[]): string[] {
+  const present = new Set<string>(records.map((r) => r.category as string));
+  const ordered = SIDEBAR_CATEGORY_ORDER.filter((c) => present.has(c));
+  const rest = [...present].filter((c) => !ordered.includes(c)).sort();
+  return [...ordered, ...rest];
+}
+
 const TAG_BG_COLOR_MAP: Record<string, string> = {
   '退院支援': 'error.light',
   'カンファ': 'success.light',
@@ -170,8 +234,8 @@ export default function MedicalRecordTab({
   }, [patient.id, dynamicMedicalRecords]);
 
   const [activeFilter, setActiveFilter] = useState<RecordCategory | 'all'>('all');
-  // us-47: 期間切替（既定 6 日分）
-  const [period, setPeriod] = useState<PeriodKey>('6days');
+  // us-47: 期間切替（既定 30 日分。入院経過を俯瞰できるよう既定を広く取る）
+  const [period, setPeriod] = useState<PeriodKey>('30days');
   // us-47: タグフィルタ（null = 全件）
   const [activeTag, setActiveTag] = useState<string | null>(null);
   // us-47: 「最初へ ▲」スクロール用
@@ -323,24 +387,27 @@ export default function MedicalRecordTab({
             </Stack>
 
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-              {/* 日付サイドバー(ページスクロールに追従しつつ可視に保つため sticky) */}
+              {/*
+                日付サイドバー（記録の俯瞰用）
+                - 目的: 「いつ・どの記録があるか」を一覧で掴む補助ナビ。記事本文は右のタイムラインで読む。
+                - 記録種別バッジは色のみ（横幅 110px を広げないため）。種別名は Tooltip で補う。
+                - ページスクロールに追従しつつ可視に保つため sticky。30 日分で縦にあふれるので自身をスクロールさせる。
+              */}
               <Box sx={{
                 width: 110, flexShrink: 0,
                 borderRight: '1px solid', borderColor: 'divider', pr: 0.5,
                 position: 'sticky',
                 top: 0,
                 alignSelf: 'flex-start',
+                maxHeight: 'calc(100vh - 240px)',
+                overflowY: 'auto',
               }}>
                 <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.6rem', display: 'block', mb: 0.5 }}>
-                  【最近の{Object.keys(groupedRecords).length}日分】
+                  【{PERIOD_LABELS[period]}】
                 </Typography>
                 {Object.entries(groupedRecords).map(([date, records]) => {
                   const d = date.split('/');
                   const dayStr = `${d[2]}日(${records[0].dayOfWeek})`;
-                  const hasDoctor = records.some((r) => r.category === '医師記録');
-                  const hasNursing = records.some((r) => r.category === '看護記録');
-                  const hasAdmission = records.some((r) => r.category === '入退院記録');
-                  const hasOrder = records.some((r) => r.category === 'オーダー');
                   return (
                     <Box
                       key={date}
@@ -358,11 +425,13 @@ export default function MedicalRecordTab({
                       <Typography sx={{ fontSize: '0.7rem', color: 'text.primary', fontWeight: 500 }}>
                         {dayStr}
                       </Typography>
+                      {/* 記録種別バッジ: その日にある種別ぶんだけ動的生成（色は recordCategoryColors.ts が単一の出所） */}
                       <Box sx={{ display: 'flex', gap: 0.2, ml: 'auto' }}>
-                        {hasDoctor && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('医師記録') }} />}
-                        {hasNursing && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('看護記録') }} />}
-                        {hasAdmission && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('入退院記録') }} />}
-                        {hasOrder && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor('オーダー') }} />}
+                        {distinctCategories(records).map((cat) => (
+                          <Tooltip key={cat} title={cat}>
+                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getRecordCategoryColor(cat), flexShrink: 0 }} />
+                          </Tooltip>
+                        ))}
                       </Box>
                     </Box>
                   );
