@@ -231,8 +231,7 @@ export interface FlowsheetStaff {
 // ----- マスタ設定（プロパティ） -----
 
 export interface FlowsheetPropertyConfig {
-  validateFuture: boolean;       // 未来日入力をエラーにする
-  confirmFuture: boolean;        // 未来日入力で確認メッセージ
+  // 未来日入力は常に不可（固定）。マスタによる制御（旧 validateFuture / confirmFuture）は 2026-08-17 に廃止。
   medicationInitialOperator: 'blank' | 'logon';  // 投薬者初期表示
   signRoleLock: 'logonOnly' | 'allowOthers';     // 実施者ロック
   defaultRecordForm: RecordFormType;             // 部門側記事形式の初期値
