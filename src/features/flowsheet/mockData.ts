@@ -125,8 +125,7 @@ export const NURSING_RECORD_TEMPLATES: NursingRecordTemplate[] = [
 
 // ---- マスタ設定（プロパティ）デフォルト ----
 export const FLOWSHEET_DEFAULT_PROPERTY: FlowsheetPropertyConfig = {
-  validateFuture: true,
-  confirmFuture: false,
+  // 未来日入力は常に不可（固定）。旧 validateFuture / confirmFuture は 2026-08-17 に廃止。
   medicationInitialOperator: 'logon',
   signRoleLock: 'allowOthers',
   defaultRecordForm: 'soap',

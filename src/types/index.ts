@@ -359,8 +359,7 @@ export interface IsolationOrder {
   restraintParts?: string[];
   /** 開放時間（最大 9 件、開始／継続／変更指示時のみ） */
   releaseTimes?: ReleaseTimeEntry[];
-  /** 期限管理対象として登録された隔離拘束時文書 */
-  linkedDocumentChecks?: string[];
+  // 隔離拘束時文書（linkedDocumentChecks）は現時点では取り扱わないため削除（2026-08-17）。
   /** 告知書（隔離拘束指示箋）印刷状態 */
   noticePrint?: IsolationNoticePrint;
   /** 「指示」段階（即時確定でない）フラグ */

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Box, Stack, Typography, Tabs, Tab, FormControl, InputLabel, Select, MenuItem,
-  Button, TextField, Paper, Chip, Alert, Divider, IconButton, Tooltip,
+  Button, TextField, Paper, Chip, Divider, IconButton, Tooltip,
 } from '@mui/material';
 import {
   Restaurant as RestaurantIcon, Lock as LockIcon,
@@ -206,7 +206,7 @@ const AdmissionHistoryView: React.FC = () => {
     showSnackbar('入院歴を登録しました（変更日時・操作者を記録）', 'success');
   };
 
-  const handleAdmitFormChange = (params: { newAdmitForm: string; changedAt: string; documents: string[] }) => {
+  const handleAdmitFormChange = (params: { newAdmitForm: string; changedAt: string }) => {
     if (!selectedRecord) return;
     // 旧形態レコードの dischargeDate を「形態変更日時 - 1 分」に設定
     const changed = new Date(params.changedAt);
@@ -229,7 +229,7 @@ const AdmissionHistoryView: React.FC = () => {
       status: '入院中',
       isAdmitFormChange: true,
       admitForm: params.newAdmitForm,
-      admitReason: `形態変更により ${params.newAdmitForm} に切替（${params.documents.length}文書添付）`,
+      admitReason: `形態変更により ${params.newAdmitForm} に切替`,
     };
     addAdmissionHistory(newRecord);
     appendMedicalRecord(selectedPatientId, buildMedicalRecord(
@@ -270,7 +270,7 @@ const AdmissionHistoryView: React.FC = () => {
         `入院取消／ 分類: ${params.category}／理由: ${params.reason || '(未入力)'}／入院確定オーダ・食事療法も連動取消`,
         ['入院取消'],
       ));
-      showSnackbar('入院を取り消しました（期限管理文書削除済、入院確定オーダ・食事療法も連動取消）', 'success');
+      showSnackbar('入院を取り消しました（入院確定オーダ・食事療法も連動取消）', 'success');
     } else if (action === 'cancel-discharge') {
       // 直近期間の最後のレコードを「入院中」に戻す（dischargeDate 等を消す）
       const last = latestPeriod?.items[latestPeriod.items.length - 1];
@@ -289,7 +289,7 @@ const AdmissionHistoryView: React.FC = () => {
         `退院取消／ 分類: ${params.category}／理由: ${params.reason || '(未入力)'}`,
         ['退院取消'],
       ));
-      showSnackbar('退院を取り消しました（退院時文書削除済）', 'success');
+      showSnackbar('退院を取り消しました', 'success');
     }
   };
 
@@ -415,9 +415,7 @@ const AdmissionHistoryView: React.FC = () => {
                 {isFormChange && <Chip label="形態変更レコード" size="small" sx={{ bgcolor: '#fef3c7', color: '#a16207' }} />}
               </Stack>
 
-              <Alert severity="warning" sx={{ py: 0.5 }} icon={<CloseIcon fontSize="small" />}>
-                期限管理文書（入院時文書／退院時文書）は取消で削除されます。必要な文書は事前にダウンロードしてください。
-              </Alert>
+              {/* 入院時文書・退院時文書は現時点では電子カルテで取り扱わないため、期限管理文書の削除注意喚起バナーを削除（2026-08-17） */}
 
               {tab === 'admit' ? (
                 <Stack spacing={1.5}>

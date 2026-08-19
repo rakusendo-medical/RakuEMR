@@ -69,14 +69,12 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
 
   const [rows, setRows] = useState<RowDraft[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
-  const [confirmFutureMsg, setConfirmFutureMsg] = useState<string | null>(null);
 
   // ダイアログ open のたびに既存値を読み込む
   useEffect(() => {
     if (open) {
       setRows(existingForDate.length > 0 ? existingForDate.map(toRowDraft) : [toRowDraft()]);
       setErrors([]);
-      setConfirmFutureMsg(null);
     }
   }, [open, existingForDate]);
 
@@ -89,9 +87,9 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
    * 検証して書き込み。
    * - 時間空欄行: 既存があれば削除、なければ無視
    * - 時間入力ありで HH:mm でないものはエラー
-   * - 未来日時: validateFuture=ON でエラー、confirmFuture=ON で確認後実行
+   * - 未来日時: 常に登録不可（固定・マスタ設定によらない）
    */
-  const handleRegister = (afterConfirm = false) => {
+  const handleRegister = () => {
     const errs: string[] = [];
     const targets: { row: RowDraft; ok: boolean }[] = [];
     rows.forEach((row, i) => {
@@ -116,13 +114,7 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
     });
 
     if (futureRows.length > 0) {
-      if (property.validateFuture) {
-        errs.push('未来日時のバイタルは登録できません（マスタ validate.future）。');
-      } else if (property.confirmFuture && !afterConfirm) {
-        setConfirmFutureMsg(`未来日時の登録があります（${futureRows.length} 件）。続行しますか？`);
-        if (errs.length > 0) setErrors(errs);
-        return;
-      }
+      errs.push('未来日時のバイタルは登録できません（未来日は登録不可）。');
     }
 
     if (errs.length > 0) {
@@ -130,7 +122,6 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
       return;
     }
     setErrors([]);
-    setConfirmFutureMsg(null);
 
     // 既存 id を持つもので draft が「時間空欄」なら削除、それ以外は値変化があれば更新
     const existingIdsTouched = new Set<string>();
@@ -199,18 +190,6 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
         {errors.length > 0 && (
           <Alert severity="error" sx={{ mb: 1 }}>
             <Stack>{errors.map((e, i) => <span key={i}>{e}</span>)}</Stack>
-          </Alert>
-        )}
-        {confirmFutureMsg && (
-          <Alert severity="warning" sx={{ mb: 1 }}
-            action={
-              <Stack direction="row" spacing={1}>
-                <Button color="inherit" size="small" onClick={() => setConfirmFutureMsg(null)}>戻る</Button>
-                <Button color="warning" size="small" variant="contained" onClick={() => handleRegister(true)}>続行</Button>
-              </Stack>
-            }
-          >
-            {confirmFutureMsg}
           </Alert>
         )}
 
@@ -310,15 +289,15 @@ const VitalEditDialog: React.FC<Props> = ({ open, patientId, date, onClose }) =>
           )}
         </Box>
 
-        {date > TODAY && property.validateFuture && (
+        {date > TODAY && (
           <Alert severity="info" sx={{ mt: 1 }}>
-            未来日 ({date}) のため、登録時は時間欄が現在時刻より未来の場合のみエラーになります。
+            未来日 ({date}) のため、この日のバイタルは登録できません（未来日は登録不可）。
           </Alert>
         )}
       </DialogContent>
       <DialogActions>
         <Button variant="text" onClick={onClose}>キャンセル</Button>
-        <Button variant="contained" onClick={() => handleRegister(false)}>登録</Button>
+        <Button variant="contained" onClick={() => handleRegister()}>登録</Button>
       </DialogActions>
     </Dialog>
   );

@@ -42,7 +42,6 @@ const FlowsheetPage: React.FC<FlowsheetPageProps> = ({ embedded = false, patient
   const patientId = patientIdProp ?? params.patientId ?? '';
   const patient = PATIENTS.find((p) => p.id === patientId);
 
-  const property = useFlowsheetStore((s) => s.property);
   const patternMaster = useFlowsheetStore((s) => s.patternMaster);
   const careItemMaster = useFlowsheetStore((s) => s.careItemMaster);
   const applications = useFlowsheetStore((s) => s.patternApplications);
@@ -88,8 +87,8 @@ const FlowsheetPage: React.FC<FlowsheetPageProps> = ({ embedded = false, patient
 
   const segs = movementSegments.filter((s) => s.patientId === patientId);
 
-  const isFutureDisabled = (d: ISODate): boolean =>
-    property.validateFuture && d > TODAY;
+  // 未来日は常に入力不可（固定・マスタ設定によらない）。
+  const isFutureDisabled = (d: ISODate): boolean => d > TODAY;
 
   const staffName = (id: string): string =>
     staffs.find((s) => s.id === id)?.name ?? id;

@@ -479,12 +479,7 @@ const DesignGuide: React.FC = () => {
               </Grid>
             </Grid>
 
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>入院時文書</Typography>
-            <Stack>
-              <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="告知・同意書" />
-              <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="入院診療計画書" />
-            </Stack>
+            {/* 入院時文書サンプルは現時点では電子カルテで取り扱わないため削除（2026-08-17） */}
 
             <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle2" sx={{ mb: 1 }}>入院決定の理由</Typography>

@@ -8,7 +8,7 @@ import { Search as SearchIcon, ContentCopy as ContentCopyIcon } from '@mui/icons
 import type { Patient } from '../../types';
 import {
   MEDICAL_INSTITUTIONS, REFERRAL_ROUTES_DISCHARGE_BASE, REFERRAL_ROUTES_DISCHARGE_OPTIONAL,
-  DISCHARGE_DOCS_BY_CATEGORY, THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES,
+  THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES,
 } from '../../data/mockData';
 import type { DischargeCategory } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
@@ -70,7 +70,6 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const [originalMealEndAt, setOriginalMealEndAt] = React.useState<string>(formatDateTimeNow());
   const [memo, setMemo] = React.useState('');
   const [category, setCategory] = React.useState<DischargeCategory>('通院');
-  const [docs, setDocs] = React.useState<Set<string>>(new Set());
   const [referralId, setReferralId] = React.useState<string>('');
   const [route, setRoute] = React.useState<string>('退院後通院なし');
   const [reason, setReason] = React.useState('');
@@ -98,7 +97,6 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       setOriginalMealEndAt(init);
       setMemo('');
       setCategory('通院');
-      setDocs(new Set(DISCHARGE_DOCS_BY_CATEGORY['通院']));
       const th = THERAPY_HISTORY_SAMPLES.find((t) => t.patientId === patient.id);
       setReferralId(th?.admitReferralId ?? '');
       setRoute(REFERRAL_ROUTES_DISCHARGE_BASE[3]); // 退院後他院通院
@@ -114,10 +112,8 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     }
   }, [open, patient, editingOrderId]);
 
-  // 退院後診療区分が変わったら退院時文書を切替
-  React.useEffect(() => {
-    setDocs(new Set(DISCHARGE_DOCS_BY_CATEGORY[category]));
-  }, [category]);
+  // 退院時文書は現時点では電子カルテで取り扱わないため、区分連動の文書チェックは削除（2026-08-17）。
+  // 退院後診療区分（不要／通院／転院）セレクトは退院区分の反映に引き続き使用する。
 
   // 退院日変更で食事終了日が自動連動
   React.useEffect(() => {
@@ -140,14 +136,6 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const referralRoutes = optionalFeatures.medicalProtection
     ? [...REFERRAL_ROUTES_DISCHARGE_BASE, REFERRAL_ROUTES_DISCHARGE_OPTIONAL]
     : [...REFERRAL_ROUTES_DISCHARGE_BASE];
-
-  const toggleDoc = (d: string) =>
-    setDocs((s) => {
-      const n = new Set(s);
-      if (n.has(d)) n.delete(d);
-      else n.add(d);
-      return n;
-    });
 
   const handleCopyFromTherapy = () => {
     const th = THERAPY_HISTORY_SAMPLES.find((t) => t.patientId === patient.id);
@@ -284,13 +272,10 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
     finalizeDischarge();
   };
 
-  // 引数型は DeleteReasonDialog の onConfirm 定義に合わせる（印刷フラグはモックのため未使用）
+  // 引数型は DeleteReasonDialog の onConfirm 定義に合わせる（中止箋・削除箋の印刷機能は 2026-08-18 に廃止）
   const handleDeleteConfirmed = (params: {
     category: string;
     reason: string;
-    printDeleteOrderSheet: boolean;
-    printMoveDeleteSheet?: boolean;
-    printMealDeleteSheet?: boolean;
   }) => {
     setDeleteReasonOpen(false);
     if (editingOrderId) {
@@ -383,20 +368,7 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
               </Typography>
             </Stack>
 
-            <Box>
-              <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-                退院時文書（区分「{category}」）
-              </Typography>
-              <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
-                {DISCHARGE_DOCS_BY_CATEGORY[category].map((d) => (
-                  <FormControlLabel
-                    key={d}
-                    control={<Checkbox checked={docs.has(d)} onChange={() => toggleDoc(d)} />}
-                    label={d}
-                  />
-                ))}
-              </Stack>
-            </Box>
+            {/* 退院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17） */}
 
             <Divider />
             <Box>

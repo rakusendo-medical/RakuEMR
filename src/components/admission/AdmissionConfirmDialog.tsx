@@ -22,15 +22,7 @@ interface Props {
   onOpenVacancy: () => void;
 }
 
-// 入院時文書 - 状態+作成医の各項目に紐づく
-const ADMIT_DOCS = [
-  { name: '告知・同意書', defaultChecked: true },
-  { name: '入院診療計画書', defaultChecked: true },
-  { name: 'テスト文書1', defaultChecked: false },
-  { name: 'テスト文書2', defaultChecked: false },
-];
-
-const DOC_STATUS = ['未着手', '作成中', '作成済', '提出済'];
+// 入院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17）。
 const DOCTORS = ['-', '医師 太郎', '医師 大吾', '医師 花子'];
 
 const HOSPITALS = ['—', '〇〇医院', '△△クリニック', '□□総合病院'];
@@ -85,10 +77,6 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const [toBed, setToBed] = React.useState<string>(order && order.bedLabel !== '—' ? order.bedLabel : '');
   const [tentativeWard, setTentativeWard] = React.useState<boolean>(false);
   const [memo, setMemo] = React.useState('');
-  // 入院時文書(各項目の状態+作成医)
-  const [docs, setDocs] = React.useState<Record<string, { checked: boolean; status: string; doctor: string }>>(
-    () => Object.fromEntries(ADMIT_DOCS.map((d) => [d.name, { checked: d.defaultChecked, status: '未着手', doctor: '-' }])),
-  );
   const [hospital, setHospital] = React.useState('');
   const [reason, setReason] = React.useState('');
   const [orderText, setOrderText] = React.useState('');
@@ -114,7 +102,6 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
       setToBed(order.bedLabel !== '—' ? order.bedLabel : '');
       setTentativeWard(false);
       setMemo('');
-      setDocs(Object.fromEntries(ADMIT_DOCS.map((d) => [d.name, { checked: d.defaultChecked, status: '未着手', doctor: '-' }])));
       setHospital('');
       setReason('');
       setOrderText('');
@@ -136,11 +123,6 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const futureDate = new Date(admitAt) > new Date();
   const mealChanged = mealAt !== originalMealAt;
   const pendingOrders = PENDING_ORDERS_SAMPLES.filter((p) => p.patientId === order.patientId && p.category === '外来専用');
-
-  const toggleDoc = (name: string) =>
-    setDocs((s) => ({ ...s, [name]: { ...s[name], checked: !s[name].checked } }));
-  const updateDocField = (name: string, key: 'status' | 'doctor', value: string) =>
-    setDocs((s) => ({ ...s, [name]: { ...s[name], [key]: value } }));
 
   const startConfirmation = () => {
     if (futureDate) {
@@ -341,37 +323,7 @@ const AdmissionConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
           <SectionHeading>メモ</SectionHeading>
           <TextField fullWidth size="small" multiline minRows={3} value={memo} onChange={(e) => setMemo(e.target.value)} />
 
-          {/* 入院時文書 */}
-          <SectionHeading>入院時文書</SectionHeading>
-          <Stack spacing={0.5}>
-            <Typography variant="caption" color="text.secondary">
-              入院形態: [任意入院]
-            </Typography>
-            {ADMIT_DOCS.map((d) => {
-              const state = docs[d.name];
-              return (
-                <Stack key={d.name} direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                  <FormControlLabel
-                    control={<Checkbox size="small" checked={state.checked} onChange={() => toggleDoc(d.name)} />}
-                    label={<Typography variant="body2">{d.name}</Typography>}
-                    sx={{ minWidth: 200 }}
-                  />
-                  <Typography variant="caption" color="text.secondary">状態</Typography>
-                  <FormControl size="small" sx={{ width: 110 }}>
-                    <Select value={state.status} onChange={(e) => updateDocField(d.name, 'status', e.target.value)}>
-                      {DOC_STATUS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                    </Select>
-                  </FormControl>
-                  <Typography variant="caption" color="text.secondary">作成医</Typography>
-                  <FormControl size="small" sx={{ width: 130 }}>
-                    <Select value={state.doctor} onChange={(e) => updateDocField(d.name, 'doctor', e.target.value)}>
-                      {DOCTORS.map((doc) => <MenuItem key={doc} value={doc}>{doc}</MenuItem>)}
-                    </Select>
-                  </FormControl>
-                </Stack>
-              );
-            })}
-          </Stack>
+          {/* 入院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17） */}
 
           {/* 紹介医療機関・入院決定の理由 */}
           <SectionHeading>紹介医療機関・入院決定の理由</SectionHeading>

@@ -1,18 +1,15 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Stack, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem,
-  FormControlLabel, Checkbox, Alert,
+  Button, Stack, Typography, TextField, FormControl, InputLabel, Select, MenuItem,
+  Alert,
 } from '@mui/material';
-import {
-  MASTER_ADMIT_FORM_TYPES, MASTER_ADMIT_DOCS_BY_FORM,
-} from '../../data/mockData';
+import { MASTER_ADMIT_FORM_TYPES } from '../../data/mockData';
 import type { AdmitFormType } from '../../data/mockData';
 
 export interface AdmitFormChangeParams {
   newAdmitForm: AdmitFormType;
   changedAt: string; // YYYY-MM-DDTHH:mm
-  documents: string[];
 }
 
 interface Props {
@@ -36,32 +33,19 @@ const AdmitFormChangeDialog: React.FC<Props> = ({ open, currentForm, patientName
 
   const [newForm, setNewForm] = React.useState<AdmitFormType>(initialForm);
   const [changedAt, setChangedAt] = React.useState<string>(formatDateTimeNow());
-  const [docs, setDocs] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
     if (open) {
       setNewForm(initialForm);
       setChangedAt(formatDateTimeNow());
-      setDocs(new Set(MASTER_ADMIT_DOCS_BY_FORM[initialForm].slice(0, 2)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // 形態変更時に文書チェックを差し替え
-  React.useEffect(() => {
-    setDocs(new Set(MASTER_ADMIT_DOCS_BY_FORM[newForm].slice(0, 2)));
-  }, [newForm]);
-
-  const toggleDoc = (d: string) =>
-    setDocs((s) => {
-      const n = new Set(s);
-      if (n.has(d)) n.delete(d);
-      else n.add(d);
-      return n;
-    });
+  // 入院時文書は現時点では電子カルテで取り扱わないため、形態連動の文書チェックは削除（2026-08-17）。
 
   const handleSubmit = () => {
-    onConfirm({ newAdmitForm: newForm, changedAt, documents: Array.from(docs) });
+    onConfirm({ newAdmitForm: newForm, changedAt });
   };
 
   return (
@@ -99,20 +83,7 @@ const AdmitFormChangeDialog: React.FC<Props> = ({ open, currentForm, patientName
             />
           </Stack>
 
-          <Box>
-            <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-              入院時文書（新形態「{newForm}」に紐づく）
-            </Typography>
-            <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
-              {MASTER_ADMIT_DOCS_BY_FORM[newForm].map((d) => (
-                <FormControlLabel
-                  key={d}
-                  control={<Checkbox checked={docs.has(d)} onChange={() => toggleDoc(d)} />}
-                  label={d}
-                />
-              ))}
-            </Stack>
-          </Box>
+          {/* 入院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17） */}
         </Stack>
       </DialogContent>
       <DialogActions>

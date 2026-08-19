@@ -103,7 +103,6 @@ const NursingRecordDialog: React.FC<Props> = ({
   const [isPublished, setIsPublished] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [confirmFutureMsg, setConfirmFutureMsg] = useState<string | null>(null);
   const [tplAnchor, setTplAnchor] = useState<HTMLElement | null>(null);
   // タブ切替で本文を破棄する確認(既存本文がある場合のみ表示)
   const [pendingFormSwitch, setPendingFormSwitch] = useState<RecordFormType | null>(null);
@@ -114,7 +113,6 @@ const NursingRecordDialog: React.FC<Props> = ({
     setMode(initialMode);
     setErrors([]);
     setConfirmDelete(false);
-    setConfirmFutureMsg(null);
     if (existing) {
       setTitle(existing.title);
       setRecordedAt(existing.recordedAt);
@@ -168,29 +166,19 @@ const NursingRecordDialog: React.FC<Props> = ({
 
   const cancelPendingFormSwitch = () => setPendingFormSwitch(null);
 
-  const handleSubmit = (afterConfirm = false) => {
+  const handleSubmit = () => {
     const errs: string[] = [];
     if (title.trim() === '') errs.push('タイトルは必須です（最大 20 文字）');
     if (title.length > 20) errs.push('タイトルは 20 文字以内で入力してください');
     if (!recordedAt) errs.push('記載日時は必須です');
 
-    // 未来日チェック
-    const dt = new Date(recordedAt).getTime();
-    const nowEpoch = Date.now();
-    const isFuture = dt > nowEpoch;
-    if (isFuture) {
-      if (property.validateFuture) {
-        errs.push('未来日時の登録はできません（マスタ validate.future）。');
-      } else if (property.confirmFuture && !afterConfirm) {
-        setConfirmFutureMsg('未来日時の登録です。続行しますか？');
-        if (errs.length > 0) setErrors(errs);
-        return;
-      }
+    // 未来日は常に登録不可（固定・マスタ設定によらない）
+    if (new Date(recordedAt).getTime() > Date.now()) {
+      errs.push('未来日時の登録はできません（未来日は登録不可）。');
     }
 
     if (errs.length > 0) { setErrors(errs); return; }
     setErrors([]);
-    setConfirmFutureMsg(null);
 
     const body: NursingRecordBody = buildBodyForSave(form, bodyText);
 
@@ -285,19 +273,6 @@ const NursingRecordDialog: React.FC<Props> = ({
         {errors.length > 0 && (
           <Alert severity="error" sx={{ mb: 1 }}>
             <Stack>{errors.map((e, i) => <span key={i}>{e}</span>)}</Stack>
-          </Alert>
-        )}
-        {confirmFutureMsg && (
-          <Alert
-            severity="warning" sx={{ mb: 1 }}
-            action={
-              <Stack direction="row" spacing={1}>
-                <Button color="inherit" size="small" onClick={() => setConfirmFutureMsg(null)}>戻る</Button>
-                <Button color="warning" size="small" variant="contained" onClick={() => handleSubmit(true)}>続行</Button>
-              </Stack>
-            }
-          >
-            {confirmFutureMsg}
           </Alert>
         )}
 
@@ -521,7 +496,7 @@ const NursingRecordDialog: React.FC<Props> = ({
         <Box sx={{ flex: 1 }} />
         <Button onClick={onClose}>閉じる</Button>
         {!isViewMode && (
-          <Button variant="contained" onClick={() => handleSubmit(false)}>
+          <Button variant="contained" onClick={() => handleSubmit()}>
             {existing ? '更新' : '登録'}
           </Button>
         )}

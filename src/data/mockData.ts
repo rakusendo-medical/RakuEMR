@@ -812,20 +812,9 @@ export const REFERRAL_ROUTES_DISCHARGE_OPTIONAL = '医療観察入院処遇中�
 export type AdmitFormType = '任意入院' | '医療保護入院' | '措置入院' | '応急入院' | '緊急措置入院';
 export const ADMIT_FORM_TYPES: AdmitFormType[] = ['任意入院', '医療保護入院', '措置入院', '応急入院', '緊急措置入院'];
 
-export const ADMIT_DOCS_BY_FORM: Record<AdmitFormType, string[]> = {
-  '任意入院':       ['入院申込書', '同意書（治療）', '同意書（個人情報）', '保険証コピー', '入院案内書'],
-  '医療保護入院':   ['医療保護入院書類', '家族同意書', '入院告知書', '入院案内書'],
-  '措置入院':       ['措置入院通知書', '入院告知書', '指定書写し', '入院案内書'],
-  '応急入院':       ['応急入院書類', '入院告知書', '入院案内書'],
-  '緊急措置入院':   ['緊急措置入院書類', '入院告知書', '指定書写し', '入院案内書'],
-};
-
+// 入院時文書／退院時文書は現時点では電子カルテで取り扱わないため削除（2026-08-17）。
+// 退院後診療区分（不要／通院／転院）は退院区分の反映・通院精神指示に引き続き使用するため型は残す。
 export type DischargeCategory = '不要' | '通院' | '転院';
-export const DISCHARGE_DOCS_BY_CATEGORY: Record<DischargeCategory, string[]> = {
-  '不要': ['退院サマリ'],
-  '通院': ['退院サマリ', '紹介状（通院）', '通院精神指示書'],
-  '転院': ['退院サマリ', '紹介状（転院）', '転院連絡票', '訪問看護指示書'],
-};
 
 export const DELETE_REASON_CATEGORIES = [
   '入力誤り',
@@ -866,8 +855,6 @@ export const MASTER_REFERRAL_ROUTES_ADMIT_OPTIONAL = REFERRAL_ROUTES_ADMIT_OPTIO
 export const MASTER_REFERRAL_ROUTES_DISCHARGE_BASE = REFERRAL_ROUTES_DISCHARGE_BASE;
 export const MASTER_REFERRAL_ROUTES_DISCHARGE_OPTIONAL = REFERRAL_ROUTES_DISCHARGE_OPTIONAL;
 export const MASTER_ADMIT_FORM_TYPES = ADMIT_FORM_TYPES;
-export const MASTER_ADMIT_DOCS_BY_FORM = ADMIT_DOCS_BY_FORM;
-export const MASTER_DISCHARGE_DOCS_BY_CATEGORY = DISCHARGE_DOCS_BY_CATEGORY;
 export const MASTER_DELETE_REASON_CATEGORIES = DELETE_REASON_CATEGORIES;
 export const MASTER_REHAB_OUTCOME_OPTIONS = REHAB_OUTCOME_OPTIONS;
 
@@ -1213,8 +1200,9 @@ export const applyCancelledMoves = (
 
 // ===== 隔離拘束 =====
 // ===== ep-05 隔離拘束指示 =====
-// IsolationOrder には ep-05 で subtype/operation/restraintParts/releaseTimes/linkedDocumentChecks
+// IsolationOrder には ep-05 で subtype/operation/restraintParts/releaseTimes
 // 等のオプショナルフィールドが追加されている。既存サンプルにも順次付与する。
+// （隔離拘束時文書 linkedDocumentChecks は現時点では取り扱わないため 2026-08-17 に削除）
 // ===== ep-06 隔離拘束一覧 =====
 // confirmSigns（指示受けサイン）サンプルも一部付与。ガバナンス警告検証用に
 // ISO004 は精神保健指定医ではない指示医（岸本）＋サイン未登録のままにしてある。
@@ -1224,7 +1212,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     type: '隔離', subtype: '隔離', operation: '開始',
     startDatetime: '2026-02-22 14:00',
     wardId: 'ward2', roomNumber: '202-C', doctorName: '岸本 医師',
-    linkedDocumentChecks: ['隔離告知書', '隔離開始書類', '行動制限実施記録'],
     confirmSigns: {
       startPrimary: { staffId: 'N001', staffName: '山本 看護師', signedAt: '2026-02-22T14:30' },
     },
@@ -1240,7 +1227,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
       { start: '13:00', end: '13:30' },
       { start: '16:00', end: '16:30' },
     ],
-    linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary:   { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2026-02-23T09:45' },
       startSecondary: { staffId: 'N003', staffName: '中田 看護師',   signedAt: '2026-02-23T10:00' },
@@ -1274,7 +1260,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     startDatetime: '2025-12-15 22:00', endDatetime: '2025-12-17 09:00',
     wardId: 'ward2', roomNumber: '202-A', doctorName: '田村 医師',
     restraintParts: ['右手首', '左手首'],
-    linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary:   { staffId: 'N001', staffName: '山本 看護師',   signedAt: '2025-12-15T22:15' },
       startSecondary: { staffId: 'N003', staffName: '中田 看護師',   signedAt: '2025-12-15T22:30' },
@@ -1286,7 +1271,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     type: '隔離', subtype: '隔離', operation: '開始',
     startDatetime: '2026-01-22 14:00', endDatetime: '2026-01-25 11:00',
     wardId: 'ward2', roomNumber: '202-A', doctorName: '田村 医師',
-    linkedDocumentChecks: ['隔離告知書', '隔離開始書類', '行動制限実施記録'],
     confirmSigns: {
       startPrimary: { staffId: 'N001', staffName: '山本 看護師',   signedAt: '2026-01-22T14:20' },
       endPrimary:   { staffId: 'N003', staffName: '中田 看護師',   signedAt: '2026-01-25T11:05' },
@@ -1299,7 +1283,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     wardId: 'ward2', roomNumber: '202-A', doctorName: '田村 医師',
     restraintParts: ['体幹'],
     releaseTimes: [{ start: '23:00', end: '23:15' }, { start: '02:00', end: '02:15' }],
-    linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary:   { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2026-03-10T21:40' },
       startSecondary: { staffId: 'N004', staffName: '原田 師長',     signedAt: '2026-03-10T21:55' },
@@ -1313,7 +1296,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     type: '隔離', subtype: '隔離', operation: '開始',
     startDatetime: '2026-02-05 18:00', endDatetime: '2026-02-06 10:00',
     wardId: 'ward1', roomNumber: '100-1', doctorName: '岸本 医師',
-    linkedDocumentChecks: ['隔離告知書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary: { staffId: 'N003', staffName: '中田 看護師',   signedAt: '2026-02-05T18:10' },
       endPrimary:   { staffId: 'N001', staffName: '山本 看護師',   signedAt: '2026-02-06T10:05' },
@@ -1330,7 +1312,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
       { start: '13:00', end: '13:30' },
       { start: '16:00', end: '16:30' },
     ],
-    linkedDocumentChecks: ['隔離告知書', '身体拘束に関する説明書・同意書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary:   { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2026-04-12T16:45' },
       startSecondary: { staffId: 'N004', staffName: '原田 師長',     signedAt: '2026-04-12T17:00' },
@@ -1347,7 +1328,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     wardId: 'ward2', roomNumber: '202-C', doctorName: '森田 医師',
     restraintParts: ['右手首', '左手首', '体幹'],
     releaseTimes: [{ start: '08:00', end: '08:30' }, { start: '14:00', end: '14:30' }],
-    linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary:   { staffId: 'N001', staffName: '山本 看護師',   signedAt: '2025-11-08T03:15' },
       startSecondary: { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2025-11-08T03:30' },
@@ -1359,7 +1339,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     type: '隔離', subtype: '隔離', operation: '開始',
     startDatetime: '2026-01-15 19:00', endDatetime: '2026-01-18 12:00',
     wardId: 'ward2', roomNumber: '202-C', doctorName: '森田 医師',
-    linkedDocumentChecks: ['隔離告知書', '隔離開始書類', '行動制限実施記録'],
     confirmSigns: {
       startPrimary: { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2026-01-15T19:15' },
       endPrimary:   { staffId: 'N001', staffName: '山本 看護師',   signedAt: '2026-01-18T12:05' },
@@ -1373,7 +1352,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     type: '隔離', subtype: '隔離', operation: '開始',
     startDatetime: '2025-12-20 07:30', endDatetime: '2025-12-22 14:00',
     wardId: 'ward1', roomNumber: '101-3', doctorName: '田村 医師',
-    linkedDocumentChecks: ['隔離告知書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary: { staffId: 'N003', staffName: '中田 看護師',   signedAt: '2025-12-20T07:45' },
       endPrimary:   { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2025-12-22T14:10' },
@@ -1390,7 +1368,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
       { start: '11:30', end: '12:30' },
       { start: '17:30', end: '18:30' },
     ],
-    linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary:   { staffId: 'N004', staffName: '原田 師長',     signedAt: '2026-01-30T13:15' },
       startSecondary: { staffId: 'N001', staffName: '山本 看護師',   signedAt: '2026-01-30T13:30' },
@@ -1406,7 +1383,6 @@ export const ISOLATION_ORDERS: IsolationOrder[] = [
     wardId: 'ward2', roomNumber: '202-E', doctorName: '岸本 医師',
     restraintParts: ['体幹'],
     releaseTimes: [{ start: '02:00', end: '02:15' }, { start: '05:00', end: '05:15' }],
-    linkedDocumentChecks: ['身体拘束に関する説明書・同意書', '行動制限実施記録'],
     confirmSigns: {
       startPrimary:   { staffId: 'N002', staffName: '佐々木 看護師', signedAt: '2026-02-28T23:15' },
       startSecondary: { staffId: 'N004', staffName: '原田 師長',     signedAt: '2026-02-28T23:30' },
