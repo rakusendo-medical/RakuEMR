@@ -23,6 +23,7 @@ import { isFutureSlot, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL } from '../iso
 import { NewRecordDialog } from '../karte/MedicalRecordTab';
 import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
 import { PATTERN_OPTIONS, FLOWSHEET_PATTERNS, patternItems, careItemLabel } from './patternMaster';
+import RecordSummaryStrip from './RecordSummaryStrip';
 
 interface Props {
   patientId?: string;
@@ -874,7 +875,22 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   };
 
   return (
-    <Box>
+    // 記録サマリー帯と詳細テーブルの右端をそろえる: ルートを最も広い子（＝固定幅の詳細テーブル）に
+    // 合わせて shrink-wrap（width:max-content）する。minWidth:100% は付けない（付けると広い
+    // ビューポートで帯だけがコンテナ幅まで伸び、固定幅のテーブルより右へはみ出すため）。
+    // これで帯（width:100%）は常にテーブル幅ちょうどになり、画面幅に依らず右端が一致する。
+    <Box sx={{ width: 'max-content' }}>
+      {/* === 記録サマリー帯（最近30日・色バッジ俯瞰）=== */}
+      {/* 医師・相談員が「いつ・どの記録が・どの程度あるか」を時系列で俯瞰する（表示専用）。詳細入力は下の7日表で行う。
+          endDate を本体と共有して右端7日を青枠でハイライト（＝下の詳細に出ている範囲の目印）。
+          ラベル幅・総幅を下の詳細テーブル（colgroup）に一致させ、左端・右端をそろえる。 */}
+      <RecordSummaryStrip
+        patientId={patientId}
+        endDate={endDate}
+        labelWidth={LABEL_COL_WIDTH + SUB_COL_WIDTH}
+        totalWidth={LABEL_COL_WIDTH + SUB_COL_WIDTH + DAY_COL_WIDTH * dayIso.length}
+        detailDays={dayIso.length}
+      />
       {/* === 単一 Table（B 案・全 7 セクション統合）=== */}
       {/*
         TableContainer のデフォルト `overflow-x: auto` は sticky の参照スクロールコンテナを
