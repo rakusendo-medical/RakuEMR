@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import StatusBadge from '../common/StatusBadge';
 import { useAppStore } from '../../stores/useAppStore';
@@ -344,7 +344,7 @@ const WardMap: React.FC = () => {
                           <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
                               <Typography variant="body2" fontWeight={bed.patientId ? 600 : 400} color={isUnavailable ? 'text.disabled' : (bed.patientId ? 'text.primary' : 'text.disabled')} noWrap>
-                                {isUnavailable ? '使用不可' : (bed.patientName || '空床')}
+                                {isUnavailable ? BED_STATUS_CONFIG.unavailable.label : (bed.patientName || BED_STATUS_CONFIG.empty.label)}
                               </Typography>
                               {bed.patientId && (
                                 <IconButton
@@ -396,15 +396,15 @@ const WardMap: React.FC = () => {
           <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5 }} alignItems="center">
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>病床:</Typography>
             <Stack direction="row" spacing={0.5} alignItems="center">
-              <Box sx={{ width: 16, height: 8, borderRadius: 0.5, bgcolor: '#f1f5f9', border: '1px solid #cbd5e1' }} />
-              <Typography variant="caption" color="text.secondary">空床</Typography>
+              <Box sx={{ width: 16, height: 8, borderRadius: 0.5, bgcolor: BED_STATUS_CONFIG.empty.bgColor, border: '1px solid #cbd5e1' }} />
+              <Typography variant="caption" color="text.secondary">{BED_STATUS_CONFIG.empty.label}</Typography>
             </Stack>
             <Stack direction="row" spacing={0.5} alignItems="center">
               <Box sx={{
                 width: 16, height: 8, borderRadius: 0.5,
                 backgroundImage: 'repeating-linear-gradient(45deg, #e2e8f0 0 4px, #f1f5f9 4px 8px)',
               }} />
-              <Typography variant="caption" color="text.secondary">使用不可</Typography>
+              <Typography variant="caption" color="text.secondary">{BED_STATUS_CONFIG.unavailable.label}</Typography>
             </Stack>
           </Stack>
           {/* ② バッジ（隔離/拘束/外出/外泊/要報告/預り金・各on/off） */}

@@ -13,9 +13,11 @@ import {
 //   医師・相談員が「いつ・どの記録が・どの程度あるか」を時系列で俯瞰する。患者状態そのものではない。
 //   横幅は広げず、記録種別ごとに「色のみ」のバッジを 1 日 1 セルで表示（同種は集約して 1 つ）。
 //
-// 配色・種別・擬似出現率は recordBadgeMaster に集約（差し替え・部門追加はそちらで）。
-// 対象は 診療録・看護記録・オーダー・部門診療録 の 4 種。実データを持つオーダーは mock（ORDERS）＋
-// オーダー入力で追加された動的オーダー（store の dynamicOrders）から導出する。その他（診療録・
+// 種別・擬似出現率（pseudoRate）は recordBadgeMaster に集約（種別の差し替え・部門追加はそちら）。
+// 配色は、診療録タブと共有する3種（診療録/看護記録/オーダー）は共有モジュール recordCategoryColors
+// （CATEGORY_COLORS）が単一ソースで、部門診療録の色のみ recordBadgeMaster が持つ（色調整は前者、種別は後者）。
+// 対象は 診療録・看護記録・オーダー・部門診療録 の 4 種。オーダーは実データ（mock の ORDERS ＋
+// オーダー入力で追加された動的オーダー dynamicOrders）から導出する（擬似生成しない）。その他（診療録・
 // 看護記録・部門診療録）は 30 日分の実記録モックが無いため決定的擬似データでワイヤーフレーム表示する。
 
 interface Props {
@@ -79,6 +81,8 @@ function recordsForDay(patientId: string | undefined, iso: string, orderDates: S
   if (!patientId) return set;
   if (orderDates.has(iso)) set.add('order');
   for (const t of RECORD_BADGE_TYPES) {
+    // pseudoRate 0（オーダー等）は擬似生成せず実データ由来のみ扱う。
+    if (t.pseudoRate <= 0) continue;
     if (hashStr(`${patientId}|${t.key}|${iso}`) % 100 < t.pseudoRate) set.add(t.key);
   }
   return set;
@@ -93,7 +97,11 @@ const RecordSummaryStrip: React.FC<Props> = ({
   patientId, endDate, days = DEFAULT_DAYS, today,
   labelWidth = DEFAULT_LABEL_W, totalWidth, detailDays = 7,
 }) => {
-  const effectiveToday = today ?? todayIso();
+  // 当日判定は下の詳細フローシート（buildDay）と揃える: 実日付（todayIso）に一致する日、または
+  // 詳細がモックの当日として扱う基準日（today prop = アンカー日）に一致する日を「当日」とする。
+  // これにより「当日」ナビで実日付へ移っても、モックのアンカー日でも、帯と詳細の当日強調が一致する。
+  const realToday = todayIso();
+  const isTodayIso = (iso: string): boolean => iso === realToday || (today !== undefined && iso === today);
   // オーダー入力で追加された動的オーダーも反映する（seed の ORDERS だけでは当日追加分が漏れる）。
   const dynamicOrders = useAppStore((s) => s.dynamicOrders);
   // 右端（endDate）から遡る days 日（昇順）。
@@ -165,7 +173,7 @@ const RecordSummaryStrip: React.FC<Props> = ({
             <Box sx={{ width: labelWidth, flex: '0 0 auto' }} />
             {dayIso.map((iso, i) => {
               const [, m, d] = iso.split('-');
-              const isToday = iso === effectiveToday;
+              const isToday = isTodayIso(iso);
               const inDetail = i >= detailStart;
               const showLabel = i === 0 || i === dayIso.length - 1 || Number(d) === 1 || i % 5 === 0;
               return (
@@ -205,7 +213,7 @@ const RecordSummaryStrip: React.FC<Props> = ({
                 // 前後の日にも同種記録があれば、その境界の角を落として隣とつなぐ。孤立日は両端角丸のピル。
                 const prevPresent = i > 0 && dayRecords[i - 1].has(t.key);
                 const nextPresent = i < dayIso.length - 1 && dayRecords[i + 1].has(t.key);
-                const isToday = iso === effectiveToday;
+                const isToday = isTodayIso(iso);
                 const inDetail = i >= detailStart;
                 const [, m, d] = iso.split('-');
                 const R = '6px';

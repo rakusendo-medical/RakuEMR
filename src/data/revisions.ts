@@ -47,7 +47,7 @@ export const REVISIONS: Revision[] = [
       },
       {
         title: '配色を診療録タブと統一・差し替え可能なマスタに集約',
-        detail: '診療録＝医師記録の紺／看護記録＝茶橙／オーダー＝シアンを診療録タブ（MedicalRecordTab の CATEGORY_COLORS）と一致。部門診療録は対応色が無いためPM指定で緑。種別×色は差し替え可能なマスタ src/components/flowsheet/recordBadgeMaster.ts に集約（色調整・部門追加はそこで）。',
+        detail: '診療録＝医師記録の紺／看護記録＝茶橙／オーダー＝シアンを診療録タブと一致。共有3色の単一ソースは src/components/karte/recordCategoryColors.ts（CATEGORY_COLORS）で、色調整はここで行うと診療録タブと帯の双方へ反映される。部門診療録は対応色が無いためPM指定で緑（recordBadgeMaster.ts が保持）。種別・擬似出現率の追加は src/components/flowsheet/recordBadgeMaster.ts に集約（部門追加はそこで1行）。',
       },
       {
         title: '下の詳細フローシートと右端整列・青枠ハイライト',

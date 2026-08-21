@@ -33,6 +33,7 @@ export interface RecordBadgeType {
   /**
    * ワイヤーフレーム用の擬似出現率（0〜100・その日に記録がある確率の目安）。
    * 30 日分の実記録モックが無い種別を帯に表示するためのダミー生成に使う（実データと union）。
+   * **0 は擬似生成しない＝実データ由来のみ**の意（オーダーは ORDERS/dynamicOrders から導出するため 0）。
    */
   pseudoRate: number;
 }
@@ -41,7 +42,7 @@ export interface RecordBadgeType {
 export const RECORD_BADGE_TYPES: RecordBadgeType[] = [
   { key: 'exam',    label: '診療録',   short: '診', color: CATEGORY_COLORS['医師記録'], pseudoRate: 45 },
   { key: 'nursing', label: '看護記録', short: '看', color: CATEGORY_COLORS['看護記録'], pseudoRate: 80 },
-  { key: 'order',   label: 'オーダー', short: 'オ', color: CATEGORY_COLORS['オーダー'], pseudoRate: 35 },
+  { key: 'order',   label: 'オーダー', short: 'オ', color: CATEGORY_COLORS['オーダー'], pseudoRate: 0 }, // 実データ（ORDERS/dynamicOrders）由来のみ
   { key: 'dept',    label: '部門診療録', short: '部', color: '#16a34a', pseudoRate: 30 }, // PM 指定色（診療録タブに対応色なし）
 ];
 

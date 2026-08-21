@@ -5,7 +5,7 @@ import {
   FormControlLabel, Checkbox, Divider, Alert, Chip,
 } from '@mui/material';
 import type { AdmissionOrder } from '../../types';
-import { PENDING_ORDERS_SAMPLES, patientNumberOf } from '../../data/mockData';
+import { PENDING_ORDERS_SAMPLES, patientNumberOf, PATIENTS, bedFlagsOf, absenceLabel, isAbsent } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import OrderConfirmDialog from './OrderConfirmDialog';
 import ProxyAuthDialog from './ProxyAuthDialog';
@@ -94,6 +94,12 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   if (!order) return null;
 
   const futureDate = new Date(dischargeAt) > new Date();
+  // 不在（外出／外泊）中は退院確定不可。判定は②バッジ＝ベッド由来 flags（isAbsent(bedFlagsOf)）。
+  // 退院指示ダイアログ（DischargeOrderDialog）と同じガードを、病棟マップ操作メニュー起点のこちらにも適用する。
+  const patient = PATIENTS.find((p) => p.id === order.patientId);
+  const bedFlags = patient ? bedFlagsOf(patient) : [];
+  const isOuting = isAbsent(bedFlags);
+  const absLabel = absenceLabel(bedFlags);
   const mealChanged = mealEndAt !== originalMealEndAt;
   const mealEditable = hasMealOnDay(dischargeAt);
   const pendingOrders = PENDING_ORDERS_SAMPLES.filter(
@@ -103,6 +109,10 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const startConfirmation = () => {
     if (futureDate) {
       showSnackbar('未来日時のため確定できません（更新は可能です）', 'warning');
+      return;
+    }
+    if (isOuting) {
+      showSnackbar(`${absLabel}の患者は退院確定できません（病床管理画面で帰院処理が必要）`, 'warning');
       return;
     }
     if (pendingOrders.length > 0) {
@@ -191,6 +201,7 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
               <Chip label={order.status === '手続完了' ? '確定済' : '未確定'} size="small" color={order.status === '手続完了' ? 'success' : 'warning'} />
               <Chip label={`操作者: ${currentUserRole === 'doctor' ? '医師' : '事務'}`} size="small" />
               {futureDate && <Chip label="未来日時" size="small" color="error" />}
+              {isOuting && <Chip label={`${absLabel}（確定不可）`} size="small" color="error" />}
             </Stack>
 
             <Stack direction="row" spacing={1.5}>
@@ -260,7 +271,7 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
         <DialogActions>
           <Button onClick={onClose}>キャンセル</Button>
           <Button onClick={handleUpdate}>更新</Button>
-          <Button variant="contained" color="primary" disabled={futureDate} onClick={startConfirmation}>
+          <Button variant="contained" color="primary" disabled={futureDate || isOuting} onClick={startConfirmation}>
             退院確定
           </Button>
         </DialogActions>
