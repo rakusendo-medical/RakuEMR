@@ -295,6 +295,22 @@ export function isAbsent(flags?: BedFlag[]): boolean {
   return !!flags && (flags.includes('outing') || flags.includes('overnight'));
 }
 
+/**
+ * 患者の現在ベッドに付いたバッジ（Bed.flags）を返す。
+ * バッジの実データはベッド側（ROOMS）を単一ソースとする（Patient 側には持たせない）。
+ */
+export function bedFlagsOf(patient: Pick<Patient, 'id' | 'roomNumber' | 'wardId'>): BedFlag[] {
+  const room = ROOMS.find((r) => r.roomNumber === patient.roomNumber && r.wardId === patient.wardId);
+  return room?.beds.find((b) => b.patientId === patient.id)?.flags ?? [];
+}
+
+/** 不在者チップ等のラベル。外泊優先で「外泊中／外出中」、不在フラグ無しは「不在中」。 */
+export function absenceLabel(flags?: BedFlag[]): string {
+  if (flags?.includes('overnight')) return '外泊中';
+  if (flags?.includes('outing')) return '外出中';
+  return '不在中';
+}
+
 // ===== 病室データ =====
 export const ROOMS: Room[] = [
   // 第１病棟（女性のみ。100=2床/2番使用不可, 101/102/103/105/106=各7床, 107/108=各4床。番号は 4 欠番）
@@ -499,7 +515,7 @@ export const PATIENTS: Patient[] = [
   { id: 'P024', patientNumber: '00010003', name: '宮田 典子', age: 34, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '2', status: 'stable', admitDate: '2026-01-30', doctorName: '岸本 医師', diagnosis: '双極性障害' },
   { id: 'P004', patientNumber: '00010004', name: '高橋 美咲', age: 35, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '3', status: 'critical', admitDate: '2026-02-05', doctorName: '田村 医師', diagnosis: '統合失調症' },
   { id: 'P026', patientNumber: '00010005', name: '原 由美子', age: 53, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '5', status: 'stable', admitDate: '2026-01-12', doctorName: '森田 医師', diagnosis: 'うつ病' },
-  { id: 'P006', patientNumber: '00010006', name: '伊藤 幸子', age: 58, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '6', status: 'stable', flags: ['outing'], admitDate: '2026-01-08', doctorName: '森田 医師', diagnosis: 'うつ病' },
+  { id: 'P006', patientNumber: '00010006', name: '伊藤 幸子', age: 58, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '6', status: 'stable', admitDate: '2026-01-08', doctorName: '森田 医師', diagnosis: 'うつ病' },
   { id: 'P027', patientNumber: '00010007', name: '内田 道子', age: 55, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '7', status: 'stable', admitDate: '2025-12-22', doctorName: '岸本 医師', diagnosis: '認知症' },
   { id: 'P008', patientNumber: '00010008', name: '中村 裕子', age: 73, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '8', status: 'observation', admitDate: '2026-01-25', doctorName: '岸本 医師', diagnosis: '認知症' },
   { id: 'P029', patientNumber: '00010009', name: '坂本 千恵子', age: 43, gender: 'F', wardId: 'ward1', roomNumber: '102', bedLabel: '1', status: 'stable', admitDate: '2026-02-03', doctorName: '森田 医師', diagnosis: 'うつ病' },
@@ -567,7 +583,7 @@ export const PATIENTS: Patient[] = [
   { id: 'P085', patientNumber: '00010070', name: '中島 大輔', age: 27, gender: 'M', wardId: 'ward2', roomNumber: '208', bedLabel: 'C', status: 'stable', admitDate: '2026-03-19', doctorName: '岸本 医師', diagnosis: '適応障害' },
   { id: 'P011', patientNumber: '00010071', name: '吉田 浩二', age: 47, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'A', status: 'stable', admitDate: '2026-02-03', doctorName: '岸本 医師', diagnosis: '統合失調症' },
   { id: 'P013', patientNumber: '00010072', name: '松本 拓也', age: 33, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'B', status: 'unstable', admitDate: '2026-02-08', doctorName: '田村 医師', diagnosis: '統合失調症' },
-  { id: 'P015', patientNumber: '00010073', name: '木村 正樹', age: 50, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'C', status: 'stable', flags: ['overnight'], admitDate: '2026-01-12', doctorName: '森田 医師', diagnosis: 'うつ病' },
+  { id: 'P015', patientNumber: '00010073', name: '木村 正樹', age: 50, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'C', status: 'stable', admitDate: '2026-01-12', doctorName: '森田 医師', diagnosis: 'うつ病' },
   { id: 'P017', patientNumber: '00010074', name: '清水 翔太', age: 36, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'D', status: 'critical', admitDate: '2026-02-11', doctorName: '岸本 医師', diagnosis: '双極性障害' },
   { id: 'P045', patientNumber: '00010075', name: '岡崎 悠人', age: 26, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'E', status: 'stable', admitDate: '2026-02-21', doctorName: '岸本 医師', diagnosis: '適応障害' },
   { id: 'P047', patientNumber: '00010076', name: '大村 徹', age: 40, gender: 'M', wardId: 'ward2', roomNumber: '211', bedLabel: 'A', status: 'stable', admitDate: '2026-01-13', doctorName: '森田 医師', diagnosis: 'アルコール依存症' },

@@ -8,7 +8,7 @@ import { Search as SearchIcon, ContentCopy as ContentCopyIcon } from '@mui/icons
 import type { Patient } from '../../types';
 import {
   MEDICAL_INSTITUTIONS, REFERRAL_ROUTES_DISCHARGE_BASE, REFERRAL_ROUTES_DISCHARGE_OPTIONAL,
-  THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES, isAbsent,
+  THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES, isAbsent, bedFlagsOf, absenceLabel,
 } from '../../data/mockData';
 import type { DischargeCategory } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
@@ -125,7 +125,9 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   if (!patient) return null;
 
   const futureDate = new Date(dischargeAt) > new Date();
-  const isOuting = isAbsent(patient.flags); // 不在（外出 or 外泊）＝バッジで判定
+  const bedFlags = bedFlagsOf(patient);
+  const isOuting = isAbsent(bedFlags); // 不在（外出 or 外泊）＝バッジで判定
+  const absLabel = absenceLabel(bedFlags);
   const mealChanged = mealEndAt !== originalMealEndAt;
   const mealEditable = hasMealOnDay(dischargeAt);
   const pendingOrders = PENDING_ORDERS_SAMPLES.filter(
@@ -213,7 +215,7 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
       return;
     }
     if (isOuting) {
-      showSnackbar('外出中の患者は退院確定できません（病床管理画面で帰院処理が必要）', 'warning');
+      showSnackbar(`${absLabel}の患者は退院確定できません（病床管理画面で帰院処理が必要）`, 'warning');
       return;
     }
     if (pendingOrders.length > 0) {
@@ -308,13 +310,13 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Chip label={editingOrderId ? '変更モード' : '新規'} size="small" color={editingOrderId ? 'info' : 'primary'} />
               {futureDate && <Chip label="未来日時（指示のみ可）" size="small" color="warning" />}
-              {isOuting && <Chip label="外出中（確定不可）" size="small" color="error" />}
+              {isOuting && <Chip label={`${absLabel}（確定不可）`} size="small" color="error" />}
               {optionalFeatures.medicalProtection && <Chip label="医療観察法 ON" size="small" />}
             </Stack>
 
             {isOuting && (
               <Alert severity="warning" sx={{ py: 0.5 }}>
-                外出中の患者は退院確定できません。病床管理画面で帰院処理を実施してから確定してください。
+                {absLabel}の患者は退院確定できません。病床管理画面で帰院処理を実施してから確定してください。
               </Alert>
             )}
 

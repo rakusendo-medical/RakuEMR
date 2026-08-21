@@ -6,7 +6,7 @@ import {
 } from '@mui/icons-material';
 import type { WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
-import { ADMISSION_ORDERS, PATIENTS, ROOMS, isAbsent } from '../../data/mockData';
+import { ADMISSION_ORDERS, PATIENTS, ROOMS, isAbsent, bedFlagsOf, absenceLabel } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
 interface Props {
@@ -119,7 +119,7 @@ const WardMapSidebar: React.FC<Props> = ({
   }, [ward, pendingOrders]);
 
   // 不在者
-  const absent = PATIENTS.filter((p) => p.wardId === ward && isAbsent(p.flags));
+  const absent = PATIENTS.filter((p) => p.wardId === ward && isAbsent(bedFlagsOf(p)));
 
   // 入院者情報(病棟集計)
   const wardPatients = PATIENTS.filter((p) => p.wardId === ward);
@@ -222,7 +222,7 @@ const WardMapSidebar: React.FC<Props> = ({
                 component="span"
                 sx={{ bgcolor: '#e9f2fd', color: '#2f6fd6', fontSize: '0.68rem', fontWeight: 700, borderRadius: 999, px: 1, py: 0.25 }}
               >
-                外出中
+                {absenceLabel(bedFlagsOf(p))}
               </Box>
             </Box>
             <PillButton label="詳細" onClick={onOpenAbsent} />

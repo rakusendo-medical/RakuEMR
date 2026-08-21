@@ -113,8 +113,6 @@ export interface Patient {
   bedLabel: string;
   /** ① Dr 観察ステータス（安定/観察中/不安定/重症） */
   status: PatientStatus;
-  /** ② 運用フラグ／バッジ（外出/外泊/隔離/拘束/要報告/預り金 など。不在＝外出 or 外泊 の判定にも使う） */
-  flags?: BedFlag[];
   admitDate: string;
   doctorName: string;
   diagnosis?: string;

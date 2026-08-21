@@ -178,11 +178,11 @@ orderedForNumber.forEach((id, i) => {
 function bedLiteral(roomNumber, bed) {
   const key = `${roomNumber}-${bed}`;
   if (disabledKeys.has(key)) {
-    return `    { bed: '${bed}', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null, disabled: true },`;
+    return `    { bed: '${bed}', patientId: null,   patientName: null,            bedStatus: 'unavailable', gender: null, age: null },`;
   }
   const base = placement.get(key);
   if (!base) {
-    return `    { bed: '${bed}', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },`;
+    return `    { bed: '${bed}', patientId: null,   patientName: null,            bedStatus: 'empty',       gender: null, age: null },`;
   }
   const p = placedById.get(base.id);
   const ex = bedExtras.get(p.id) || {};
