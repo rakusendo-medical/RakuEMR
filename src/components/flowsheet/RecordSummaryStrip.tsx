@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Box, Paper, Stack, Typography, Tooltip } from '@mui/material';
 import { ORDERS } from '../../data/mockData';
+import { useAppStore } from '../../stores/useAppStore';
 import {
   RECORD_BADGE_TYPES,
   type RecordBadgeKey,
@@ -12,9 +13,10 @@ import {
 //   医師・相談員が「いつ・どの記録が・どの程度あるか」を時系列で俯瞰する。患者状態そのものではない。
 //   横幅は広げず、記録種別ごとに「色のみ」のバッジを 1 日 1 セルで表示（同種は集約して 1 つ）。
 //
-// 配色・種別は recordBadgeMaster に集約（差し替え・部門追加はそちらで）。
-// 対象は 診療録・看護記録・オーダー・部門診療録 の 4 種。実データを持つオーダーは mock から導出し、
-// その他（診療録・看護記録・部門診療録）は日付シードの決定的擬似データでワイヤーフレーム表示する。
+// 配色・種別・擬似出現率は recordBadgeMaster に集約（差し替え・部門追加はそちらで）。
+// 対象は 診療録・看護記録・オーダー・部門診療録 の 4 種。実データを持つオーダーは mock（ORDERS）＋
+// オーダー入力で追加された動的オーダー（store の dynamicOrders）から導出する。その他（診療録・
+// 看護記録・部門診療録）は 30 日分の実記録モックが無いため決定的擬似データでワイヤーフレーム表示する。
 
 interface Props {
   patientId?: string;
@@ -22,11 +24,17 @@ interface Props {
   endDate: string;
   /** 表示日数（既定 30）。 */
   days?: number;
+  /**
+   * 「当日」として強調する日（ISO）。下の詳細フローシートが当日とみなす日を渡す
+   * （モックでは実日付ではなくデータの基準日を当日扱いするため、詳細表と一致させる）。
+   * 省略時は実日付。
+   */
+  today?: string;
   /** 下の詳細テーブルと左端・右端をそろえるためのラベル列幅（＝詳細のラベル+サブ列合計）。 */
   labelWidth?: number;
   /** 下の詳細テーブルと全体幅をそろえるための総幅（＝詳細テーブルの colgroup 合計）。 */
   totalWidth?: number;
-  /** 下の詳細テーブルが表示している日数（帯の右端 N 日をハイライトして対応を示す）。 */
+  /** 下の詳細テーブルが表示している日数（帯の右端 N 日を青枠でハイライトして対応を示す）。 */
   detailDays?: number;
 }
 
@@ -61,30 +69,17 @@ function hashStr(s: string): number {
   return h >>> 0;
 }
 
-// 記録種別 × 出現しやすさ（決定的擬似データの閾値。100 分率）。
-// order は実データ（mock）由来の日にも出すが、実データが無い日でも帯の密度が
-// 出るようワイヤーフレーム用のフォールバックとして本表にも登録する（実データと union）。
-const PSEUDO_RATE: Record<RecordBadgeKey, number> = {
-  exam: 45,    // 診療録: 数日おき
-  nursing: 80, // 看護記録: ほぼ毎日
-  order: 35,   // オーダー: 数日おき
-  dept: 30,    // 部門診療録: 時々
-};
-
-/** その日に開始オーダがあるか（種別問わず 1 つでもあれば「オーダーあり」）。 */
-function orderOn(patientId: string, iso: string): boolean {
-  return ORDERS.some((o) => o.patientId === patientId && o.startDate === iso);
-}
-
-/** (patientId, iso) → その日に存在する記録種別の集合（色バッジ用・同種は自然に 1 つ）。 */
-function recordsForDay(patientId: string | undefined, iso: string): Set<RecordBadgeKey> {
+/**
+ * (patientId, iso) → その日に存在する記録種別の集合（色バッジ用・同種は自然に 1 つ）。
+ * オーダーは実データ（ORDERS + 動的オーダー）の開始日集合 orderDates から判定。
+ * その他はマスタの pseudoRate による決定的擬似データ（実データと union）。
+ */
+function recordsForDay(patientId: string | undefined, iso: string, orderDates: Set<string>): Set<RecordBadgeKey> {
   const set = new Set<RecordBadgeKey>();
   if (!patientId) return set;
-  // 実データ由来（mock のオーダー）
-  if (orderOn(patientId, iso)) set.add('order');
-  // ワイヤーフレーム用の決定的擬似データ（実データと union）
-  for (const [key, rate] of Object.entries(PSEUDO_RATE) as [RecordBadgeKey, number][]) {
-    if (hashStr(`${patientId}|${key}|${iso}`) % 100 < rate) set.add(key);
+  if (orderDates.has(iso)) set.add('order');
+  for (const t of RECORD_BADGE_TYPES) {
+    if (hashStr(`${patientId}|${t.key}|${iso}`) % 100 < t.pseudoRate) set.add(t.key);
   }
   return set;
 }
@@ -92,35 +87,46 @@ function recordsForDay(patientId: string | undefined, iso: string): Set<RecordBa
 const DEFAULT_LABEL_W = 170; // 詳細テーブルの label(130)+sub(40) に一致
 const CELL_MIN = 18;  // 1 日あたり最小セル幅
 const ROW_H = 20;     // 記録行の高さ
+const FRAME_COLOR = '#2563eb'; // 青枠（詳細フローシートに表示中の範囲）
 
 const RecordSummaryStrip: React.FC<Props> = ({
-  patientId, endDate, days = DEFAULT_DAYS,
+  patientId, endDate, days = DEFAULT_DAYS, today,
   labelWidth = DEFAULT_LABEL_W, totalWidth, detailDays = 7,
 }) => {
-  const today = todayIso();
+  const effectiveToday = today ?? todayIso();
+  // オーダー入力で追加された動的オーダーも反映する（seed の ORDERS だけでは当日追加分が漏れる）。
+  const dynamicOrders = useAppStore((s) => s.dynamicOrders);
   // 右端（endDate）から遡る days 日（昇順）。
   const dayIso = useMemo(
     () => Array.from({ length: days }, (_, i) => shiftIso(endDate, i - (days - 1))),
     [endDate, days],
   );
-  // 下の詳細テーブルはコンテナ幅いっぱいに伸びる（tableLayout:auto 相当で日列が均等伸長）。
-  // 帯も同様にコンテナ幅いっぱいに伸ばし、ラベル幅だけ詳細に一致させることで左端・右端をそろえる。
-  // totalWidth（詳細テーブルの実幅）が渡された場合は最大幅の目安に使うが、基本は 100% 伸長。
-  // 狭いコンテナ用に最小幅（ラベル + 最小セル×日数）を確保しつつ、広い時は伸びる。
+  // この患者のオーダー開始日集合（seed + 動的）。dynamicOrders 更新で再計算＝帯も追従する。
+  const orderDates = useMemo(() => {
+    const s = new Set<string>();
+    if (!patientId) return s;
+    for (const o of [...ORDERS, ...dynamicOrders]) {
+      if (o.patientId === patientId) s.add(o.startDate);
+    }
+    return s;
+  }, [patientId, dynamicOrders]);
+  // 下の詳細テーブルはコンテナ幅いっぱいに伸びる。帯も 100% 伸長し、ラベル幅だけ詳細に一致させて
+  // 左端・右端をそろえる。狭いコンテナ用に最小幅（ラベル + 最小セル×日数）を確保する。
   const minContentWidth = labelWidth + CELL_MIN * days;
   void totalWidth; // 現状は幅の直接指定には使わず、100% 伸長 + minWidth で詳細テーブルに追従する
-  // 帯の右端 detailDays 日 = 下の詳細テーブルが表示している範囲。ハイライトの開始 index。
+  // 帯の右端 detailDays 日 = 下の詳細テーブルが表示している範囲。青枠ハイライトの開始 index。
   const detailStart = Math.max(0, days - detailDays);
+  // 青枠の左端位置（ラベル幅 + グリッド領域の detailStart/days の割合）。右端はコンテナ右端。
+  const frameLeft = `calc(${labelWidth}px + (100% - ${labelWidth}px) * ${detailStart / days})`;
   // 各日の記録集合。
   const dayRecords = useMemo(
-    () => dayIso.map((iso) => recordsForDay(patientId, iso)),
-    [dayIso, patientId],
+    () => dayIso.map((iso) => recordsForDay(patientId, iso, orderDates)),
+    [dayIso, patientId, orderDates],
   );
 
   return (
     <Paper data-testid="record-summary-strip" variant="outlined" sx={{ mb: 1, overflow: 'hidden' }}>
-      {/* 見出し + 凡例（左寄せ＝帯がテーブル幅まで広がっても凡例が画面外に出ないように）。
-          position:sticky/left:0 で横スクロールしても見出し・凡例を左端に留める。 */}
+      {/* 見出し + 凡例（左寄せ＝帯がテーブル幅まで広がっても凡例が画面外に出ないように）。 */}
       <Stack
         direction="row" alignItems="center" spacing={2} flexWrap="wrap" useFlexGap
         sx={{
@@ -142,13 +148,24 @@ const RecordSummaryStrip: React.FC<Props> = ({
       </Stack>
 
       <Box sx={{ overflowX: 'auto' }}>
-        <Box sx={{ width: '100%', minWidth: minContentWidth }}>
+        {/* position:relative の内側に、右端 detailDays 日を囲う青枠（閉じた四辺）をオーバーレイする。 */}
+        <Box sx={{ width: '100%', minWidth: minContentWidth, position: 'relative' }}>
+          {/* 青枠オーバーレイ（ヘッダー行＋記録行の全高を四辺で囲う。クリックは透過） */}
+          <Box
+            aria-hidden
+            data-testid="record-summary-detail-frame"
+            sx={{
+              position: 'absolute', top: 0, bottom: 0, left: frameLeft, right: 0,
+              border: `2px solid ${FRAME_COLOR}`, borderRadius: '4px',
+              pointerEvents: 'none', zIndex: 3,
+            }}
+          />
           {/* 日付ヘッダー行（5 日ごとに月日、当日を強調） */}
           <Box sx={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
             <Box sx={{ width: labelWidth, flex: '0 0 auto' }} />
             {dayIso.map((iso, i) => {
               const [, m, d] = iso.split('-');
-              const isToday = iso === today;
+              const isToday = iso === effectiveToday;
               const inDetail = i >= detailStart;
               const showLabel = i === 0 || i === dayIso.length - 1 || Number(d) === 1 || i % 5 === 0;
               return (
@@ -160,9 +177,7 @@ const RecordSummaryStrip: React.FC<Props> = ({
                     color: isToday ? '#b45309' : isWeekend(iso) ? '#94a3b8' : '#64748b',
                     fontWeight: isToday ? 700 : 400,
                     bgcolor: isToday ? '#fff8e1' : inDetail ? '#eef4fb' : undefined,
-                    borderLeft: i === detailStart
-                      ? '2px solid #2563eb'
-                      : Number(d) === 1 ? '1px solid #cbd5e1' : undefined,
+                    borderLeft: Number(d) === 1 ? '1px solid #cbd5e1' : undefined,
                   }}
                 >
                   {showLabel ? `${Number(m)}/${Number(d)}` : ''}
@@ -190,7 +205,7 @@ const RecordSummaryStrip: React.FC<Props> = ({
                 // 前後の日にも同種記録があれば、その境界の角を落として隣とつなぐ。孤立日は両端角丸のピル。
                 const prevPresent = i > 0 && dayRecords[i - 1].has(t.key);
                 const nextPresent = i < dayIso.length - 1 && dayRecords[i + 1].has(t.key);
-                const isToday = iso === today;
+                const isToday = iso === effectiveToday;
                 const inDetail = i >= detailStart;
                 const [, m, d] = iso.split('-');
                 const R = '6px';
@@ -202,14 +217,13 @@ const RecordSummaryStrip: React.FC<Props> = ({
                     arrow
                   >
                     <Box
+                      role="img"
                       aria-label={`${iso} ${t.label}${present ? 'あり' : 'なし'}`}
                       sx={{
                         flex: '1 1 0', minWidth: CELL_MIN, height: ROW_H,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         bgcolor: isToday ? '#fff8e1' : inDetail ? '#eef4fb' : undefined,
-                        borderLeft: i === detailStart
-                          ? '2px solid #2563eb'
-                          : Number(d) === 1 ? '1px solid #cbd5e1' : undefined,
+                        borderLeft: Number(d) === 1 ? '1px solid #cbd5e1' : undefined,
                       }}
                     >
                       {present && (

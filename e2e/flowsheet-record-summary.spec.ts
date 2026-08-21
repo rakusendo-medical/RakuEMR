@@ -50,5 +50,25 @@ test.describe('フローシート 記録サマリー帯（最近30日）', () =>
   test('右端7日を青枠でハイライト（下の詳細フローシートに表示中の範囲）', async ({ page }) => {
     const strip = page.getByTestId('record-summary-strip');
     await expect(strip.getByText(/青枠内（右端7日）/)).toBeVisible();
+    // 青枠は四辺を持つ実要素（背景色だけの疑似表現ではない）
+    const frame = page.getByTestId('record-summary-detail-frame');
+    await expect(frame).toBeVisible();
+    await expect(frame).toHaveCSS('border-top-style', 'solid');
+    await expect(frame).toHaveCSS('border-right-style', 'solid');
+    await expect(frame).toHaveCSS('border-bottom-style', 'solid');
+    await expect(frame).toHaveCSS('border-left-style', 'solid');
+  });
+
+  test('AC-11: 帯と詳細フローシートの右端が一致する', async ({ page }) => {
+    const strip = page.getByTestId('record-summary-strip');
+    const table = page.locator('table').first();
+    const sb = await strip.boundingBox();
+    const tb = await table.boundingBox();
+    expect(sb).not.toBeNull();
+    expect(tb).not.toBeNull();
+    const stripRight = sb!.x + sb!.width;
+    const tableRight = tb!.x + tb!.width;
+    // 画面幅に依らず右端が一致（枠線分の数pxの誤差は許容）
+    expect(Math.abs(stripRight - tableRight)).toBeLessThanOrEqual(3);
   });
 });

@@ -16,14 +16,9 @@ import { ORDERS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import RestraintOrderLinks from '../isolation/RestraintOrderLinks';
 import type { KarteMode } from './KartePage';
+import { CATEGORY_COLORS, type RecordCategory } from './recordCategoryColors';
 
 // ===== 集約タイムラインのレコード型 =====
-
-type RecordCategory =
-  | '医師記録'
-  | '看護記録'
-  | '入退院記録'
-  | 'オーダー';
 
 interface TimelineRecord {
   id: string;
@@ -40,13 +35,6 @@ interface TimelineRecord {
   /** us-08/us-09: 指示中止などで取消された記事（削除せず取消表示で残す） */
   cancelled?: boolean;
 }
-
-const CATEGORY_COLORS: Record<RecordCategory, string> = {
-  '医師記録': '#1e40af',
-  '看護記録': '#c2410c',
-  '入退院記録': '#b91c1c',
-  'オーダー': '#0891b2',
-};
 
 const MOCK_RECORDS: TimelineRecord[] = [
   { id: 'kr1',  date: '2026/03/10', dayOfWeek: '月', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '定期回診。状態安定。処方継続。',                                                                          tags: [],                          timestamp: '2026/03/10 10:30' },

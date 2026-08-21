@@ -887,6 +887,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
       <RecordSummaryStrip
         patientId={patientId}
         endDate={endDate}
+        today={ANCHOR_END_ISO}
         labelWidth={LABEL_COL_WIDTH + SUB_COL_WIDTH}
         totalWidth={LABEL_COL_WIDTH + SUB_COL_WIDTH + DAY_COL_WIDTH * dayIso.length}
         detailDays={dayIso.length}

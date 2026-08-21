@@ -1,14 +1,20 @@
-// 記録サマリー帯（最近30日）の「記録種別 × 配色」マスタ。
+// 記録サマリー帯（最近30日）の「記録種別 × 配色 × 擬似出現率」マスタ。
 //
 // 目的: フローシート左側の「最近の記録」を時系列で俯瞰するための色バッジ定義。
 //   医師・相談員が「いつ・どの記録が・どの程度あるか」を把握するために使う（患者状態そのものではない）。
 //
 // 運用方針（PM 指示 2026-08-20）:
-//   - 配色は後で差し替えられるよう、この 1 ファイルに集約する（色合い調整・部門追加を1箇所で行う）。
-//   - バッジは「色のみ」。横幅を広げないため、同一日に同種記録が複数あっても 1 つに集約する（色は変えない）。
-//   - 部門追加はこの配列に 1 行足すだけで済む（描画側は本マスタを走査する）。
+//   - バッジは「色のみ」。横幅を広げないため、同一日に同種記録が複数あっても 1 つに集約する。
+//   - 配色は診療録タブと統一する。診療録タブの記録カテゴリ色は共有モジュール
+//     `src/components/karte/recordCategoryColors.ts`（CATEGORY_COLORS）を単一ソースとして参照する
+//     （＝色を変えるときはそのファイルを直せば診療録タブと本帯の両方に反映される）。
+//   - 部門診療録は診療録タブに対応カテゴリが無いため、PM 指定色をここで直接持つ。
 //
-// 色は色覚多様性に配慮し、隣接種別の色相を離す。差し替え時も同様の配慮を推奨。
+// 部門追加の手順: 本ファイルで ①`RecordBadgeKey` に key を足し、②`RECORD_BADGE_TYPES` に 1 行足す
+//   （color と pseudoRate を含める）。擬似出現率（pseudoRate）も本マスタに集約しているため、
+//   描画側（RecordSummaryStrip）の編集は不要。
+
+import { CATEGORY_COLORS } from '../karte/recordCategoryColors';
 
 export type RecordBadgeKey =
   | 'exam'       // 診療録（医師の診察記録）
@@ -22,22 +28,21 @@ export interface RecordBadgeType {
   label: string;
   /** ラベル列に出す短縮 1〜2 文字 */
   short: string;
-  /** バッジ色（差し替え対象。ここを変えると帯・凡例とも一括で変わる） */
+  /** バッジ色（差し替え対象。診療録タブと共有する種別は CATEGORY_COLORS 由来） */
   color: string;
+  /**
+   * ワイヤーフレーム用の擬似出現率（0〜100・その日に記録がある確率の目安）。
+   * 30 日分の実記録モックが無い種別を帯に表示するためのダミー生成に使う（実データと union）。
+   */
+  pseudoRate: number;
 }
 
-// 表示順 = この配列順（上から下）。部門追加時はここに 1 行足す。
-//
-// 診療録タブ（MedicalRecordTab の CATEGORY_COLORS）と配色を統一する（PM 指示 2026-08-20）:
-//   診療録=医師記録 #1e40af ／ 看護記録 #c2410c ／ オーダー #0891b2。
-//   この 3 種は診療録タブのカテゴリ色をそのまま使い、2 画面で色が一致するようにする。
-//   ※差し替え時は診療録タブ側（CATEGORY_COLORS）と同時に更新すること。
-//   部門記録（部門診療録）は診療録タブに専用色が無いため、別途 PM 指定色で管理する。
+// 表示順 = この配列順（上から下）。
 export const RECORD_BADGE_TYPES: RecordBadgeType[] = [
-  { key: 'exam',    label: '診療録',   short: '診', color: '#1e40af' }, // = 診療録タブ 医師記録
-  { key: 'nursing', label: '看護記録', short: '看', color: '#c2410c' }, // = 診療録タブ 看護記録
-  { key: 'order',   label: 'オーダー', short: 'オ', color: '#0891b2' }, // = 診療録タブ オーダー
-  { key: 'dept',    label: '部門診療録', short: '部', color: '#16a34a' }, // PM 指定色（診療録タブに対応色なし）
+  { key: 'exam',    label: '診療録',   short: '診', color: CATEGORY_COLORS['医師記録'], pseudoRate: 45 },
+  { key: 'nursing', label: '看護記録', short: '看', color: CATEGORY_COLORS['看護記録'], pseudoRate: 80 },
+  { key: 'order',   label: 'オーダー', short: 'オ', color: CATEGORY_COLORS['オーダー'], pseudoRate: 35 },
+  { key: 'dept',    label: '部門診療録', short: '部', color: '#16a34a', pseudoRate: 30 }, // PM 指定色（診療録タブに対応色なし）
 ];
 
 // key → 色/ラベルの逆引き（描画・凡例で使う）。
