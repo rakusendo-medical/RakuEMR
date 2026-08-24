@@ -96,7 +96,7 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
   const wardRooms = ROOMS.filter((r) => r.wardId === toWard);
   const selectedRoom = wardRooms.find((r) => r.roomNumber === toRoom);
   const availableBeds = selectedRoom
-    ? selectedRoom.beds.filter((b) => !b.disabled && !b.patientId)
+    ? selectedRoom.beds.filter((b) => b.bedStatus !== 'unavailable' && !b.patientId)
     : [];
   const [errors, setErrors] = React.useState<string[]>([]);
   const [noticeOpen, setNoticeOpen] = React.useState(false);

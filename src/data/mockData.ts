@@ -17,7 +17,7 @@ import {
   RehabOrder, RehabDailyReport, RehabEvaluation, NursingCareSchedule,
   Document, NursingDiaryEntry, WardDiaryEntry, StatusConfig, PatientStatus,
   OutpatientVisit, NursingPlan, PeriodicEvaluationRecord,
-  BedFlag, BedFlagConfig, UnassignedPatient,
+  BedFlag, BedFlagConfig, BedStatus, BedStatusConfig, UnassignedPatient,
 } from '../types';
 import type { ScheduledMove } from '../stores/useAppStore';
 
@@ -262,13 +262,18 @@ export const actionButtons = [
 ];
 
 // ===== ステータス設定 =====
+// ① Dr 観察ステータス（占有ベッドの患者のみ・4値）。外出/空床は分離済み（2026-08-18）。
 export const STATUS_CONFIG: Record<PatientStatus, StatusConfig> = {
   stable:      { label: '安定',   color: '#22c55e', bgColor: '#f0fdf4', muiColor: 'success' },
   observation: { label: '観察中', color: '#f59e0b', bgColor: '#fffbeb', muiColor: 'warning' },
   unstable:    { label: '不安定', color: '#ea580c', bgColor: '#fff7ed', muiColor: 'warning' },
   critical:    { label: '重症',   color: '#dc2626', bgColor: '#fef2f2', muiColor: 'error' },
-  outing:      { label: '外出中', color: '#6366f1', bgColor: '#eef2ff', muiColor: 'info' },
-  empty:       { label: '空床',   color: '#94a3b8', bgColor: '#f8fafc', muiColor: 'default' },
+};
+
+// ③ 病床ステータス（非占有ベッドの状態・空床/使用不可）。
+export const BED_STATUS_CONFIG: Record<BedStatus, BedStatusConfig> = {
+  empty:       { label: '空床',     color: '#94a3b8', bgColor: '#f8fafc' },
+  unavailable: { label: '使用不可', color: '#64748b', bgColor: '#e2e8f0' },
 };
 
 // ===== ベッド運用フラグ（病棟マップ凡例・アイコン用） =====
@@ -285,19 +290,40 @@ export const BED_FLAG_ORDER: BedFlag[] = [
   'isolation', 'restraint', 'outing', 'overnight', 'reportRequired', 'deposit',
 ];
 
+// 不在（外出 or 外泊）判定。旧 status:'outing' の代替。バッジ（flags）を正とする。
+export function isAbsent(flags?: BedFlag[]): boolean {
+  return !!flags && (flags.includes('outing') || flags.includes('overnight'));
+}
+
+/**
+ * 患者の現在ベッドに付いたバッジ（Bed.flags）を返す。
+ * バッジの実データはベッド側（ROOMS）を単一ソースとする（Patient 側には持たせない）。
+ */
+export function bedFlagsOf(patient: Pick<Patient, 'id' | 'roomNumber' | 'wardId'>): BedFlag[] {
+  const room = ROOMS.find((r) => r.roomNumber === patient.roomNumber && r.wardId === patient.wardId);
+  return room?.beds.find((b) => b.patientId === patient.id)?.flags ?? [];
+}
+
+/** 不在者チップ等のラベル。外泊優先で「外泊中／外出中」、不在フラグ無しは「不在中」。 */
+export function absenceLabel(flags?: BedFlag[]): string {
+  if (flags?.includes('overnight')) return '外泊中';
+  if (flags?.includes('outing')) return '外出中';
+  return '不在中';
+}
+
 // ===== 病室データ =====
 export const ROOMS: Room[] = [
   // 第１病棟（女性のみ。100=2床/2番使用不可, 101/102/103/105/106=各7床, 107/108=各4床。番号は 4 欠番）
   { roomNumber: '100', wardId: 'ward1', beds: [
     { bed: '1', patientId: 'P002', patientName: '佐藤 花子', status: 'observation', gender: 'F', age: 67 },
-    { bed: '2', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null, disabled: true },
+    { bed: '2', patientId: null,   patientName: null,            bedStatus: 'unavailable', gender: null, age: null },
   ]},
   { roomNumber: '101', wardId: 'ward1', beds: [
     { bed: '1', patientId: 'P021', patientName: '後藤 幸子', status: 'stable', gender: 'F', age: 46 },
     { bed: '2', patientId: 'P024', patientName: '宮田 典子', status: 'stable', gender: 'F', age: 34, flags: ['deposit'] },
     { bed: '3', patientId: 'P004', patientName: '高橋 美咲', status: 'critical', gender: 'F', age: 35, flags: ['restraint', 'reportRequired'] },
     { bed: '5', patientId: 'P026', patientName: '原 由美子', status: 'stable', gender: 'F', age: 53 },
-    { bed: '6', patientId: 'P006', patientName: '伊藤 幸子', status: 'outing', gender: 'F', age: 58, flags: ['outing', 'deposit'] },
+    { bed: '6', patientId: 'P006', patientName: '伊藤 幸子', status: 'stable', gender: 'F', age: 58, flags: ['outing', 'deposit'] },
     { bed: '7', patientId: 'P027', patientName: '内田 道子', status: 'stable', gender: 'F', age: 55 },
     { bed: '8', patientId: 'P008', patientName: '中村 裕子', status: 'observation', gender: 'F', age: 73 },
   ]},
@@ -341,13 +367,13 @@ export const ROOMS: Room[] = [
     { bed: '1', patientId: 'P063', patientName: '渡部 千佳', status: 'stable', gender: 'F', age: 32 },
     { bed: '2', patientId: 'P065', patientName: '豊田 里美', status: 'stable', gender: 'F', age: 44 },
     { bed: '3', patientId: 'P067', patientName: '浜田 由美子', status: 'stable', gender: 'F', age: 49 },
-    { bed: '5', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: '5', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '108', wardId: 'ward1', beds: [
     { bed: '1', patientId: 'P087', patientName: '遠藤 彩', status: 'stable', gender: 'F', age: 26 },
     { bed: '2', patientId: 'P088', patientName: '近藤 麻衣', status: 'stable', gender: 'F', age: 33 },
     { bed: '3', patientId: 'P089', patientName: '斉藤 咲', status: 'stable', gender: 'F', age: 40 },
-    { bed: '5', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: '5', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   // 第２病棟（男性のみ。ただし 201 は女性室。201=5床, 202/203/205/206/210-213=各6床, 208/215/216=各4床）
   { roomNumber: '201', wardId: 'ward2', beds: [
@@ -363,7 +389,7 @@ export const ROOMS: Room[] = [
     { bed: 'C', patientId: 'P003', patientName: '鈴木 一郎', status: 'unstable', gender: 'M', age: 41, flags: ['isolation', 'reportRequired'] },
     { bed: 'D', patientId: 'P023', patientName: '中山 誠一', status: 'stable', gender: 'M', age: 62 },
     { bed: 'E', patientId: 'P005', patientName: '田中 健太', status: 'stable', gender: 'M', age: 29 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '203', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P025', patientName: '石川 裕二', status: 'stable', gender: 'M', age: 28 },
@@ -371,7 +397,7 @@ export const ROOMS: Room[] = [
     { bed: 'C', patientId: 'P028', patientName: '西川 雅之', status: 'stable', gender: 'M', age: 51 },
     { bed: 'D', patientId: 'P009', patientName: '小林 誠', status: 'stable', gender: 'M', age: 38 },
     { bed: 'E', patientId: 'P030', patientName: '安田 正人', status: 'stable', gender: 'M', age: 57 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '205', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P019', patientName: '新井 太一', status: 'stable', gender: 'M', age: 22 },
@@ -379,7 +405,7 @@ export const ROOMS: Room[] = [
     { bed: 'C', patientId: 'P035', patientName: '西田 智也', status: 'stable', gender: 'M', age: 25 },
     { bed: 'D', patientId: 'P037', patientName: '杉本 健二', status: 'stable', gender: 'M', age: 33 },
     { bed: 'E', patientId: 'P069', patientName: '柴田 直樹', status: 'stable', gender: 'M', age: 42 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '206', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P071', patientName: '橋本 隆', status: 'stable', gender: 'M', age: 48 },
@@ -387,21 +413,21 @@ export const ROOMS: Room[] = [
     { bed: 'C', patientId: 'P075', patientName: '長谷川 慎', status: 'observation', gender: 'M', age: 53 },
     { bed: 'D', patientId: 'P077', patientName: '青木 浩司', status: 'stable', gender: 'M', age: 70 },
     { bed: 'E', patientId: 'P079', patientName: '飯田 弘', status: 'stable', gender: 'M', age: 36 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '208', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P081', patientName: '関口 健一', status: 'observation', gender: 'M', age: 45 },
     { bed: 'B', patientId: 'P083', patientName: '吉川 修', status: 'stable', gender: 'M', age: 61 },
     { bed: 'C', patientId: 'P085', patientName: '中島 大輔', status: 'stable', gender: 'M', age: 27 },
-    { bed: 'D', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'D', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '210', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P011', patientName: '吉田 浩二', status: 'stable', gender: 'M', age: 47 },
     { bed: 'B', patientId: 'P013', patientName: '松本 拓也', status: 'unstable', gender: 'M', age: 33, flags: ['restraint'] },
-    { bed: 'C', patientId: 'P015', patientName: '木村 正樹', status: 'outing', gender: 'M', age: 50, flags: ['overnight'] },
+    { bed: 'C', patientId: 'P015', patientName: '木村 正樹', status: 'stable', gender: 'M', age: 50, flags: ['overnight'] },
     { bed: 'D', patientId: 'P017', patientName: '清水 翔太', status: 'critical', gender: 'M', age: 36, flags: ['isolation', 'restraint'] },
     { bed: 'E', patientId: 'P045', patientName: '岡崎 悠人', status: 'stable', gender: 'M', age: 26 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '211', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P047', patientName: '大村 徹', status: 'stable', gender: 'M', age: 40 },
@@ -409,7 +435,7 @@ export const ROOMS: Room[] = [
     { bed: 'C', patientId: 'P052', patientName: '中田 博之', status: 'stable', gender: 'M', age: 31 },
     { bed: 'D', patientId: 'P054', patientName: '小野 剛', status: 'stable', gender: 'M', age: 45 },
     { bed: 'E', patientId: 'P056', patientName: '山崎 悟', status: 'stable', gender: 'M', age: 53 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '212', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P058', patientName: '藤原 昌也', status: 'observation', gender: 'M', age: 27 },
@@ -417,7 +443,7 @@ export const ROOMS: Room[] = [
     { bed: 'C', patientId: 'P062', patientName: '加藤 大介', status: 'stable', gender: 'M', age: 48 },
     { bed: 'D', patientId: 'P064', patientName: '三浦 宏樹', status: 'stable', gender: 'M', age: 56 },
     { bed: 'E', patientId: 'P066', patientName: '清野 明', status: 'stable', gender: 'M', age: 30 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '213', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P068', patientName: '武田 誠治', status: 'stable', gender: 'M', age: 58 },
@@ -425,19 +451,19 @@ export const ROOMS: Room[] = [
     { bed: 'C', patientId: 'P096', patientName: '前田 翔', status: 'stable', gender: 'M', age: 45 },
     { bed: 'D', patientId: 'P097', patientName: '岡部 健', status: 'stable', gender: 'M', age: 52 },
     { bed: 'E', patientId: 'P098', patientName: '広瀬 亮', status: 'stable', gender: 'M', age: 59 },
-    { bed: 'F', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '215', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P099', patientName: '今井 誠司', status: 'stable', gender: 'M', age: 66 },
     { bed: 'B', patientId: 'P100', patientName: '菅原 直人', status: 'stable', gender: 'M', age: 29 },
     { bed: 'C', patientId: 'P101', patientName: '千葉 隆司', status: 'stable', gender: 'M', age: 36 },
-    { bed: 'D', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'D', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '216', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P102', patientName: '須藤 和也', status: 'stable', gender: 'M', age: 43 },
     { bed: 'B', patientId: 'P103', patientName: '黒田 康平', status: 'stable', gender: 'M', age: 50 },
-    { bed: 'C', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
-    { bed: 'D', patientId: null,   patientName: null,            status: 'empty',        gender: null, age: null },
+    { bed: 'C', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
+    { bed: 'D', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
 ];
 
@@ -489,7 +515,7 @@ export const PATIENTS: Patient[] = [
   { id: 'P024', patientNumber: '00010003', name: '宮田 典子', age: 34, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '2', status: 'stable', admitDate: '2026-01-30', doctorName: '岸本 医師', diagnosis: '双極性障害' },
   { id: 'P004', patientNumber: '00010004', name: '高橋 美咲', age: 35, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '3', status: 'critical', admitDate: '2026-02-05', doctorName: '田村 医師', diagnosis: '統合失調症' },
   { id: 'P026', patientNumber: '00010005', name: '原 由美子', age: 53, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '5', status: 'stable', admitDate: '2026-01-12', doctorName: '森田 医師', diagnosis: 'うつ病' },
-  { id: 'P006', patientNumber: '00010006', name: '伊藤 幸子', age: 58, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '6', status: 'outing', admitDate: '2026-01-08', doctorName: '森田 医師', diagnosis: 'うつ病' },
+  { id: 'P006', patientNumber: '00010006', name: '伊藤 幸子', age: 58, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '6', status: 'stable', admitDate: '2026-01-08', doctorName: '森田 医師', diagnosis: 'うつ病' },
   { id: 'P027', patientNumber: '00010007', name: '内田 道子', age: 55, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '7', status: 'stable', admitDate: '2025-12-22', doctorName: '岸本 医師', diagnosis: '認知症' },
   { id: 'P008', patientNumber: '00010008', name: '中村 裕子', age: 73, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '8', status: 'observation', admitDate: '2026-01-25', doctorName: '岸本 医師', diagnosis: '認知症' },
   { id: 'P029', patientNumber: '00010009', name: '坂本 千恵子', age: 43, gender: 'F', wardId: 'ward1', roomNumber: '102', bedLabel: '1', status: 'stable', admitDate: '2026-02-03', doctorName: '森田 医師', diagnosis: 'うつ病' },
@@ -557,7 +583,7 @@ export const PATIENTS: Patient[] = [
   { id: 'P085', patientNumber: '00010070', name: '中島 大輔', age: 27, gender: 'M', wardId: 'ward2', roomNumber: '208', bedLabel: 'C', status: 'stable', admitDate: '2026-03-19', doctorName: '岸本 医師', diagnosis: '適応障害' },
   { id: 'P011', patientNumber: '00010071', name: '吉田 浩二', age: 47, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'A', status: 'stable', admitDate: '2026-02-03', doctorName: '岸本 医師', diagnosis: '統合失調症' },
   { id: 'P013', patientNumber: '00010072', name: '松本 拓也', age: 33, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'B', status: 'unstable', admitDate: '2026-02-08', doctorName: '田村 医師', diagnosis: '統合失調症' },
-  { id: 'P015', patientNumber: '00010073', name: '木村 正樹', age: 50, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'C', status: 'outing', admitDate: '2026-01-12', doctorName: '森田 医師', diagnosis: 'うつ病' },
+  { id: 'P015', patientNumber: '00010073', name: '木村 正樹', age: 50, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'C', status: 'stable', admitDate: '2026-01-12', doctorName: '森田 医師', diagnosis: 'うつ病' },
   { id: 'P017', patientNumber: '00010074', name: '清水 翔太', age: 36, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'D', status: 'critical', admitDate: '2026-02-11', doctorName: '岸本 医師', diagnosis: '双極性障害' },
   { id: 'P045', patientNumber: '00010075', name: '岡崎 悠人', age: 26, gender: 'M', wardId: 'ward2', roomNumber: '210', bedLabel: 'E', status: 'stable', admitDate: '2026-02-21', doctorName: '岸本 医師', diagnosis: '適応障害' },
   { id: 'P047', patientNumber: '00010076', name: '大村 徹', age: 40, gender: 'M', wardId: 'ward2', roomNumber: '211', bedLabel: 'A', status: 'stable', admitDate: '2026-01-13', doctorName: '森田 医師', diagnosis: 'アルコール依存症' },
@@ -1142,19 +1168,21 @@ const relocatePatient = (rooms: Room[], patientId: string, toWardId: WardId, toR
   const curRoom = rooms.find((r) => r.beds.includes(cur));
   if (curRoom && curRoom.wardId === toWardId && curRoom.roomNumber === toRoom) return; // 既に在室
   const destRoom = rooms.find((r) => r.wardId === toWardId && r.roomNumber === toRoom);
-  const destBed = destRoom?.beds.find((b) => !b.disabled && !b.patientId);
+  const destBed = destRoom?.beds.find((b) => b.bedStatus !== 'unavailable' && !b.patientId);
   if (!destBed) return; // 満床 → スキップ
   destBed.patientId = cur.patientId;
   destBed.patientName = cur.patientName;
   destBed.gender = cur.gender;
   destBed.age = cur.age;
   destBed.status = cur.status;
+  destBed.bedStatus = undefined; // 占有化（患者ありのため病床ステータスは持たない）
   destBed.flags = cur.flags ? [...cur.flags] : undefined;
   cur.patientId = null;
   cur.patientName = null;
   cur.gender = null;
   cur.age = null;
-  cur.status = 'empty';
+  cur.status = undefined;
+  cur.bedStatus = 'empty'; // 空床化
   cur.flags = undefined;
 };
 

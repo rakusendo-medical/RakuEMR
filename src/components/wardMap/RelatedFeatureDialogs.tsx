@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Room, WardId } from '../../types';
 import {
   ROOMS, PATIENTS, ADMISSION_ORDERS,
-  MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves,
+  MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves, isAbsent, bedFlagsOf, absenceLabel,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -331,7 +331,7 @@ const VacancyContent: React.FC<{ ward: WardId }> = ({ ward }) => {
                     {bed.bed}
                   </Box>
                   {days.map((d) => {
-                    const state = bed.disabled
+                    const state = bed.bedStatus === 'unavailable'
                       ? '使用不可'
                       : occupied(r.roomNumber, bed.bed, d) ? '使用中' : '空床';
                     const bg = state === '使用不可' ? DISABLED : state === '使用中' ? OCCUPIED : EMPTY_BG;
@@ -453,7 +453,7 @@ const AdmissionScheduleContent: React.FC<{ type: 'admit' | 'discharge'; ward: Wa
 };
 
 const AbsentContent: React.FC<{ ward: WardId }> = ({ ward }) => {
-  const absent = PATIENTS.filter((p) => p.wardId === ward && p.status === 'outing');
+  const absent = PATIENTS.filter((p) => p.wardId === ward && isAbsent(bedFlagsOf(p)));
   if (absent.length === 0) {
     return <Typography variant="body2" color="text.secondary">不在者はいません。</Typography>;
   }
@@ -471,7 +471,7 @@ const AbsentContent: React.FC<{ ward: WardId }> = ({ ward }) => {
             {p.roomNumber}号室 {p.bedLabel} ／ {p.doctorName}
           </Typography>
           <Box sx={{ mt: 0.5 }}>
-            <Chip size="small" label="外出中" sx={{ bgcolor: '#eef2ff', color: '#4338ca' }} />
+            <Chip size="small" label={absenceLabel(bedFlagsOf(p))} sx={{ bgcolor: '#eef2ff', color: '#4338ca' }} />
           </Box>
         </Box>
       ))}

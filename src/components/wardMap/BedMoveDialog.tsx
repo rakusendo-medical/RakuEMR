@@ -129,7 +129,7 @@ const BedMoveDialog: React.FC<Props> = ({
   const room = wardRooms.find((r) => r.roomNumber === toRoom);
   // 対象患者自身が占めるベッドは「空き」とみなす（自己ブロック防止）。他患者が居る枠のみ満床扱い。
   const availableBeds = room
-    ? room.beds.filter((b: Bed) => !b.disabled && (!b.patientId || b.patientId === subjectPatientId))
+    ? room.beds.filter((b: Bed) => b.bedStatus !== 'unavailable' && (!b.patientId || b.patientId === subjectPatientId))
     : [];
   // ベッドは廃止（布団運用）。移動先病室の空き枠の先頭を自動割当する。
   const autoBed = availableBeds[0]?.bed ?? '';
