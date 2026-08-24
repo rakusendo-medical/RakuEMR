@@ -468,7 +468,6 @@ const NursingRecordDialog: React.FC<Props> = ({
               </Stack>
             </Box>
           )}
-
         </Stack>
 
         {confirmDelete && (

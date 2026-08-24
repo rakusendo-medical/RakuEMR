@@ -23,9 +23,11 @@ interface RowDraft {
   connections: ConnectionTarget[];
 }
 
+// 個別ダイアログ（NursingRecordDialog.buildBodyForSave）と同じ簡易マッピング:
+// 本文全文を主フィールド（SOAP は s）に入れる
 const buildBody = (form: RecordFormType, text: string): NursingRecordBody => {
   switch (form) {
-    case 'soap': return { formType: 'soap', body: { s: '', o: text, a: '', p: '' } };
+    case 'soap': return { formType: 'soap', body: { s: text, o: '', a: '', p: '' } };
     case 'chronological': return { formType: 'chronological', body: { text } };
   }
 };
@@ -341,7 +343,7 @@ const BulkNursingRecordsPage: React.FC = () => {
           <TextField multiline rows={6} fullWidth
             value={bulkBodyText}
             onChange={(e) => setBulkBodyText(e.target.value)}
-            placeholder="本文を入力。形式 SOAP→O / 経時記録→本文 に反映されます。"
+            placeholder="本文を入力。入力内容がそのまま記事本文に反映されます。"
           />
         </DialogContent>
         <DialogActions>
