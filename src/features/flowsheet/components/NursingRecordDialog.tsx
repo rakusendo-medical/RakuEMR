@@ -174,7 +174,8 @@ const NursingRecordDialog: React.FC<Props> = ({
   const appendTimeLine = () => {
     const hhmm = new Date().toTimeString().slice(0, 5);
     setBodyText((prev) => {
-      const trimmed = prev.replace(/\s+$/, '');
+      // 末尾の改行のみ除去する（行内の末尾スペースは既存行の一部なので保持する）
+      const trimmed = prev.replace(/\n+$/, '');
       return trimmed ? `${trimmed}\n${hhmm} ` : `${hhmm} `;
     });
   };
