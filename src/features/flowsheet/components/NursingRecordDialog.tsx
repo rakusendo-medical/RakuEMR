@@ -326,7 +326,7 @@ const NursingRecordDialog: React.FC<Props> = ({
                 </Stack>
               }
             >
-              本文に内容があります。{FORM_LABELS[pendingFormSwitch]} の定型文で上書きしますか?(現在の内容は失われます)
+              本文に内容があります。{FORM_LABELS[pendingFormSwitch]}の定型文で上書きしますか？（現在の内容は失われます）
             </Alert>
           )}
 

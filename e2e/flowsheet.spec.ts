@@ -95,7 +95,7 @@ test.describe('フローシート', () => {
     await body.fill('S 「眠れない」と発言\nO 夜間覚醒 2 回\nA 不眠傾向\nP 主治医へ報告');
     await dialog.getByRole('tab', { name: '経時記録', exact: true }).click();
     // 上書き確認 → キャンセルで本文は保持される
-    await expect(dialog.getByText(/経時記録 の定型文で上書きしますか/)).toBeVisible();
+    await expect(dialog.getByText(/経時記録の定型文で上書きしますか/)).toBeVisible();
     await dialog.getByRole('button', { name: 'キャンセル' }).click();
     await expect(body).toHaveValue(/眠れない/);
     // 再度切替して上書きを選ぶと経時記録の定型文に置き換わる
