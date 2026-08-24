@@ -279,7 +279,6 @@ export const INITIAL_NURSING_RECORDS: NursingRecord[] = [
     connections: ['flowsheet', 'handover'],
     reportTargets: [{ staffId: 'st-tamura', role: '確' }],
     tags: ['看護記録'],
-    isPublished: true,
     recordedBy: 'st-yamamoto', registeredAt: '2026-05-01T10:32:00',
   },
   {
@@ -294,7 +293,6 @@ export const INITIAL_NURSING_RECORDS: NursingRecord[] = [
     connections: ['flowsheet'],
     reportTargets: [],
     tags: ['看護記録', 'リスク管理'],
-    isPublished: true,
     recordedBy: 'st-sasaki', registeredAt: '2026-05-02T14:05:00',
   },
 ];

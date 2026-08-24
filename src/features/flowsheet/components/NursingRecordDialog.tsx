@@ -99,7 +99,6 @@ const NursingRecordDialog: React.FC<Props> = ({
   const [reports, setReports] = useState<{ staffId: string; role: ReportRoleCode }[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [isPublished, setIsPublished] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tplAnchor, setTplAnchor] = useState<HTMLElement | null>(null);
@@ -122,7 +121,6 @@ const NursingRecordDialog: React.FC<Props> = ({
       setConnections(existing.connections);
       setReports(existing.reportTargets.map((rt) => ({ staffId: rt.staffId, role: rt.role })));
       setTags(existing.tags);
-      setIsPublished(existing.isPublished);
       setLastTemplate('');
     } else {
       const baseDate = defaultDate ?? new Date().toISOString().slice(0, 10);
@@ -136,7 +134,6 @@ const NursingRecordDialog: React.FC<Props> = ({
       setConnections(['flowsheet']);
       setReports([]);
       setTags([]);
-      setIsPublished(true);
     }
     setPendingFormSwitch(null);
   }, [open, existing, initialMode, defaultDate, property.defaultRecordForm]);
@@ -204,14 +201,14 @@ const NursingRecordDialog: React.FC<Props> = ({
       updateRecord(existing.id, {
         title, recordedAt, shift, formType: form, body,
         connections, reportTargets: reports.map((r) => ({ staffId: r.staffId, role: r.role })),
-        tags, isPublished,
+        tags,
       });
     } else {
       addRecord({
         patientId,
         title, recordedAt, shift, formType: form, body,
         connections, reportTargets: reports.map((r) => ({ staffId: r.staffId, role: r.role })),
-        tags, isPublished,
+        tags,
       });
     }
     onSaved?.({ title, recordedAt, mode: existing && mode === 'edit' ? 'edit' : 'new' });
@@ -472,17 +469,6 @@ const NursingRecordDialog: React.FC<Props> = ({
             </Box>
           )}
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                checked={isPublished}
-                disabled={isViewMode}
-                onChange={(e) => setIsPublished(e.target.checked)}
-              />
-            }
-            label="記事を公開する（オフ: 看護メニュー内のみ表示）"
-          />
         </Stack>
 
         {confirmDelete && (

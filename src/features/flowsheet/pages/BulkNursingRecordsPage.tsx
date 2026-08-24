@@ -21,7 +21,6 @@ interface RowDraft {
   time: string; // HH:mm
   text: string; // 簡素化: 形式に応じてプライマリブロックに反映
   connections: ConnectionTarget[];
-  isPublished: boolean;
 }
 
 const buildBody = (form: RecordFormType, text: string): NursingRecordBody => {
@@ -82,7 +81,6 @@ const BulkNursingRecordsPage: React.FC = () => {
       time: '',
       text: '',
       connections: ['flowsheet'],
-      isPublished: true,
     })));
     setSavedMsg(null);
   };
@@ -137,7 +135,6 @@ const BulkNursingRecordsPage: React.FC = () => {
         connections: r.connections,
         reportTargets: [],
         tags: [],
-        isPublished: r.isPublished,
       });
       count += 1;
     });
@@ -227,7 +224,6 @@ const BulkNursingRecordsPage: React.FC = () => {
                 <TableCell sx={{ width: 90 }}>時間</TableCell>
                 <TableCell>本文</TableCell>
                 <TableCell sx={{ width: 200 }}>連携</TableCell>
-                <TableCell sx={{ width: 80 }}>公開</TableCell>
                 <TableCell sx={{ width: 70 }}>記録</TableCell>
               </TableRow>
             </TableHead>
@@ -282,11 +278,6 @@ const BulkNursingRecordsPage: React.FC = () => {
                           />
                         ))}
                       </Stack>
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox size="small" checked={r.isPublished}
-                        onChange={(e) => setRows((rs) => rs.map((row, idx) => (idx === i ? { ...row, isPublished: e.target.checked } : row)))}
-                      />
                     </TableCell>
                     <TableCell>{cnt > 0 ? cnt : '未'}</TableCell>
                   </TableRow>

@@ -129,10 +129,10 @@ const NursingRecordsPage: React.FC = () => {
         variant="outlined"
         sx={{
           mb: 1,
-          bgcolor: !r.isPublished ? '#fef2f2' : 'background.paper',
+          bgcolor: 'background.paper',
           opacity: isDeleted ? 0.55 : 1,
           cursor: 'pointer',
-          '&:hover': { bgcolor: !r.isPublished ? '#fee2e2' : '#fafafa' },
+          '&:hover': { bgcolor: '#fafafa' },
         }}
         onClick={() => setDialog({ open: true, recordId: r.id, mode: 'view' })}
       >
@@ -156,7 +156,6 @@ const NursingRecordsPage: React.FC = () => {
               label={FORM_CHIP_LABEL[r.formType]}
               sx={{ bgcolor: formStyle.bg, color: formStyle.color, fontWeight: 700 }}
             />
-            {!r.isPublished && <Chip size="small" color="warning" label="非公開" />}
             {/* タグ＝アウトラインチップ */}
             {r.tags.map((t) => (
               <Chip key={t} size="small" variant="outlined" label={t} />

@@ -158,7 +158,6 @@ const ObservationBulkDialog: React.FC<Props> = ({ open, onClose, subtype, date, 
           connections: ['flowsheet'],
           reportTargets: [],
           tags: ['隔離拘束観察', ...r.tags],
-          isPublished: true,
         });
         linkedNursingRecordId = created.id;
       }

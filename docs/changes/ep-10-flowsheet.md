@@ -556,3 +556,16 @@ briefing 指示「B 案リファクタ: 7 セクションを 1 つの Table に�
 
 - `npx tsc --noEmit` クリーン / `npm run build` クリーン
 - e2e: `flowsheet.spec.ts` に 4 件追加（タブ 2 本と SOAP 定型文挿入／経時切替と時刻行追加／編集後の上書き確認／経時登録で部門記録簿チップ「経時」）
+
+### 追記: 公開/非公開（isPublished）の削除（同 ver0.37・2026-08-24）
+
+非公開時の参照範囲の使い方が定まらない（Spec 内でも「看護メニュー内のみ」と「記載職員のみ」の 2 通りの記述が混在していた）ため、PM 判断で公開/非公開の仕組みを Spec・画面・データモデルから削除。
+
+- `types.ts` — `NursingRecord.isPublished` を削除
+- `NursingRecordDialog.tsx` — [記事を公開する] チェックボックスと state を削除
+- `NursingRecordsPage.tsx` — 非公開時の薄赤背景・「非公開」チップを削除
+- `BulkNursingRecordsPage.tsx` — 公開列（チェックボックス）を削除
+- `ObservationRecordDialog.tsx` / `ObservationBulkDialog.tsx` — 連携書き込みの `isPublished: true` を削除
+- Spec: us-23（画面要素・振る舞い・AC-7・状態遷移・補足）／us-26（AC-8・列・振る舞い）／us-22（表示項目）／_epic／screen-mapping／issues ドラフトから削除し、削除経緯を補足に記載（AC 番号は欠番のまま維持）
+
+必要になれば参照範囲（看護部門内共有か記載職員のみか）を先方確認のうえ再検討する。

@@ -146,7 +146,7 @@ export interface NursingRecord {
   connections: ConnectionTarget[];
   reportTargets: NursingRecordReportTarget[];
   tags: string[];
-  isPublished: boolean;       // false=記載職員のみ参照可
+  // 公開/非公開（isPublished）は 2026-08-24 に削除（使い方が定まらないため。必要になれば再検討）
   recordedBy: UUID;
   registeredAt: ISODateTime;
   updatedAt?: ISODateTime;
