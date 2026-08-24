@@ -97,27 +97,27 @@ export const NURSING_RECORD_TEMPLATES: NursingRecordTemplate[] = [
     },
   },
   {
-    id: 'nrt-focus-fall',
-    name: '転倒リスク FOCUS',
-    formType: 'focus',
+    id: 'nrt-soap-fall',
+    name: '転倒リスク SOAP',
+    formType: 'soap',
     body: {
-      formType: 'focus',
+      formType: 'soap',
       body: {
-        focus: '転倒リスク',
-        data: '夜間覚醒時にふらつきあり。',
-        action: '見守り強化、ナースコール周知。',
-        response: '夜間転倒なく経過。',
+        s: '「夜トイレに行くときふらつく」と発言。',
+        o: '夜間覚醒時にふらつきあり。',
+        a: '転倒リスク高い。見守り強化が必要。',
+        p: '見守り強化、ナースコール周知。',
       },
     },
   },
   {
-    id: 'nrt-free-summary',
-    name: '日勤サマリ（フリー）',
-    formType: 'free',
+    id: 'nrt-chrono-daily',
+    name: '日勤経過（経時記録）',
+    formType: 'chronological',
     body: {
-      formType: 'free',
+      formType: 'chronological',
       body: {
-        free: '本日 ADL 自立。日中レクリエーション参加。表情穏やか。',
+        text: '09:00 検温。バイタル著変なし。\n10:30 レクリエーション参加。表情穏やか。\n14:00 面会あり。落ち着いて過ごす。',
       },
     },
   },
@@ -284,14 +284,11 @@ export const INITIAL_NURSING_RECORDS: NursingRecord[] = [
   },
   {
     id: 'nr-002', patientId: 'P001', title: '転倒リスク',
-    recordedAt: '2026-05-02T14:00:00', shift: 'day', formType: 'focus',
+    recordedAt: '2026-05-02T14:00:00', shift: 'day', formType: 'chronological',
     body: {
-      formType: 'focus',
+      formType: 'chronological',
       body: {
-        focus: '転倒リスク',
-        data: '夜間覚醒時のふらつきが続く。',
-        action: '見守り強化、夜間ラウンドを 1 時間ごとに変更。',
-        response: '夜間転倒なし。',
+        text: '06:10 夜間覚醒時にふらつきあり。付き添いにて転倒なし。\n10:00 見守り強化、夜間ラウンドを 1 時間ごとに変更。\n14:00 日中は安定して歩行。夜間転倒なし。',
       },
     },
     connections: ['flowsheet'],

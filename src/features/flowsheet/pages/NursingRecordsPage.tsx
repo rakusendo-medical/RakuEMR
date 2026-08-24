@@ -19,9 +19,12 @@ const SHIFT_COLOR: Record<ShiftType, string> = { night: '#dc2626', day: '#1e40af
 
 // 記録形式（種別）チップの配色。タグ（アウトライン）と見分けられるよう塗りチップにする。
 const FORM_CHIP_STYLE: Record<RecordFormType, { bg: string; color: string }> = {
-  focus: { bg: '#dcfce7', color: '#166534' }, // 緑
-  soap: { bg: '#dbeafe', color: '#1e40af' },  // 青
-  free: { bg: '#ede9fe', color: '#6b21a8' },  // 紫
+  soap: { bg: '#dbeafe', color: '#1e40af' },          // 青
+  chronological: { bg: '#dcfce7', color: '#166534' }, // 緑
+};
+const FORM_CHIP_LABEL: Record<RecordFormType, string> = {
+  soap: 'SOAP',
+  chronological: '経時',
 };
 
 const NursingRecordsPage: React.FC = () => {
@@ -150,7 +153,7 @@ const NursingRecordsPage: React.FC = () => {
             {/* 記録形式（種別）＝塗りチップで配色（タグ＝アウトラインと区別） */}
             <Chip
               size="small"
-              label={r.formType.toUpperCase()}
+              label={FORM_CHIP_LABEL[r.formType]}
               sx={{ bgcolor: formStyle.bg, color: formStyle.color, fontWeight: 700 }}
             />
             {!r.isPublished && <Chip size="small" color="warning" label="非公開" />}

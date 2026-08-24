@@ -8,7 +8,8 @@ export type HHmm = string;          // HH:mm
 
 export type ShiftType = 'night' | 'day' | 'evening'; // 深夜 / 日勤 / 準夜
 
-export type RecordFormType = 'focus' | 'soap' | 'free';
+// 記録形式は SOAP／経時記録の 2 形式（2026-08-24 確定。旧 focus/free は廃止）
+export type RecordFormType = 'soap' | 'chronological';
 
 export type ChangeOpType = 'register' | 'update';
 
@@ -111,26 +112,23 @@ export interface SignEntry {
 
 // ----- 看護記録（個別 / 一括 共通モデル） -----
 
-export interface NursingRecordFocusBody {
-  focus: string;              // FOCUS（タイトルにも連動）
-  data: string;
-  action: string;
-  response: string;
-}
 export interface NursingRecordSoapBody {
   s: string;
   o: string;
   a: string;
   p: string;
 }
-export interface NursingRecordFreeBody {
-  free: string;
+// 経時記録: 行頭に時刻（HH:mm）を付けた平文。
+// 「時刻＋本文」の行構造による構造化入力は現時点スコープ外（将来、看護記録に限らず
+// 多職種の部門診療録全てを対象にした共通の仕組みとして検討余地を残すため、
+// body は formType 別 union のまま拡張できる形にしておく）。
+export interface NursingRecordChronologicalBody {
+  text: string;
 }
 
 export type NursingRecordBody =
-  | { formType: 'focus'; body: NursingRecordFocusBody }
   | { formType: 'soap'; body: NursingRecordSoapBody }
-  | { formType: 'free'; body: NursingRecordFreeBody };
+  | { formType: 'chronological'; body: NursingRecordChronologicalBody };
 
 export interface NursingRecordReportTarget {
   staffId: UUID;
@@ -140,7 +138,7 @@ export interface NursingRecordReportTarget {
 export interface NursingRecord {
   id: UUID;
   patientId: UUID;
-  title: string;              // 最大 20 文字。FOCUS 時は body.focus と連動
+  title: string;              // 最大 20 文字
   recordedAt: ISODateTime;    // 記載日時（勤務帯はここから自動判定）
   shift: ShiftType;
   formType: RecordFormType;

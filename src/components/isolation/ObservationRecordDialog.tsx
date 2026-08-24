@@ -211,14 +211,12 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
           title: subtype === 'その他' ? '観察記録（その他）' : '観察記録（隔離拘束）',
           recordedAt: `${date}T${r.time}:00`,
           shift: deriveShift(hour),
-          formType: 'focus',
+          formType: 'chronological',
           body: {
-            formType: 'focus',
+            formType: 'chronological',
+            // 経時記録: 行頭に観察時刻を付けて状態・内容を 1 行で記録する
             body: {
-              focus: subtype === 'その他' ? '観察記録（その他）' : '隔離拘束観察',
-              data: r.content || stateConf?.prescriptionText || '',
-              action: stateConf?.prescriptionText || '',
-              response: r.state,
+              text: `${r.time} ${r.state}：${r.content || stateConf?.prescriptionText || ''}`,
             },
           },
           connections: ['flowsheet'],

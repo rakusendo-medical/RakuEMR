@@ -56,6 +56,73 @@ test.describe('フローシート', () => {
     await expect(page.getByText('看護記録(熱発対応)')).toBeVisible();
   });
 
+  test('看護経過記録: 記録形式タブは SOAP／経時記録 の2つのみで SOAP 定型文が挿入される', async ({ page }) => {
+    const nrRow = page.getByRole('row').filter({ has: page.getByRole('cell', { name: '看護記録', exact: true }) });
+    await nrRow.getByRole('button', { name: '新規作成' }).first().click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    // タブは SOAP／経時記録 の 2 つのみ（旧 FOCUS／フリーは廃止）
+    await expect(dialog.getByRole('tab', { name: 'SOAP', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('tab', { name: '経時記録', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('tab', { name: 'FOCUS' })).toHaveCount(0);
+    await expect(dialog.getByRole('tab', { name: 'フリー' })).toHaveCount(0);
+    // 既定タブ SOAP の定型文（S/O/A/P の見出し 4 行）が本文に挿入されている
+    await expect(dialog.getByLabel('本文')).toHaveValue('S\nO\nA\nP');
+  });
+
+  test('看護経過記録: 経時記録タブへ切替で時刻行の定型文が入り [時刻行を追加] で行が増える', async ({ page }) => {
+    const nrRow = page.getByRole('row').filter({ has: page.getByRole('cell', { name: '看護記録', exact: true }) });
+    await nrRow.getByRole('button', { name: '新規作成' }).first().click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    // 本文が SOAP 定型文のまま（未編集）なので確認なしで切替できる
+    await dialog.getByRole('tab', { name: '経時記録', exact: true }).click();
+    const body = dialog.getByLabel('本文');
+    await expect(body).toHaveValue(/^\d{2}:\d{2} $/);
+    // 1 行目に本文を書き、[時刻行を追加] で現在時刻の行頭が改行して挿入される
+    const first = await body.inputValue();
+    await body.fill(`${first}意識清明`);
+    await dialog.getByRole('button', { name: '時刻行を追加' }).click();
+    await expect(body).toHaveValue(/^\d{2}:\d{2} 意識清明\n\d{2}:\d{2} $/);
+  });
+
+  test('看護経過記録: 本文編集後の形式切替は上書き確認をはさむ', async ({ page }) => {
+    const nrRow = page.getByRole('row').filter({ has: page.getByRole('cell', { name: '看護記録', exact: true }) });
+    await nrRow.getByRole('button', { name: '新規作成' }).first().click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    const body = dialog.getByLabel('本文');
+    await body.fill('S 「眠れない」と発言\nO 夜間覚醒 2 回\nA 不眠傾向\nP 主治医へ報告');
+    await dialog.getByRole('tab', { name: '経時記録', exact: true }).click();
+    // 上書き確認 → キャンセルで本文は保持される
+    await expect(dialog.getByText(/経時記録 の定型文で上書きしますか/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    await expect(body).toHaveValue(/眠れない/);
+    // 再度切替して上書きを選ぶと経時記録の定型文に置き換わる
+    await dialog.getByRole('tab', { name: '経時記録', exact: true }).click();
+    await dialog.getByRole('button', { name: '上書きして 経時記録 に切替' }).click();
+    await expect(body).toHaveValue(/^\d{2}:\d{2} $/);
+  });
+
+  test('看護経過記録: 経時記録で登録すると部門記録簿に「経時」チップで表示される', async ({ page }) => {
+    test.slow(); // beforeEach のカルテ表示 + 部門記録簿への goto で初期化が 2 回走るため
+    // ストアはインメモリのため、部門記録簿ページ内で作成→一覧反映まで確認する
+    await page.goto('/nursing/records?patientId=P001');
+    await page.getByRole('button', { name: '新規作成' }).click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '看護経過記録（新規作成）' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('tab', { name: '経時記録', exact: true }).click();
+    const body = dialog.getByLabel('本文');
+    await body.fill(`${await body.inputValue()}朝食全量摂取`);
+    await dialog.getByLabel('タイトル').fill('経時記録テスト');
+    await dialog.getByRole('button', { name: '登録', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    // 当該記事のカードに記録形式チップ「経時」が付く
+    const card = page.locator('.MuiCard-root').filter({ hasText: '経時記録テスト' });
+    await expect(card).toBeVisible();
+    await expect(card.getByText('経時', { exact: true })).toBeVisible();
+  });
+
   test('バイタルグラフ行が表示される', async ({ page }) => {
     await expect(page.locator('text=/体温|バイタル|T\\.P\\.R/').first()).toBeVisible();
   });

@@ -24,12 +24,16 @@ interface RowDraft {
   isPublished: boolean;
 }
 
-const buildBody = (form: RecordFormType, text: string, title: string): NursingRecordBody => {
+const buildBody = (form: RecordFormType, text: string): NursingRecordBody => {
   switch (form) {
-    case 'focus': return { formType: 'focus', body: { focus: title, data: text, action: '', response: '' } };
     case 'soap': return { formType: 'soap', body: { s: '', o: text, a: '', p: '' } };
-    case 'free': return { formType: 'free', body: { free: text } };
+    case 'chronological': return { formType: 'chronological', body: { text } };
   }
+};
+
+const FORM_LABEL: Record<RecordFormType, string> = {
+  soap: 'SOAP',
+  chronological: '経時記録',
 };
 
 const CONN_OPTIONS: { value: ConnectionTarget; label: string }[] = [
@@ -129,7 +133,7 @@ const BulkNursingRecordsPage: React.FC = () => {
         recordedAt,
         shift,
         formType,
-        body: buildBody(formType, r.text, title),
+        body: buildBody(formType, r.text),
         connections: r.connections,
         reportTargets: [],
         tags: [],
@@ -181,7 +185,7 @@ const BulkNursingRecordsPage: React.FC = () => {
             onChange={(_, v: RecordFormType | null) => v && setFormType(v)}
           >
             <ToggleButton value="soap">SOAP</ToggleButton>
-            <ToggleButton value="free">フリー</ToggleButton>
+            <ToggleButton value="chronological">経時記録</ToggleButton>
           </ToggleButtonGroup>
           <Tooltip title="全患者の時間を一括設定">
             <span>
@@ -341,12 +345,12 @@ const BulkNursingRecordsPage: React.FC = () => {
 
       {/* 本文一括 */}
       <Dialog open={bulkBodyOpen} onClose={() => setBulkBodyOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>本文一括入力（{formType.toUpperCase()}）</DialogTitle>
+        <DialogTitle>本文一括入力（{FORM_LABEL[formType]}）</DialogTitle>
         <DialogContent dividers>
           <TextField multiline rows={6} fullWidth
             value={bulkBodyText}
             onChange={(e) => setBulkBodyText(e.target.value)}
-            placeholder="本文を入力。形式 SOAP→O / フリー→本文 に反映されます。"
+            placeholder="本文を入力。形式 SOAP→O / 経時記録→本文 に反映されます。"
           />
         </DialogContent>
         <DialogActions>

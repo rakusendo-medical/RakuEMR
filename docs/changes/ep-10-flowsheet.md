@@ -528,3 +528,31 @@ briefing 指示「B 案リファクタ: 7 セクションを 1 つの Table に�
 
 - `npx tsc --noEmit` クリーン
 - e2e: `e2e/flowsheet.spec.ts` にパターン系 8 件を追加（適用期間登録／入力展開・セル読取専用／表示切替／削除で解除／入力済みは削除不可／終了日以降入力不可／日付アイコンで当日パターンのみ編集／隔離拘束では非表示）
+
+## 看護経過記録の記録形式を SOAP／経時記録の 2 形式に変更（ver0.37・2026-08-24）
+
+先方合意（2026-08-24）に基づき、記録形式を **SOAP／経時記録（chronological）の 2 形式** に確定。従来の FOCUS／フリーは廃止。
+
+### 仕様
+
+- **定型文の定義**: 記録形式のテンプレは「1 つの本文入力欄（平文）への挿入テキスト＝定型文」として定義。
+  - SOAP: `S`/`O`/`A`/`P` の見出し 4 行
+  - 経時記録: 行頭に時刻（`HH:mm `）を付けた行（初期挿入は記載日時の時刻）
+- **経時記録の入力補助**: 時系列入力の専用標準 UI は無いため、平文入力＋[時刻行を追加]（現在時刻の行頭を本文末尾へ改行挿入）を採用。
+- **タブ切替**: 本文が空か定型文のまま（未編集）なら切替先の定型文を自動挿入。編集済みなら上書き確認。
+- **構造化入力はスコープ外**: SOAP 各欄・経時の「時刻＋本文」行構造の構造化入力は現時点実装しない。将来は看護記録を除く多職種の部門診療録全てを対象にした共通の仕組みとして検討余地を残す（`NursingRecordBody` は formType 別 union のまま拡張余地を確保）。
+
+### 実装
+
+- `types.ts` — `RecordFormType = 'soap' | 'chronological'`。`NursingRecordChronologicalBody { text }` を新設、Focus/Free body 廃止
+- `components/NursingRecordDialog.tsx` — タブ 2 本化、`bodyTemplateFor()`（経時は時刻付きで動的生成）、未編集判定を `lastTemplate` 比較に変更、[時刻行を追加] ボタン追加
+- `pages/NursingRecordsPage.tsx` — 形式チップ SOAP=青／経時=緑（`FORM_CHIP_LABEL`）
+- `pages/BulkNursingRecordsPage.tsx` — 形式トグル・一括入力ダイアログ表記を追随（`buildBody` から title 引数を除去）
+- `components/isolation/RestraintNursingRecordStub.tsx` — 形式セレクトを SOAP／経時記録に
+- `components/isolation/ObservationRecordDialog.tsx` / `ObservationBulkDialog.tsx` — 看護記録連携（ダブル書き込み）を経時記録形式「HH:mm 状態：内容」に変更
+- `mockData.ts` — テンプレ（定型文呼出用の文例）とシードレコードを 2 形式に変換
+
+### 検証
+
+- `npx tsc --noEmit` クリーン / `npm run build` クリーン
+- e2e: `flowsheet.spec.ts` に 4 件追加（タブ 2 本と SOAP 定型文挿入／経時切替と時刻行追加／編集後の上書き確認／経時登録で部門記録簿チップ「経時」）

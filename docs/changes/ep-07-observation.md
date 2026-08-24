@@ -302,3 +302,9 @@ S3 から下記契約で承認：
 - `npx tsc --noEmit` クリーン / `npm run build` クリーン
 - E2E: 新規 `observation-future-block.spec.ts` 6 件パス。既存 `flowsheet.spec.ts` / `isolation.spec.ts`（36 件）もパス（回帰なし）
 - `npm run lint` は本改修前から実行不可（ESLint 10 系に対し flat config 未整備）。今回は対応範囲外
+
+## 看護記録連携の記事形式を経時記録に変更（ver0.37・2026-08-24）
+
+看護経過記録の記録形式が SOAP／経時記録の 2 形式に確定（FOCUS 廃止。詳細は `docs/changes/ep-10-flowsheet.md` の ver0.37）したことに伴い、観察記録の看護記録連携（ダブル書き込み）を **経時記録形式** に変更。
+
+- `ObservationRecordDialog.tsx` / `ObservationBulkDialog.tsx` — `addNursingRecord` へ渡す body を `formType: 'chronological'`、本文 `"HH:mm 状態：内容（内容が空なら定型文）"` の 1 行に変更（旧: FOCUS 形式で focus/data/action/response に分割）

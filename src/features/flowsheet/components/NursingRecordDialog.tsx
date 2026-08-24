@@ -27,10 +27,10 @@ interface Props {
   onSaved?: (info: { title: string; recordedAt: ISODateTime; mode: 'new' | 'edit' }) => void;
 }
 
+// 記録形式は SOAP／経時記録の 2 形式（2026-08-24 確定。旧 FOCUS/フリーは廃止）
 const FORM_LABELS: Record<RecordFormType, string> = {
-  focus: 'FOCUS',
   soap: 'SOAP',
-  free: 'フリー',
+  chronological: '経時記録',
 };
 
 const CONNECTION_OPTIONS: { value: ConnectionTarget; label: string }[] = [
@@ -43,31 +43,30 @@ const CONNECTION_OPTIONS: { value: ConnectionTarget; label: string }[] = [
 
 const REPORT_ROLES: ReportRoleCode[] = ['作', '確', '両'];
 
-// テンプレート(本文の雛形)。タブ切替時に空欄なら自動挿入、本文ありなら確認して上書き
-const BODY_TEMPLATE: Record<RecordFormType, string> = {
-  focus: 'F：\n\nD：\n\nA：\n\nR：\n',
-  soap: 'S：\n\nO：\n\nA：\n\nP：\n',
-  free: '',
-};
+// 定型文(1 つの本文入力欄へ挿入するテキスト)。タブ切替時に空欄なら自動挿入、本文ありなら確認して上書き。
+// SOAP は S/O/A/P の見出し 4 行。経時記録は行頭に時刻（HH:mm ）を付けた行を起点にする。
+const bodyTemplateFor = (form: RecordFormType, hhmm: string): string =>
+  form === 'soap' ? 'S\nO\nA\nP' : `${hhmm} `;
 
 // 既存レコード(構造化)を 1 本のテキストに復元
 const composeBodyText = (rec: NursingRecord): string => {
   const b = rec.body;
-  if (b.formType === 'focus') {
-    return `F：${b.body.focus}\nD：${b.body.data}\nA：${b.body.action}\nR：${b.body.response}`;
-  }
   if (b.formType === 'soap') {
-    return `S：${b.body.s}\nO：${b.body.o}\nA：${b.body.a}\nP：${b.body.p}`;
+    const { s, o, a, p } = b.body;
+    // ダイアログ保存分は全文を s に持つ（o/a/p 空）ためそのまま返す。構造化シードは見出し付きで展開
+    if (!o && !a && !p) return s;
+    return `S\n${s}\nO\n${o}\nA\n${a}\nP\n${p}`;
   }
-  return b.body.free;
+  return b.body.text;
 };
 
-// 保存時にテキスト → 構造化 body を作る(主フィールドに全文を入れる簡易マッピング)
+// 保存時にテキスト → 構造化 body を作る(主フィールドに全文を入れる簡易マッピング)。
+// SOAP 各欄・経時記録の「時刻＋本文」行構造への構造化入力は現時点スコープ外
+// （将来は多職種の部門診療録全てを対象にした共通の仕組みとして検討余地を残す）。
 const buildBodyForSave = (form: RecordFormType, text: string): NursingRecordBody => {
   switch (form) {
-    case 'focus': return { formType: 'focus', body: { focus: text, data: '', action: '', response: '' } };
     case 'soap': return { formType: 'soap', body: { s: text, o: '', a: '', p: '' } };
-    case 'free': return { formType: 'free', body: { free: text } };
+    case 'chronological': return { formType: 'chronological', body: { text } };
   }
 };
 
@@ -106,6 +105,8 @@ const NursingRecordDialog: React.FC<Props> = ({
   const [tplAnchor, setTplAnchor] = useState<HTMLElement | null>(null);
   // タブ切替で本文を破棄する確認(既存本文がある場合のみ表示)
   const [pendingFormSwitch, setPendingFormSwitch] = useState<RecordFormType | null>(null);
+  // 直近に自動挿入した定型文（未編集判定用。経時記録は時刻を含むため文字列で保持する）
+  const [lastTemplate, setLastTemplate] = useState<string>('');
 
   // ダイアログ open 時に既存レコードを読み込む
   useEffect(() => {
@@ -122,13 +123,16 @@ const NursingRecordDialog: React.FC<Props> = ({
       setReports(existing.reportTargets.map((rt) => ({ staffId: rt.staffId, role: rt.role })));
       setTags(existing.tags);
       setIsPublished(existing.isPublished);
+      setLastTemplate('');
     } else {
       const baseDate = defaultDate ?? new Date().toISOString().slice(0, 10);
       const nowHHmm = new Date().toTimeString().slice(0, 5);
       setTitle('');
       setRecordedAt(`${baseDate}T${nowHHmm}:00`);
       setForm(property.defaultRecordForm);
-      setBodyText(BODY_TEMPLATE[property.defaultRecordForm]); // 新規作成は既定タブのテンプレを最初から挿入
+      const tpl = bodyTemplateFor(property.defaultRecordForm, nowHHmm);
+      setBodyText(tpl); // 新規作成は既定タブの定型文を最初から挿入
+      setLastTemplate(tpl);
       setConnections(['flowsheet']);
       setReports([]);
       setTags([]);
@@ -139,19 +143,23 @@ const NursingRecordDialog: React.FC<Props> = ({
 
   const isViewMode = mode === 'view';
 
-  // タブ(form)切替ハンドラ: 本文が空ならテンプレ挿入、ありなら確認
+  // 経時記録の定型文・時刻行に使う時刻（記載日時があればその時刻、なければ現在時刻）
+  const currentHHmm = () =>
+    recordedAt ? recordedAt.slice(11, 16) : new Date().toTimeString().slice(0, 5);
+
+  const insertTemplateFor = (next: RecordFormType) => {
+    const tpl = bodyTemplateFor(next, currentHHmm());
+    setForm(next);
+    setBodyText(tpl);
+    setLastTemplate(tpl);
+  };
+
+  // タブ(form)切替ハンドラ: 本文が空か定型文のままなら挿入、編集済みなら確認
   const requestFormSwitch = (next: RecordFormType) => {
     if (isViewMode || next === form) return;
     const hasContent = bodyText.trim().length > 0;
-    if (!hasContent) {
-      setForm(next);
-      setBodyText(BODY_TEMPLATE[next]);
-      return;
-    }
-    // 現テンプレと完全一致なら未編集とみなして無確認で切替
-    if (bodyText === BODY_TEMPLATE[form]) {
-      setForm(next);
-      setBodyText(BODY_TEMPLATE[next]);
+    if (!hasContent || bodyText === lastTemplate) {
+      insertTemplateFor(next);
       return;
     }
     setPendingFormSwitch(next);
@@ -159,12 +167,20 @@ const NursingRecordDialog: React.FC<Props> = ({
 
   const applyPendingFormSwitch = () => {
     if (!pendingFormSwitch) return;
-    setForm(pendingFormSwitch);
-    setBodyText(BODY_TEMPLATE[pendingFormSwitch]);
+    insertTemplateFor(pendingFormSwitch);
     setPendingFormSwitch(null);
   };
 
   const cancelPendingFormSwitch = () => setPendingFormSwitch(null);
+
+  // 経時記録: 本文末尾に現在時刻の行頭(HH:mm )を改行して挿入する補助
+  const appendTimeLine = () => {
+    const hhmm = new Date().toTimeString().slice(0, 5);
+    setBodyText((prev) => {
+      const trimmed = prev.replace(/\s+$/, '');
+      return trimmed ? `${trimmed}\n${hhmm} ` : `${hhmm} `;
+    });
+  };
 
   const handleSubmit = () => {
     const errs: string[] = [];
@@ -215,23 +231,16 @@ const NursingRecordDialog: React.FC<Props> = ({
     setForm(tpl.formType);
     // テンプレの構造化本文を 1 本のテキストに展開して挿入
     const b = tpl.body;
-    let text = '';
-    if (b.formType === 'focus') {
-      text = `F：${b.body.focus}\nD：${b.body.data}\nA：${b.body.action}\nR：${b.body.response}`;
-    } else if (b.formType === 'soap') {
-      text = `S：${b.body.s}\nO：${b.body.o}\nA：${b.body.a}\nP：${b.body.p}`;
-    } else {
-      text = b.body.free;
-    }
+    const text = b.formType === 'soap'
+      ? `S\n${b.body.s}\nO\n${b.body.o}\nA\n${b.body.a}\nP\n${b.body.p}`
+      : b.body.text;
     setBodyText(text);
   };
 
   const renderBody = () => {
-    const helper = form === 'focus'
-      ? '※ FOCUS テンプレート(F/D/A/R)の見出しに沿って記入'
-      : form === 'soap'
-        ? '※ SOAP テンプレート(S/O/A/P)の見出しに沿って記入'
-        : '※ 自由記述';
+    const helper = form === 'soap'
+      ? '※ SOAP 定型文(S/O/A/P の見出し行)に沿って記入'
+      : '※ 行頭に時刻(HH:mm)を付けて時系列で記入。[時刻行を追加] で現在時刻の行を挿入';
     return (
       <TextField
         label="本文"
@@ -301,9 +310,8 @@ const NursingRecordDialog: React.FC<Props> = ({
             onChange={(_, v: RecordFormType) => requestFormSwitch(v)}
             sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32 } }}
           >
-            <Tab value="focus" label="FOCUS" disabled={isViewMode && form !== 'focus'} />
             <Tab value="soap" label="SOAP" disabled={isViewMode && form !== 'soap'} />
-            <Tab value="free" label="フリー" disabled={isViewMode && form !== 'free'} />
+            <Tab value="chronological" label="経時記録" disabled={isViewMode && form !== 'chronological'} />
           </Tabs>
 
           {/* 本文が編集済みの状態でタブ切替するときの上書き確認 */}
@@ -321,7 +329,7 @@ const NursingRecordDialog: React.FC<Props> = ({
                 </Stack>
               }
             >
-              本文に内容があります。{FORM_LABELS[pendingFormSwitch]} テンプレートで上書きしますか?(現在の内容は失われます)
+              本文に内容があります。{FORM_LABELS[pendingFormSwitch]} の定型文で上書きしますか?(現在の内容は失われます)
             </Alert>
           )}
 
@@ -330,6 +338,11 @@ const NursingRecordDialog: React.FC<Props> = ({
               <Button size="small" variant="outlined" onClick={(e) => setTplAnchor(e.currentTarget)}>
                 テンプレート呼出
               </Button>
+              {form === 'chronological' && (
+                <Button size="small" variant="outlined" onClick={appendTimeLine}>
+                  時刻行を追加
+                </Button>
+              )}
               <Menu
                 open={Boolean(tplAnchor)}
                 anchorEl={tplAnchor}
