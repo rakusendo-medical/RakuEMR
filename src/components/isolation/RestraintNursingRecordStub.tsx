@@ -13,8 +13,8 @@ import {
   Button, Stack, TextField, MenuItem, Typography, Chip,
 } from '@mui/material';
 
-type RecordKind = 'FOCUS' | 'SOAP' | 'フリー';
-const RECORD_KINDS: RecordKind[] = ['FOCUS', 'SOAP', 'フリー'];
+type RecordKind = 'SOAP' | '経時記録';
+const RECORD_KINDS: RecordKind[] = ['SOAP', '経時記録'];
 
 interface Props {
   open: boolean;
@@ -64,7 +64,7 @@ const RestraintNursingRecordStub: React.FC<Props> = ({ open, onClose, phase, exi
             multiline minRows={5} fullWidth size="small" label="本文"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={kind === 'FOCUS' ? 'F:\nD:\nA:' : kind === 'SOAP' ? 'S:\nO:\nA:\nP:' : '本文を入力'}
+            placeholder={kind === 'SOAP' ? 'S\nO\nA\nP' : '00:00 本文（行頭に時刻を付けて時系列で記入）'}
           />
         </Stack>
       </DialogContent>

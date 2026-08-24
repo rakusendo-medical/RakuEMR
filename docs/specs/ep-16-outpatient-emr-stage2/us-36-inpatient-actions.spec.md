@@ -108,7 +108,7 @@ spec の AC-C1〜C4 / 振る舞い / 想定実装ステップは本確定に追�
 「看護ケア記録」用語はマニュアル調査で参考システムに対応機能が無いと判明したため **「看護記録」に統一**（PM 判断・2026-05-11）。実装方針は **案 b（ep-10 既存看護記録系を流用）** を採択。
 
 - **「看護記録」ボタンクリック**: ep-10 既存 `NursingRecordDialog`（`src/features/flowsheet/components/NursingRecordDialog.tsx`）を **`initialMode='new'`** で直接起動
-- **ダイアログ内容**: ep-10 のフォーム（FOCUS / SOAP / フリー の 3 形式選択 + 連携設定 + 報告先）をそのまま利用。新規入力モード固定
+- **ダイアログ内容**: ep-10 のフォーム（SOAP / 経時記録 の 2 形式選択 + 連携設定 + 報告先）をそのまま利用。新規入力モード固定
 - **保存ロジック**: ep-10 既存 `useFlowsheetStore` への積み込みに完全委譲。`types` / 他 store の追加なし
 - **既存記録の閲覧**: 新カルテの **診療録タブ**（`MedicalRecordTab` の集約タイムライン）で `'看護記録'` カテゴリとして混在表示済（us-43 で本実装済）。記録一覧の全画面表示が必要なら別途 `/nursing/records?patientId=<id>` へ手動 navigate（spec 範囲外）
 - **「看護経過記録」の概念整理**: PM 指示で本 us では扱わない。必要なら別 us で位置づけ
@@ -169,7 +169,7 @@ spec の AC-C1〜C4 / 振る舞い / 想定実装ステップは本確定に追�
   - **When** 「看護記録」ボタンクリック
   - **Then** `<NursingRecordDialog open patientId={patient.id} initialMode='new' onClose />` が起動する
   - **Given** ダイアログ表示中
-  - **Then** ep-10 既存の入力フォーム（FOCUS / SOAP / フリー の 3 形式選択）が表示される
+  - **Then** ep-10 既存の入力フォーム（SOAP / 経時記録 の 2 形式選択）が表示される
 
 - [ ] **AC-C3: 保存ロジックは ep-10 既存 `useFlowsheetStore` を踏襲**
   - **Given** 看護記録の入力 → 保存

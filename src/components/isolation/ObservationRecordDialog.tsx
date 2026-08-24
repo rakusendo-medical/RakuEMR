@@ -206,25 +206,24 @@ const ObservationRecordDialog: React.FC<Props> = ({ open, onClose, patient, date
       let linkedNursingRecordId: string | undefined;
       if (r.linkSetting?.linkToNursingRecord) {
         const stateConf = MASTER_OBSERVATION_STATES.find((s) => s.state === r.state);
+        // 経時記録は行頭時刻の 1 行形式のため、複数行入力の内容は改行をスペースに正規化する
+        const contentText = (r.content || stateConf?.prescriptionText || '').replace(/\s*\n+\s*/g, ' ');
         const created = addNursingRecord({
           patientId: patient.id,
           title: subtype === 'その他' ? '観察記録（その他）' : '観察記録（隔離拘束）',
           recordedAt: `${date}T${r.time}:00`,
           shift: deriveShift(hour),
-          formType: 'focus',
+          formType: 'chronological',
           body: {
-            formType: 'focus',
+            formType: 'chronological',
+            // 経時記録: 行頭に観察時刻を付けて状態・内容を 1 行で記録する
             body: {
-              focus: subtype === 'その他' ? '観察記録（その他）' : '隔離拘束観察',
-              data: r.content || stateConf?.prescriptionText || '',
-              action: stateConf?.prescriptionText || '',
-              response: r.state,
+              text: `${r.time} ${r.state}：${contentText}`,
             },
           },
           connections: ['flowsheet'],
           reportTargets: [],
           tags: ['隔離拘束観察', ...r.tags],
-          isPublished: true,
         });
         linkedNursingRecordId = created.id;
       }

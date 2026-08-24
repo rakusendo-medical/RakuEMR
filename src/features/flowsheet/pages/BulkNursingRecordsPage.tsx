@@ -21,15 +21,20 @@ interface RowDraft {
   time: string; // HH:mm
   text: string; // 簡素化: 形式に応じてプライマリブロックに反映
   connections: ConnectionTarget[];
-  isPublished: boolean;
 }
 
-const buildBody = (form: RecordFormType, text: string, title: string): NursingRecordBody => {
+// 個別ダイアログ（NursingRecordDialog.buildBodyForSave）と同じ簡易マッピング:
+// 本文全文を主フィールド（SOAP は s）に入れる
+const buildBody = (form: RecordFormType, text: string): NursingRecordBody => {
   switch (form) {
-    case 'focus': return { formType: 'focus', body: { focus: title, data: text, action: '', response: '' } };
-    case 'soap': return { formType: 'soap', body: { s: '', o: text, a: '', p: '' } };
-    case 'free': return { formType: 'free', body: { free: text } };
+    case 'soap': return { formType: 'soap', body: { s: text, o: '', a: '', p: '' } };
+    case 'chronological': return { formType: 'chronological', body: { text } };
   }
+};
+
+const FORM_LABEL: Record<RecordFormType, string> = {
+  soap: 'SOAP',
+  chronological: '経時記録',
 };
 
 const CONN_OPTIONS: { value: ConnectionTarget; label: string }[] = [
@@ -78,7 +83,6 @@ const BulkNursingRecordsPage: React.FC = () => {
       time: '',
       text: '',
       connections: ['flowsheet'],
-      isPublished: true,
     })));
     setSavedMsg(null);
   };
@@ -129,11 +133,10 @@ const BulkNursingRecordsPage: React.FC = () => {
         recordedAt,
         shift,
         formType,
-        body: buildBody(formType, r.text, title),
+        body: buildBody(formType, r.text),
         connections: r.connections,
         reportTargets: [],
         tags: [],
-        isPublished: r.isPublished,
       });
       count += 1;
     });
@@ -181,7 +184,7 @@ const BulkNursingRecordsPage: React.FC = () => {
             onChange={(_, v: RecordFormType | null) => v && setFormType(v)}
           >
             <ToggleButton value="soap">SOAP</ToggleButton>
-            <ToggleButton value="free">フリー</ToggleButton>
+            <ToggleButton value="chronological">経時記録</ToggleButton>
           </ToggleButtonGroup>
           <Tooltip title="全患者の時間を一括設定">
             <span>
@@ -223,7 +226,6 @@ const BulkNursingRecordsPage: React.FC = () => {
                 <TableCell sx={{ width: 90 }}>時間</TableCell>
                 <TableCell>本文</TableCell>
                 <TableCell sx={{ width: 200 }}>連携</TableCell>
-                <TableCell sx={{ width: 80 }}>公開</TableCell>
                 <TableCell sx={{ width: 70 }}>記録</TableCell>
               </TableRow>
             </TableHead>
@@ -278,11 +280,6 @@ const BulkNursingRecordsPage: React.FC = () => {
                           />
                         ))}
                       </Stack>
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox size="small" checked={r.isPublished}
-                        onChange={(e) => setRows((rs) => rs.map((row, idx) => (idx === i ? { ...row, isPublished: e.target.checked } : row)))}
-                      />
                     </TableCell>
                     <TableCell>{cnt > 0 ? cnt : '未'}</TableCell>
                   </TableRow>
@@ -341,12 +338,12 @@ const BulkNursingRecordsPage: React.FC = () => {
 
       {/* 本文一括 */}
       <Dialog open={bulkBodyOpen} onClose={() => setBulkBodyOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>本文一括入力（{formType.toUpperCase()}）</DialogTitle>
+        <DialogTitle>本文一括入力（{FORM_LABEL[formType]}）</DialogTitle>
         <DialogContent dividers>
           <TextField multiline rows={6} fullWidth
             value={bulkBodyText}
             onChange={(e) => setBulkBodyText(e.target.value)}
-            placeholder="本文を入力。形式 SOAP→O / フリー→本文 に反映されます。"
+            placeholder="本文を入力。入力内容がそのまま記事本文に反映されます。"
           />
         </DialogContent>
         <DialogActions>
