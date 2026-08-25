@@ -22,6 +22,16 @@ test.describe('空床照会（入退院指示の反映）', () => {
     d.setDate(d.getDate() + days);
     return d;
   };
+  /**
+   * 入院予定日に使うオフセット（基準日からの日数）。
+   * 空床照会は月単位のカレンダー表示のため、予定日とその前日が別の月に分かれると
+   * 前日のセルが同じ月ビューに出ず判定できない。予定日が「1 日」にならないよう後ろへずらす。
+   */
+  const ADMIT_OFFSET = (() => {
+    let n = 7;
+    while (new Date(BASE_DATE.getFullYear(), BASE_DATE.getMonth(), BASE_DATE.getDate() + n).getDate() === 1) n += 1;
+    return n;
+  })();
   /** datetime-local 入力用（YYYY-MM-DDTHH:mm） */
   const toInputValue = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T09:00`;
   /** セルの title 用（YYYY/MM/DD） */
@@ -54,8 +64,8 @@ test.describe('空床照会（入退院指示の反映）', () => {
     const orderDialog = page.getByRole('dialog');
     await expect(orderDialog).toBeVisible();
 
-    // ② 入院日を 7 日後に設定し、第１病棟 107号室 ベッド5 を指定して [指示] を登録
-    const admitDate = dayAfter(7);
+    // ② 入院日を約 7 日後に設定し、第１病棟 107号室 ベッド5 を指定して [指示] を登録
+    const admitDate = dayAfter(ADMIT_OFFSET);
     await orderDialog.getByRole('textbox', { name: '入院日時' }).fill(toInputValue(admitDate));
     await orderDialog.getByRole('combobox', { name: '病棟' }).click();
     await page.getByRole('option', { name: '第１病棟' }).click();
@@ -72,7 +82,7 @@ test.describe('空床照会（入退院指示の反映）', () => {
       dialog.getByTitle(`${toCellDate(admitDate)} 107号室 5 使用中`),
     ).toBeVisible();
     await expect(
-      dialog.getByTitle(`${toCellDate(dayAfter(6))} 107号室 5 空床`),
+      dialog.getByTitle(`${toCellDate(dayAfter(ADMIT_OFFSET - 1))} 107号室 5 空床`),
     ).toBeVisible();
   });
 

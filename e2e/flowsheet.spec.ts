@@ -499,28 +499,28 @@ test.describe('フローシート', () => {
   });
 
   test('日付ナビ（≪ ＜ 当日 ＞ ≫）で 7 日列が移動する', async ({ page }) => {
-    // 初期表示はモックデータの 7 日（2026/5/13〜5/19）
-    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/8/18(水)' })).toBeVisible();
+    // 初期表示はモックデータの 7 日（2026/8/18〜8/24 = MOCK_TODAY 基準）
+    await expect(page.getByRole('cell', { name: '2026/8/24(月)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/18(火)' })).toBeVisible();
 
-    // ＜（1日前）: 右端が 5/18 に、左端は 5/12 になる
+    // ＜（1日前）: 右端が 8/23 に、左端は 8/17 になる
     await page.getByRole('button', { name: '1日前' }).click();
-    await expect(page.getByRole('cell', { name: '2026/8/23(月)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/8/17(火)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeHidden();
+    await expect(page.getByRole('cell', { name: '2026/8/23(日)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/17(月)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/24(月)' })).toBeHidden();
 
     // ＞（1日後）で戻る
     await page.getByRole('button', { name: '1日後' }).click();
-    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/24(月)' })).toBeVisible();
 
-    // ≫（7日後）: 5/20〜5/26
+    // ≫（7日後）: 8/25〜8/31
     await page.getByRole('button', { name: '7日後' }).click();
-    await expect(page.getByRole('cell', { name: '2026/8/31(火)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/8/25(水)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/31(月)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/25(火)' })).toBeVisible();
 
     // ≪（7日前）で戻る
     await page.getByRole('button', { name: '7日前' }).click();
-    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/24(月)' })).toBeVisible();
 
     // 当日: 実際の当日が右端に来る
     const now = new Date();
