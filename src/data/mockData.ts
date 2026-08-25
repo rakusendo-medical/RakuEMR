@@ -263,6 +263,12 @@ export const actionButtons = [
 
 // ===== ステータス設定 =====
 // ① Dr 観察ステータス（占有ベッドの患者のみ・4値）。外出/空床は分離済み（2026-08-18）。
+//
+// ここが「患者状態色」の単一ソース。患者 1 人の現在の様態を表し、
+// 表示は StatusBadge（ドット付きチップ＝点）／色は重症度グラデーションの鮮やかなベタ色。
+// 観察記録の「観察状態色」（MASTER_OBSERVATION_STATES・観察 1 コマごと・セル塗り＝面・
+// 淡背景＋濃文字）とは別概念。相互に流用・import しないこと。
+// 詳細: docs/specs/_terminology.md「状態色の使い分け」
 export const STATUS_CONFIG: Record<PatientStatus, StatusConfig> = {
   stable:      { label: '安定',   color: '#22c55e', bgColor: '#f0fdf4', muiColor: 'success' },
   observation: { label: '観察中', color: '#f59e0b', bgColor: '#fffbeb', muiColor: 'warning' },
@@ -984,7 +990,14 @@ export const MASTER_STAFF_FOR_SIGN: StaffForSign[] = [
 export const MASTER_BEHAVIOR_RESTRICT_WARDS = ['ward1', 'ward2'] as const;
 
 // ===== ep-07 観察記録 マスタ =====
-// 隔離拘束状態マスタ（状態色＋自動記載定型文）
+// 隔離拘束状態マスタ（観察状態色＋自動記載定型文）
+//
+// ここが「観察状態色」の単一ソース。観察 1 コマ（時間枠）ごとの状態を表し、
+// 表示はグリッドのセル塗り（＝面）／色は淡背景（bgColor）＋濃文字（color）のペアで作る。
+// 患者の様態を表す「患者状態色」（STATUS_CONFIG・患者 1 人につき 1 つ・チップ＝点・
+// 鮮やかなベタ色）とは別概念。相互に流用・import しないこと。
+// 状態を追加するときも「淡背景＋濃文字」のペアで登録し、患者状態色との濃度差を保つ。
+// 詳細: docs/specs/_terminology.md「状態色の使い分け」
 export interface ObservationStateConfig {
   state: ObservationState;
   color: string;       // 文字色（ラベル用）
