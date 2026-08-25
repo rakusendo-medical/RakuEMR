@@ -227,12 +227,12 @@ test.describe('オーダ送信（オーダ入力）', () => {
     const endField = rx.getByLabel('終了日');
 
     // 開始日固定 → 日数から終了日が算出
-    await startField.fill('2026-07-24');
+    await startField.fill('2026-10-29');
     await daysField.fill('10');
-    await expect(endField).toHaveValue('2026-08-02');
+    await expect(endField).toHaveValue('2026-11-07');
 
     // 終了日をカレンダー入力 → 日数を逆算
-    await endField.fill('2026-08-22');
+    await endField.fill('2026-11-27');
     await expect(daysField).toHaveValue('30');
 
     // 終了日を空欄 → 継続（日数0）
@@ -270,8 +270,8 @@ test.describe('オーダ送信（オーダ入力）', () => {
     await rpDays.fill('14');
     await expect(rpDays).toHaveValue('14');
     // 予定日も編集できる（全種別）
-    await s.getByLabel('予定日 処方').fill('2026-05-22');
-    await expect(s.getByLabel('予定日 処方')).toHaveValue('2026-05-22');
+    await s.getByLabel('予定日 処方').fill('2026-08-27');
+    await expect(s.getByLabel('予定日 処方')).toHaveValue('2026-08-27');
 
     // 入院定時を作成 → 予定日の下の日数を 3 に編集できる
     await s.getByRole('button', { name: '入院定時', exact: true }).click();

@@ -251,12 +251,12 @@ function BasicInfoContent({ patient }: { patient: Patient }) {
   // mock: 保険・責任範囲・ADL/GAF・自立度
   const insurance = {
     name: '社保（協会けんぽ）',
-    expire: '2027-03-31',
+    expire: '2027-09-14',
     payer: '01130012',
     selfPay: 30,
   };
   const responsibility = patient.admissionState === 'inpatient' ? '病棟内' : '外来通院';
-  const adl = { barthel: 95, fixedAt: '2026-02-15' };
+  const adl = { barthel: 95, fixedAt: '2026-08-01' };
   const independence = { rank: 'B', day: '介助 (一部)', night: '見守り' };
 
   return (
@@ -291,10 +291,10 @@ function BasicInfoContent({ patient }: { patient: Patient }) {
 // ----- GAF -----
 function GafContent() {
   const recent = [
-    { date: '2026-02-15', score: 65 },
-    { date: '2026-01-15', score: 60 },
-    { date: '2025-12-10', score: 58 },
-    { date: '2025-11-12', score: 52 },
+    { date: '2026-08-01', score: 65 },
+    { date: '2026-07-01', score: 60 },
+    { date: '2026-05-26', score: 58 },
+    { date: '2026-04-28', score: 52 },
   ];
   const latest = recent[0];
   return (
@@ -329,9 +329,9 @@ function GafContent() {
 // ----- 院外/状・診断書類 -----
 function DocumentsContent() {
   const docs = [
-    { date: '2026-02-20', kind: '紹介状（返書）', title: '〇〇クリニック → 当院（精神科）', author: '田村 医師' },
-    { date: '2026-02-05', kind: '診断書',         title: '自立支援医療意見書',                   author: '田村 医師' },
-    { date: '2026-01-15', kind: '院外文書',       title: '訪問看護指示書',                       author: '森田 医師' },
+    { date: '2026-08-06', kind: '紹介状（返書）', title: '〇〇クリニック → 当院（精神科）', author: '田村 医師' },
+    { date: '2026-07-22', kind: '診断書',         title: '自立支援医療意見書',                   author: '田村 医師' },
+    { date: '2026-07-01', kind: '院外文書',       title: '訪問看護指示書',                       author: '森田 医師' },
   ];
   return (
     <Stack spacing={0.25}>
@@ -418,12 +418,12 @@ function ClinicalPathContent() {
 // ----- 指示/入室 -----
 function OrdersAdmissionContent({ patient }: { patient: Patient }) {
   const orders = [
-    { date: '2026-02-25', title: '入院指示', detail: '第１病棟 102 号室 A 床への入室指示', status: '実施済' },
-    { date: '2026-02-20', title: '入院オーダ', detail: '点滴指示・処方継続', status: '実施中' },
+    { date: '2026-08-11', title: '入院指示', detail: '第１病棟 102 号室 A 床への入室指示', status: '実施済' },
+    { date: '2026-08-06', title: '入院オーダ', detail: '点滴指示・処方継続', status: '実施中' },
   ];
   // 入室予定（mock）
   const upcoming = patient.admissionState === 'inpatient'
-    ? [{ date: '2026-04-15', title: '退院予定', detail: '退院時カンファレンス予定' }]
+    ? [{ date: '2026-09-29', title: '退院予定', detail: '退院時カンファレンス予定' }]
     : [];
 
   return (

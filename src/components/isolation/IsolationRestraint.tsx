@@ -1005,7 +1005,7 @@ const cellSx = {
 };
 
 const BehaviorRestrictLedgerTab: React.FC = () => {
-  const [month, setMonth] = useState('2026-06'); // YYYY-MM
+  const [month, setMonth] = useState('2026-08'); // YYYY-MM
   const [ward, setWard] = useState<WardId | 'all'>('all');
 
   const [year, mon] = month.split('-').map(Number);

@@ -23,7 +23,7 @@ test.describe('テキストオーダ 指示日・継続する', () => {
     await expect(keep).toBeVisible();
 
     // 指示日を既定(当日)から変更し、タイトル・本文を入力（本文には「継続」の語を含めない）、継続する を ON
-    await dlg.getByLabel('指示日', { exact: true }).fill('2026-05-22');
+    await dlg.getByLabel('指示日', { exact: true }).fill('2026-08-27');
     await dlg.getByRole('textbox', { name: 'タイトル' }).fill('経過観察依頼');
     await dlg.getByPlaceholder('フリーテキストで記載してください').fill('夜間の睡眠状況を観察のこと');
     await keep.check();
@@ -40,7 +40,7 @@ test.describe('テキストオーダ 指示日・継続する', () => {
     await page.getByRole('tab', { name: '指示簿' }).click();
     const row = page.getByRole('row', { name: /経過観察依頼/ });
     await expect(row).toBeVisible();
-    await expect(row).toContainText('2026-05-22');
+    await expect(row).toContainText('2026-08-27');
     await expect(row).toContainText('継続');
   });
 });

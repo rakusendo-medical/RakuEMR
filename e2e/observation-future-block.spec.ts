@@ -24,10 +24,10 @@ async function openIsolationGridAt(page: import('@playwright/test').Page, isoDat
 
 test.describe('ep-07 観察記録: 未来日入力不可', () => {
   test('未来の時間枠セルはクリックしても観察記録ダイアログが開かない', async ({ page }) => {
-    await openIsolationGridAt(page, '2026-05-19T16:29:00');
+    await openIsolationGridAt(page, '2026-08-24T16:29:00');
 
     // 16時枠は開始時刻に達しているので入力可
-    const past = page.getByLabel('観察 2026-05-19 16:00');
+    const past = page.getByLabel('観察 2026-08-24 16:00');
     await expect(past).not.toHaveAttribute('aria-disabled', 'true');
     await past.click();
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -35,7 +35,7 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
     await expect(page.getByRole('dialog')).toBeHidden();
 
     // 17時枠は未到来なのでクリック不可（ダイアログが開かない）
-    const future = page.getByLabel('観察 2026-05-19 17:00');
+    const future = page.getByLabel('観察 2026-08-24 17:00');
     await expect(future).toHaveAttribute('aria-disabled', 'true');
     await expect(future).toHaveAttribute('title', '未来日入力不可');
     await future.click({ force: true });
@@ -43,9 +43,9 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
   });
 
   test('16時29分: 15分枠は 16:30 / 16:45 が入力不可（16:00 / 16:15 のみ登録される）', async ({ page }) => {
-    await openIsolationGridAt(page, '2026-05-19T16:29:00');
+    await openIsolationGridAt(page, '2026-08-24T16:29:00');
 
-    const cell = page.getByLabel('観察 2026-05-19 16:00');
+    const cell = page.getByLabel('観察 2026-08-24 16:00');
     await cell.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -69,9 +69,9 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
   });
 
   test('16時30分: 16:30 枠は入力可になり 16:45 のみ入力不可', async ({ page }) => {
-    await openIsolationGridAt(page, '2026-05-19T16:30:00');
+    await openIsolationGridAt(page, '2026-08-24T16:30:00');
 
-    await page.getByLabel('観察 2026-05-19 16:00').click();
+    await page.getByLabel('観察 2026-08-24 16:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: '15分単位' }).click();
@@ -84,9 +84,9 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
   });
 
   test('16時31分: 枠の途中でも次の枠（16:45）は入力不可のまま', async ({ page }) => {
-    await openIsolationGridAt(page, '2026-05-19T16:31:00');
+    await openIsolationGridAt(page, '2026-08-24T16:31:00');
 
-    await page.getByLabel('観察 2026-05-19 16:00').click();
+    await page.getByLabel('観察 2026-08-24 16:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: '15分単位' }).click();
@@ -97,9 +97,9 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
   });
 
   test('時間欄に未来時刻を手入力すると登録が中止される', async ({ page }) => {
-    await openIsolationGridAt(page, '2026-05-19T16:29:00');
+    await openIsolationGridAt(page, '2026-08-24T16:29:00');
 
-    await page.getByLabel('観察 2026-05-19 16:00').click();
+    await page.getByLabel('観察 2026-08-24 16:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     // 1 行目（16:00・入力可）の時間を未来時刻へ書き換える
@@ -123,7 +123,7 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
 
     // 初期表示（2026/5 のモック日付）は全て過去なので入力可
-    await expect(page.getByLabel('観察 2026-05-19 23:00')).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByLabel('観察 2026-08-24 23:00')).not.toHaveAttribute('aria-disabled', 'true');
 
     // 日付ナビ「当日」で当日を右端に
     await page.getByRole('button', { name: '当日を右端に表示' }).click();
@@ -141,7 +141,7 @@ test.describe('ep-07 観察記録: 未来日入力不可', () => {
   });
 
   test('隔離拘束一覧／記録タブの未来の回数枠は一括入力を開けない', async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-05-19T16:29:00'));
+    await page.clock.setFixedTime(new Date('2026-08-24T16:29:00'));
     await page.goto('/isolation');
     await page.getByRole('tab', { name: '観察記録' }).click();
 

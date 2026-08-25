@@ -24,12 +24,14 @@ import { NewRecordDialog } from '../karte/MedicalRecordTab';
 import NursingRecordDialog from '../../features/flowsheet/components/NursingRecordDialog';
 import { PATTERN_OPTIONS, FLOWSHEET_PATTERNS, patternItems, careItemLabel } from './patternMaster';
 import RecordSummaryStrip from './RecordSummaryStrip';
+import { MOCK_TODAY } from '../../data/mockToday';
 
 interface Props {
   patientId?: string;
 }
 
-// 7日分の固定モック(2026-05-13〜2026-05-19、当日=5/19)
+// 7日分の固定モック(2026-08-18〜2026-08-24、当日=8/24)
+// ※ 基準日の単一ソースは src/data/mockToday.ts（MOCK_TODAY）
 type OrderKind = '薬' | '注' | '検' | '処' | '画' | '心' | 'E';
 
 // オーダ入力（オーダ送信画面）の OrderType → 予定オーダ欄の種名1文字（参考システムマニュアル 02 看護支援 第1章第2部）。
@@ -78,7 +80,7 @@ interface DailyRow {
 
 const DAILY: DailyRow[] = [
   {
-    date: '2026/5/13', weekday: '水', admitDay: 28, isToday: false, room: 'E102号室',
+    date: '2026/8/18', weekday: '火', admitDay: 28, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '検', '処'], labLinks: ['外(CRC)血液'],
     meal: { morning: '通常指示', lunch: '臨時変更', dinner: '通常指示' },
     height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '1100',
@@ -90,7 +92,7 @@ const DAILY: DailyRow[] = [
     stoolDetail: '—', laxative: 'なし', bath: '入浴', sign: '鈴木',
   },
   {
-    date: '2026/5/14', weekday: '木', admitDay: 29, isToday: false, room: 'E102号室',
+    date: '2026/8/19', weekday: '水', admitDay: 29, isToday: false, room: 'E102号室',
     orderKinds: ['注', '検', '処'], labLinks: ['院内血液', '外(CRC)血液', '院内血液'],
     meal: { morning: '通常指示', lunch: '欠食', dinner: '通常指示' },
     height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '1300',
@@ -102,7 +104,7 @@ const DAILY: DailyRow[] = [
     stoolDetail: '2', laxative: '緩下剤', bath: '入浴', sign: '高橋',
   },
   {
-    date: '2026/5/15', weekday: '金', admitDay: 30, isToday: false, room: 'E102号室',
+    date: '2026/8/20', weekday: '木', admitDay: 30, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '注', '検', '処'], labLinks: [],
     meal: { morning: '通常指示', lunch: '通常指示', dinner: '通常指示' },
     height: 167.8, weightBmi: '55.8(19.8)', stool: 2, urine: '950',
@@ -114,7 +116,7 @@ const DAILY: DailyRow[] = [
     stoolDetail: '4', laxative: 'なし', bath: 'シャワー浴', sign: '山本',
   },
   {
-    date: '2026/5/16', weekday: '土', admitDay: 31, isToday: false, room: 'E102号室',
+    date: '2026/8/21', weekday: '金', admitDay: 31, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '注', '検', '処', '画', '心', 'E'], labLinks: ['院内血液'],
     meal: { morning: '外出・外泊', lunch: '通常指示', dinner: '欠食' },
     height: 167.8, weightBmi: '57(20.2)', stool: 1, urine: '1250',
@@ -126,7 +128,7 @@ const DAILY: DailyRow[] = [
     stoolDetail: '2', laxative: '坐薬', bath: '清拭', sign: '佐々木',
   },
   {
-    date: '2026/5/17', weekday: '日', admitDay: 32, isToday: false, room: 'E102号室',
+    date: '2026/8/22', weekday: '土', admitDay: 32, isToday: false, room: 'E102号室',
     orderKinds: ['薬', '画'], labLinks: ['外(CRC)血液'],
     meal: { morning: '通常指示', lunch: '通常指示', dinner: '外出・外泊' },
     height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '1000',
@@ -138,7 +140,7 @@ const DAILY: DailyRow[] = [
     stoolDetail: '—', laxative: 'なし', bath: '入浴', sign: '中田',
   },
   {
-    date: '2026/5/18', weekday: '月', admitDay: 33, isToday: false, room: 'E102号室',
+    date: '2026/8/23', weekday: '日', admitDay: 33, isToday: false, room: 'E102号室',
     orderKinds: ['注', '画'], labLinks: ['院内血液', '外(CRC)血液'],
     meal: { morning: '通常指示', lunch: '通常指示', dinner: '臨時変更' },
     height: 167.8, weightBmi: '57(20.2)', stool: 2, urine: '1180',
@@ -150,7 +152,7 @@ const DAILY: DailyRow[] = [
     stoolDetail: '4', laxative: 'なし', bath: 'シャワー浴', sign: '鈴木',
   },
   {
-    date: '2026/5/19', weekday: '火', admitDay: 34, isToday: true, room: 'E102号室',
+    date: '2026/8/24', weekday: '月', admitDay: 34, isToday: true, room: 'E102号室',
     orderKinds: ['薬', '注', '画'], labLinks: ['外(CRC)血液'],
     meal: { morning: '通常指示', lunch: '臨時変更', dinner: '絶食' },
     height: 167.8, weightBmi: '55.8(19.8)', stool: 0, urine: '—',
@@ -275,7 +277,7 @@ function buildDay(iso: string): DailyRow {
     weekday: weekdayOf(iso),
     // 在院日数は基準日（モック右端 = 34 日目）からの相対で算出
     admitDay: Math.max(1, ANCHOR_END_ADMIT_DAY + diffDays(ANCHOR_END_ISO, iso)),
-    // 実際の当日に加え、モックが「当日」と定義している日（2026/5/19）も当日扱いで色付けする
+    // 実際の当日に加え、モックが「当日」と定義している日（MOCK_TODAY = 2026/8/24）も当日扱いで色付けする
     isToday: iso === todayIso() || (base?.isToday ?? false),
   };
 }
@@ -471,7 +473,7 @@ const inPeriod = (startDate: string, endDate: string | undefined, iso: string) =
 const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   // ----- 日付送り（ページめくり）-----
   // 右端（基準日）を state で持ち、7 日列は「基準日から遡る 7 日」を都度組み立てる。
-  // 初期値はモックデータの右端（2026/5/19）＝従来表示と同じ。
+  // 初期値はモックデータの右端（2026/8/24 = MOCK_TODAY）＝従来表示と同じ。
   const [endDate, setEndDate] = useState<string>(ANCHOR_END_ISO);
   // 7 日列の ISO 日付（昇順。共通ヘッダの日付列・観察グリッドの日付列と一致）
   const dayIso = useMemo(
@@ -637,11 +639,11 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
 
   // ----- フローシートパターン変更（最下部の欄 → [パターン変更] でダイアログ）-----
   const [patternPeriods, setPatternPeriods] = useState<PatternPeriod[]>([
-    { id: 'pp1', startDate: '2026-05-13', pattern: '精神科基本' },
-    { id: 'pp2', startDate: '2026-05-16', pattern: '精神科隔離' },
+    { id: 'pp1', startDate: '2026-08-18', pattern: '精神科基本' },
+    { id: 'pp2', startDate: '2026-08-21', pattern: '精神科隔離' },
   ]);
   const [patternDialogOpen, setPatternDialogOpen] = useState(false);
-  const [pStart, setPStart] = useState('2026-05-19'); // 既定は当日（モック当日=5/19）
+  const [pStart, setPStart] = useState(MOCK_TODAY); // 既定は当日（モック基準日）
   const [pEnd, setPEnd] = useState(''); // 終了日（空＝終了日なし）
   const [pName, setPName] = useState(PATTERN_OPTIONS[0]);
   // [登録]（新規適用）は確認サブダイアログ（AC-1）を挟み、OK で適用＋適用日以降データ削除（AC-3）。

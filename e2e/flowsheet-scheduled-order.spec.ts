@@ -23,7 +23,7 @@ test.describe('フローシート 予定オーダ連携', () => {
     await send.getByRole('button', { name: '検査', exact: true }).click();
     const test = page.getByRole('dialog').filter({ hasText: '検査セット' });
     await expect(test).toBeVisible();
-    await test.getByLabel('実施予定日').fill('2026-05-19');
+    await test.getByLabel('実施予定日').fill('2026-08-24');
     await test.getByRole('button', { name: '院内セット1' }).click();
     await test.getByRole('button', { name: '登録' }).click();
     // [指示] → カルテ記事作成（現在指示中）→ [実行] で確定

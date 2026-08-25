@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Box, Paper, Stack, Typography, Tooltip } from '@mui/material';
 import { ORDERS } from '../../data/mockData';
+import { hasRecentRecords, recentRecordDateSets } from '../../data/recentRecords';
+import type { RecentRecordCategory } from '../../data/recentRecords';
 import { useAppStore } from '../../stores/useAppStore';
 import {
   RECORD_BADGE_TYPES,
@@ -74,12 +76,25 @@ function hashStr(s: string): number {
 /**
  * (patientId, iso) → その日に存在する記録種別の集合（色バッジ用・同種は自然に 1 つ）。
  * オーダーは実データ（ORDERS + 動的オーダー）の開始日集合 orderDates から判定。
- * その他はマスタの pseudoRate による決定的擬似データ（実データと union）。
+ * 診療録／看護記録／部門診療録は、主要患者（RECENT_RECORDS を持つ患者）は**実データ**、
+ * それ以外はマスタの pseudoRate による決定的擬似データで埋める。
  */
-function recordsForDay(patientId: string | undefined, iso: string, orderDates: Set<string>): Set<RecordBadgeKey> {
+function recordsForDay(
+  patientId: string | undefined,
+  iso: string,
+  orderDates: Set<string>,
+  realDates: Record<RecentRecordCategory, Set<string>> | null,
+): Set<RecordBadgeKey> {
   const set = new Set<RecordBadgeKey>();
   if (!patientId) return set;
   if (orderDates.has(iso)) set.add('order');
+  if (realDates) {
+    // 実データを持つ患者は擬似生成しない（帯・診療録タブ・部門記録簿で同じ内容を見せるため）
+    if (realDates['医師記録'].has(iso)) set.add('exam');
+    if (realDates['看護記録'].has(iso)) set.add('nursing');
+    if (realDates['部門診療録'].has(iso)) set.add('dept');
+    return set;
+  }
   for (const t of RECORD_BADGE_TYPES) {
     // pseudoRate 0（オーダー等）は擬似生成せず実データ由来のみ扱う。
     if (t.pseudoRate <= 0) continue;
@@ -126,10 +141,15 @@ const RecordSummaryStrip: React.FC<Props> = ({
   const detailStart = Math.max(0, days - detailDays);
   // 青枠の左端位置（ラベル幅 + グリッド領域の detailStart/days の割合）。右端はコンテナ右端。
   const frameLeft = `calc(${labelWidth}px + (100% - ${labelWidth}px) * ${detailStart / days})`;
+  // 主要患者は直近 30 日の実データ（RECENT_RECORDS）を使い、それ以外は擬似生成にフォールバックする。
+  const realDates = useMemo(
+    () => (hasRecentRecords(patientId) ? recentRecordDateSets(patientId) : null),
+    [patientId],
+  );
   // 各日の記録集合。
   const dayRecords = useMemo(
-    () => dayIso.map((iso) => recordsForDay(patientId, iso, orderDates)),
-    [dayIso, patientId, orderDates],
+    () => dayIso.map((iso) => recordsForDay(patientId, iso, orderDates, realDates)),
+    [dayIso, patientId, orderDates, realDates],
   );
 
   return (

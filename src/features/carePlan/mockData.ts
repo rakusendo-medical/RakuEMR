@@ -8,8 +8,10 @@ import type {
   ProblemItem,
   Template,
 } from './types';
+import { MOCK_TODAY } from '../../data/mockToday';
 
-export const TODAY = '2026-04-21';
+// 基準日の単一ソースは src/data/mockToday.ts（全 feature で同じ「当日」を使う）
+export const TODAY = MOCK_TODAY;
 
 export const NURSES: Nurse[] = [
   { id: 'ns-a', name: '田村 幸子' },
@@ -54,16 +56,16 @@ export const NANDA_MASTER: NandaDiagnosis[] = [
 
 // 10 患者 - Ns A担当 4名、B担当 3名、C担当 3名
 export const PATIENTS: Patient[] = [
-  { id: 'P001', name: '山田太郎', age: 75, sex: 'M', roomNo: '101', admissionDate: '2025-11-10', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-a' },
-  { id: 'P002', name: '佐藤花子', age: 68, sex: 'F', roomNo: '203', admissionDate: '2025-12-05', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-a' },
-  { id: 'P003', name: '鈴木一郎', age: 82, sex: 'M', roomNo: '105', admissionDate: '2026-04-10', primaryDiagnosis: '認知症', primaryNurseId: 'ns-a' },
-  { id: 'P004', name: '田中良子', age: 55, sex: 'F', roomNo: '207', admissionDate: '2026-01-20', primaryDiagnosis: '双極性障害', primaryNurseId: 'ns-a' },
-  { id: 'P005', name: '高橋健', age: 45, sex: 'M', roomNo: '102', admissionDate: '2025-10-15', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-b' },
-  { id: 'P006', name: '伊藤美香', age: 38, sex: 'F', roomNo: '208', admissionDate: '2026-02-01', primaryDiagnosis: '適応障害', primaryNurseId: 'ns-b' },
-  { id: 'P007', name: '渡辺正雄', age: 70, sex: 'M', roomNo: '103', admissionDate: '2026-03-12', primaryDiagnosis: 'アルコール依存症', primaryNurseId: 'ns-b' },
-  { id: 'P008', name: '中村早苗', age: 62, sex: 'F', roomNo: '201', admissionDate: '2025-09-20', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-c' },
-  { id: 'P009', name: '小林拓也', age: 29, sex: 'M', roomNo: '106', admissionDate: '2026-02-18', primaryDiagnosis: 'パニック障害', primaryNurseId: 'ns-c' },
-  { id: 'P010', name: '加藤由美', age: 51, sex: 'F', roomNo: '205', admissionDate: '2025-11-25', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-c' },
+  { id: 'P001', name: '山田太郎', age: 75, sex: 'M', roomNo: '101', admissionDate: '2026-03-15', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-a' },
+  { id: 'P002', name: '佐藤花子', age: 68, sex: 'F', roomNo: '203', admissionDate: '2026-04-09', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-a' },
+  { id: 'P003', name: '鈴木一郎', age: 82, sex: 'M', roomNo: '105', admissionDate: '2026-08-13', primaryDiagnosis: '認知症', primaryNurseId: 'ns-a' },
+  { id: 'P004', name: '田中良子', age: 55, sex: 'F', roomNo: '207', admissionDate: '2026-05-25', primaryDiagnosis: '双極性障害', primaryNurseId: 'ns-a' },
+  { id: 'P005', name: '高橋健', age: 45, sex: 'M', roomNo: '102', admissionDate: '2026-02-17', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-b' },
+  { id: 'P006', name: '伊藤美香', age: 38, sex: 'F', roomNo: '208', admissionDate: '2026-06-06', primaryDiagnosis: '適応障害', primaryNurseId: 'ns-b' },
+  { id: 'P007', name: '渡辺正雄', age: 70, sex: 'M', roomNo: '103', admissionDate: '2026-07-15', primaryDiagnosis: 'アルコール依存症', primaryNurseId: 'ns-b' },
+  { id: 'P008', name: '中村早苗', age: 62, sex: 'F', roomNo: '201', admissionDate: '2026-01-23', primaryDiagnosis: 'うつ病', primaryNurseId: 'ns-c' },
+  { id: 'P009', name: '小林拓也', age: 29, sex: 'M', roomNo: '106', admissionDate: '2026-06-23', primaryDiagnosis: 'パニック障害', primaryNurseId: 'ns-c' },
+  { id: 'P010', name: '加藤由美', age: 51, sex: 'F', roomNo: '205', admissionDate: '2026-03-30', primaryDiagnosis: '統合失調症', primaryNurseId: 'ns-c' },
 ];
 
 // CarePlans - 全10名のうち p-003 (鈴木一郎) のみ計画未立案
@@ -73,16 +75,16 @@ export const PATIENTS: Patient[] = [
 //   closed プランには periodEnd を補完
 export const CARE_PLANS: CarePlan[] = [
   // P001 山田太郎: 過去期間 + 現在期間の 2 期間サンプル（期間プルダウンの動作確認用）
-  { id: 'cp-001-prev', patientId: 'P001', longTermGoal: '初回入院時の症状改善と生活リズム確立', status: 'closed', createdAt: '2025-08-01', createdBy: 'ns-a', periodStart: '2025-08-01', periodEnd: '2026-01-14', closedAt: '2026-01-14' },
-  { id: 'cp-001', patientId: 'P001', longTermGoal: '服薬自己管理ができ、自宅退院を目指す', status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a', periodStart: '2026-01-15' },
-  { id: 'cp-002', patientId: 'P002', longTermGoal: '気分の安定を保ち、日常生活動作を自立して行える', status: 'active', createdAt: '2026-01-20', createdBy: 'ns-a', periodStart: '2026-01-20' },
-  { id: 'cp-004', patientId: 'P004', longTermGoal: '気分の波をコントロールし、社会復帰の準備を進める', status: 'active', createdAt: '2026-02-10', createdBy: 'ns-a', periodStart: '2026-02-10' },
-  { id: 'cp-005', patientId: 'P005', longTermGoal: '幻聴への対処方法を習得し、生活リズムを整える', status: 'active', createdAt: '2025-11-01', createdBy: 'ns-b', periodStart: '2025-11-01' },
-  { id: 'cp-006', patientId: 'P006', longTermGoal: 'ストレス対処行動を身に付け、職場復帰を目指す', status: 'active', createdAt: '2026-02-15', createdBy: 'ns-b', periodStart: '2026-02-15' },
-  { id: 'cp-007', patientId: 'P007', longTermGoal: '断酒継続のセルフモニタリングを確立する', status: 'active', createdAt: '2026-03-20', createdBy: 'ns-b', periodStart: '2026-03-20' },
-  { id: 'cp-008', patientId: 'P008', longTermGoal: '希死念慮を訴えることができ、安全に療養生活を送れる', status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c', periodStart: '2025-10-05' },
-  { id: 'cp-009', patientId: 'P009', longTermGoal: '予期不安のコントロール方法を獲得する', status: 'active', createdAt: '2026-02-25', createdBy: 'ns-c', periodStart: '2026-02-25' },
-  { id: 'cp-010', patientId: 'P010', longTermGoal: '陰性症状への対応と生活リズムの確立', status: 'active', createdAt: '2025-12-01', createdBy: 'ns-c', periodStart: '2025-12-01' },
+  { id: 'cp-001-prev', patientId: 'P001', longTermGoal: '初回入院時の症状改善と生活リズム確立', status: 'closed', createdAt: '2025-12-04', createdBy: 'ns-a', periodStart: '2025-12-04', periodEnd: '2026-05-19', closedAt: '2026-05-19' },
+  { id: 'cp-001', patientId: 'P001', longTermGoal: '服薬自己管理ができ、自宅退院を目指す', status: 'active', createdAt: '2026-05-20', createdBy: 'ns-a', periodStart: '2026-05-20' },
+  { id: 'cp-002', patientId: 'P002', longTermGoal: '気分の安定を保ち、日常生活動作を自立して行える', status: 'active', createdAt: '2026-05-25', createdBy: 'ns-a', periodStart: '2026-05-25' },
+  { id: 'cp-004', patientId: 'P004', longTermGoal: '気分の波をコントロールし、社会復帰の準備を進める', status: 'active', createdAt: '2026-06-15', createdBy: 'ns-a', periodStart: '2026-06-15' },
+  { id: 'cp-005', patientId: 'P005', longTermGoal: '幻聴への対処方法を習得し、生活リズムを整える', status: 'active', createdAt: '2026-03-06', createdBy: 'ns-b', periodStart: '2026-03-06' },
+  { id: 'cp-006', patientId: 'P006', longTermGoal: 'ストレス対処行動を身に付け、職場復帰を目指す', status: 'active', createdAt: '2026-06-20', createdBy: 'ns-b', periodStart: '2026-06-20' },
+  { id: 'cp-007', patientId: 'P007', longTermGoal: '断酒継続のセルフモニタリングを確立する', status: 'active', createdAt: '2026-07-23', createdBy: 'ns-b', periodStart: '2026-07-23' },
+  { id: 'cp-008', patientId: 'P008', longTermGoal: '希死念慮を訴えることができ、安全に療養生活を送れる', status: 'active', createdAt: '2026-02-07', createdBy: 'ns-c', periodStart: '2026-02-07' },
+  { id: 'cp-009', patientId: 'P009', longTermGoal: '予期不安のコントロール方法を獲得する', status: 'active', createdAt: '2026-06-30', createdBy: 'ns-c', periodStart: '2026-06-30' },
+  { id: 'cp-010', patientId: 'P010', longTermGoal: '陰性症状への対応と生活リズムの確立', status: 'active', createdAt: '2026-04-05', createdBy: 'ns-c', periodStart: '2026-04-05' },
 ];
 
 // ProblemItems
@@ -106,8 +108,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['就寝前の傾聴', '入眠環境の調整'],
       education: ['リラクゼーション法の指導'],
     },
-    status: 'closed_resolved', createdAt: '2025-08-01', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-01-10', closedAt: '2026-01-14', closeReason: '症状改善',
+    status: 'closed_resolved', createdAt: '2025-12-04', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-05-15', closedAt: '2026-05-19', closeReason: '症状改善',
   },
   {
     id: 'pi-001-prev-2', carePlanId: 'cp-001-prev', domain: '日常生活', priority: 'medium', nandaCode: '00095',
@@ -118,8 +120,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['生活リズムの調整支援'],
       education: ['病棟スケジュールの説明'],
     },
-    status: 'closed_resolved', createdAt: '2025-08-01', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-01-10', closedAt: '2026-01-14', closeReason: '症状改善',
+    status: 'closed_resolved', createdAt: '2025-12-04', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-05-15', closedAt: '2026-05-19', closeReason: '症状改善',
   },
   // --- cp-001 山田太郎 (期限超過) ---
   {
@@ -130,8 +132,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['服薬時に見守りを行う', '服薬カレンダーの使用を支援する'],
       education: ['服薬の重要性について説明する', '副作用時の対応を指導する'],
     },
-    status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-03-15', nextEvaluationDueAt: '2026-04-15',
+    status: 'active', createdAt: '2026-05-20', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-07-18', nextEvaluationDueAt: '2026-08-18',
   },
   {
     id: 'pi-001-2', carePlanId: 'cp-001', domain: '安全', priority: 'medium', nandaCode: '00138',
@@ -141,8 +143,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['クールダウン場所への誘導', '傾聴・共感的対応'],
       education: ['感情コントロール方法を一緒に考える'],
     },
-    status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-03-15', nextEvaluationDueAt: '2026-04-15',
+    status: 'active', createdAt: '2026-05-20', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-07-18', nextEvaluationDueAt: '2026-08-18',
   },
   {
     id: 'pi-001-3', carePlanId: 'cp-001', domain: '社会', priority: 'low', nandaCode: '00052',
@@ -152,8 +154,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['レクリエーションへの声かけ'],
       education: ['自己表現の仕方を一緒に練習する'],
     },
-    status: 'active', createdAt: '2026-01-15', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-03-15', nextEvaluationDueAt: '2026-04-15',
+    status: 'active', createdAt: '2026-05-20', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-07-18', nextEvaluationDueAt: '2026-08-18',
   },
   // --- cp-002 佐藤花子 (今月評価必要) ---
   {
@@ -164,8 +166,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['定期的な声かけと傾聴', '希死念慮の確認'],
       education: ['気分の変化を記録する方法を指導する'],
     },
-    status: 'active', createdAt: '2026-01-20', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-03-28', nextEvaluationDueAt: '2026-04-28',
+    status: 'active', createdAt: '2026-05-25', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-07-31', nextEvaluationDueAt: '2026-08-31',
   },
   {
     id: 'pi-002-2', carePlanId: 'cp-002', domain: '日常生活', priority: 'medium', nandaCode: '00095',
@@ -175,8 +177,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['就寝前の環境整備', '入眠前のリラクゼーション支援'],
       education: ['睡眠衛生について指導する'],
     },
-    status: 'active', createdAt: '2026-01-20', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-03-28', nextEvaluationDueAt: '2026-04-28',
+    status: 'active', createdAt: '2026-05-25', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-07-31', nextEvaluationDueAt: '2026-08-31',
   },
   // --- cp-004 田中良子 (評価中のまま) ---
   {
@@ -187,8 +189,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['気分記録の支援', 'ストレス対処の一緒の検討'],
       education: ['病識・再発予防を指導する'],
     },
-    status: 'evaluating', createdAt: '2026-02-10', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-03-10', nextEvaluationDueAt: '2026-04-10',
+    status: 'evaluating', createdAt: '2026-06-15', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-07-13', nextEvaluationDueAt: '2026-08-13',
   },
   {
     id: 'pi-004-2', carePlanId: 'cp-004', domain: '服薬', priority: 'medium', nandaCode: '00078',
@@ -198,8 +200,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['服薬時の声かけ'],
       education: ['気分安定薬の必要性を説明する'],
     },
-    status: 'active', createdAt: '2026-02-10', createdBy: 'ns-a',
-    lastEvaluatedAt: '2026-03-10', nextEvaluationDueAt: '2026-04-10',
+    status: 'active', createdAt: '2026-06-15', createdBy: 'ns-a',
+    lastEvaluatedAt: '2026-07-13', nextEvaluationDueAt: '2026-08-13',
   },
   // --- cp-005 高橋健 (期限超過) ---
   {
@@ -210,8 +212,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['安全確保と声かけ', 'リラクセーションの導入'],
       education: ['対処行動(音楽を聴く等)を一緒に練習する'],
     },
-    status: 'active', createdAt: '2025-11-01', createdBy: 'ns-b',
-    lastEvaluatedAt: '2026-03-10', nextEvaluationDueAt: '2026-04-10',
+    status: 'active', createdAt: '2026-03-06', createdBy: 'ns-b',
+    lastEvaluatedAt: '2026-07-13', nextEvaluationDueAt: '2026-08-13',
   },
   {
     id: 'pi-005-2', carePlanId: 'cp-005', domain: 'セルフケア', priority: 'medium', nandaCode: '00108',
@@ -221,8 +223,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['入浴の声かけ・準備支援'],
       education: ['清潔保持の重要性を説明する'],
     },
-    status: 'active', createdAt: '2025-11-01', createdBy: 'ns-b',
-    lastEvaluatedAt: '2026-03-10', nextEvaluationDueAt: '2026-04-10',
+    status: 'active', createdAt: '2026-03-06', createdBy: 'ns-b',
+    lastEvaluatedAt: '2026-07-13', nextEvaluationDueAt: '2026-08-13',
   },
   // --- cp-006 伊藤美香 (今月評価必要) ---
   {
@@ -233,8 +235,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['深呼吸・漸進的筋弛緩法の実施支援'],
       education: ['不安のメカニズムを説明する'],
     },
-    status: 'active', createdAt: '2026-02-15', createdBy: 'ns-b',
-    lastEvaluatedAt: '2026-03-15', nextEvaluationDueAt: '2026-04-15',
+    status: 'active', createdAt: '2026-06-20', createdBy: 'ns-b',
+    lastEvaluatedAt: '2026-07-18', nextEvaluationDueAt: '2026-08-18',
   },
   {
     id: 'pi-006-2', carePlanId: 'cp-006', domain: '社会', priority: 'medium', nandaCode: '00052',
@@ -244,8 +246,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['参加前の声かけ・同伴'],
       education: ['集団療法の意義を説明する'],
     },
-    status: 'active', createdAt: '2026-02-15', createdBy: 'ns-b',
-    lastEvaluatedAt: '2026-03-20', nextEvaluationDueAt: '2026-04-20',
+    status: 'active', createdAt: '2026-06-20', createdBy: 'ns-b',
+    lastEvaluatedAt: '2026-07-23', nextEvaluationDueAt: '2026-08-23',
   },
   // --- cp-007 渡辺正雄 (通常) ---
   {
@@ -256,8 +258,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['参加への声かけ', '達成時のフィードバック'],
       education: ['依存症の病気教育'],
     },
-    status: 'active', createdAt: '2026-03-20', createdBy: 'ns-b',
-    nextEvaluationDueAt: '2026-05-10',
+    status: 'active', createdAt: '2026-07-23', createdBy: 'ns-b',
+    nextEvaluationDueAt: '2026-09-12',
   },
   {
     id: 'pi-007-2', carePlanId: 'cp-007', domain: '身体', priority: 'medium', nandaCode: '00002',
@@ -267,8 +269,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['食事の嗜好確認', '必要時の栄養補助'],
       education: ['栄養バランスの指導'],
     },
-    status: 'active', createdAt: '2026-03-20', createdBy: 'ns-b',
-    nextEvaluationDueAt: '2026-05-10',
+    status: 'active', createdAt: '2026-07-23', createdBy: 'ns-b',
+    nextEvaluationDueAt: '2026-09-12',
   },
   // --- cp-008 中村早苗 (今月評価必要) ---
   {
@@ -279,8 +281,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['訪室頻度の増加', '傾聴と共感的対応'],
       education: ['SOSを発信することの重要性を伝える'],
     },
-    status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c',
-    lastEvaluatedAt: '2026-03-22', nextEvaluationDueAt: '2026-04-22',
+    status: 'active', createdAt: '2026-02-07', createdBy: 'ns-c',
+    lastEvaluatedAt: '2026-07-25', nextEvaluationDueAt: '2026-08-25',
   },
   {
     id: 'pi-008-2', carePlanId: 'cp-008', domain: '精神', priority: 'medium', nandaCode: '00124',
@@ -290,8 +292,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['作業療法への同伴'],
       education: ['小さな達成体験を一緒に振り返る'],
     },
-    status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c',
-    lastEvaluatedAt: '2026-03-22', nextEvaluationDueAt: '2026-04-22',
+    status: 'active', createdAt: '2026-02-07', createdBy: 'ns-c',
+    lastEvaluatedAt: '2026-07-25', nextEvaluationDueAt: '2026-08-25',
   },
   {
     id: 'pi-008-3', carePlanId: 'cp-008', domain: '日常生活', priority: 'low', nandaCode: '00096',
@@ -301,8 +303,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['日課表を用いた生活支援'],
       education: ['生活リズムの重要性を説明する'],
     },
-    status: 'active', createdAt: '2025-10-05', createdBy: 'ns-c',
-    lastEvaluatedAt: '2026-03-22', nextEvaluationDueAt: '2026-04-22',
+    status: 'active', createdAt: '2026-02-07', createdBy: 'ns-c',
+    lastEvaluatedAt: '2026-07-25', nextEvaluationDueAt: '2026-08-25',
   },
   // --- cp-009 小林拓也 (通常) ---
   {
@@ -313,8 +315,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['落ち着ける環境提供', '呼吸法の実施支援'],
       education: ['認知行動療法の基本を説明する'],
     },
-    status: 'active', createdAt: '2026-02-25', createdBy: 'ns-c',
-    nextEvaluationDueAt: '2026-05-05',
+    status: 'active', createdAt: '2026-06-30', createdBy: 'ns-c',
+    nextEvaluationDueAt: '2026-09-07',
   },
   {
     id: 'pi-009-2', carePlanId: 'cp-009', domain: '社会', priority: 'low', nandaCode: '00069',
@@ -324,8 +326,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['段階的曝露の同伴'],
       education: ['曝露療法の意味を説明する'],
     },
-    status: 'active', createdAt: '2026-02-25', createdBy: 'ns-c',
-    nextEvaluationDueAt: '2026-05-05',
+    status: 'active', createdAt: '2026-06-30', createdBy: 'ns-c',
+    nextEvaluationDueAt: '2026-09-07',
   },
   // --- cp-010 加藤由美 (通常) ---
   {
@@ -336,8 +338,8 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['肯定的フィードバック'],
       education: ['自己受容について一緒に考える'],
     },
-    status: 'active', createdAt: '2025-12-01', createdBy: 'ns-c',
-    lastEvaluatedAt: '2026-03-30', nextEvaluationDueAt: '2026-04-30',
+    status: 'active', createdAt: '2026-04-05', createdBy: 'ns-c',
+    lastEvaluatedAt: '2026-08-02', nextEvaluationDueAt: '2026-09-02',
   },
   {
     id: 'pi-010-2', carePlanId: 'cp-010', domain: 'セルフケア', priority: 'medium', nandaCode: '00109',
@@ -347,38 +349,38 @@ export const PROBLEM_ITEMS: ProblemItem[] = [
       therapy: ['更衣の声かけ・支援'],
       education: ['身だしなみの重要性を説明する'],
     },
-    status: 'active', createdAt: '2025-12-01', createdBy: 'ns-c',
-    lastEvaluatedAt: '2026-03-30', nextEvaluationDueAt: '2026-04-30',
+    status: 'active', createdAt: '2026-04-05', createdBy: 'ns-c',
+    lastEvaluatedAt: '2026-08-02', nextEvaluationDueAt: '2026-09-02',
   },
 ];
 
 export const EVALUATIONS: Evaluation[] = [
   {
-    id: 'ev-001', problemItemId: 'pi-001-1', evaluatedAt: '2026-02-15', evaluatedBy: 'ns-a',
+    id: 'ev-001', problemItemId: 'pi-001-1', evaluatedAt: '2026-06-20', evaluatedBy: 'ns-a',
     achievement: 'not_achieved', findings: '服薬時の見守りがないと飲み忘れが目立つ', nextStatus: 'active',
   },
   {
-    id: 'ev-002', problemItemId: 'pi-001-1', evaluatedAt: '2026-03-15', evaluatedBy: 'ns-a',
+    id: 'ev-002', problemItemId: 'pi-001-1', evaluatedAt: '2026-07-18', evaluatedBy: 'ns-a',
     achievement: 'partial', findings: '服薬に声かけが必要だが一部は自主的に内服できる', nextStatus: 'active',
   },
   {
-    id: 'ev-003', problemItemId: 'pi-001-2', evaluatedAt: '2026-03-15', evaluatedBy: 'ns-a',
+    id: 'ev-003', problemItemId: 'pi-001-2', evaluatedAt: '2026-07-18', evaluatedBy: 'ns-a',
     achievement: 'achieved', findings: '暴力行為なく落ち着いて過ごせている', nextStatus: 'active',
   },
   {
-    id: 'ev-004', problemItemId: 'pi-002-1', evaluatedAt: '2026-02-28', evaluatedBy: 'ns-a',
+    id: 'ev-004', problemItemId: 'pi-002-1', evaluatedAt: '2026-07-03', evaluatedBy: 'ns-a',
     achievement: 'partial', findings: '少しずつ発語が増えているが、絶望感の言語化は限定的', nextStatus: 'active',
   },
   {
-    id: 'ev-005', problemItemId: 'pi-002-1', evaluatedAt: '2026-03-28', evaluatedBy: 'ns-a',
+    id: 'ev-005', problemItemId: 'pi-002-1', evaluatedAt: '2026-07-31', evaluatedBy: 'ns-a',
     achievement: 'partial', findings: '信頼関係が構築されてきた。気分の波を自覚できる日も出てきた', nextStatus: 'active',
   },
   {
-    id: 'ev-006', problemItemId: 'pi-004-1', evaluatedAt: '2026-03-10', evaluatedBy: 'ns-a',
+    id: 'ev-006', problemItemId: 'pi-004-1', evaluatedAt: '2026-07-13', evaluatedBy: 'ns-a',
     achievement: 'not_achieved', findings: '躁状態がみられ対処行動の獲得に至っていない', nextStatus: 'evaluating',
   },
   {
-    id: 'ev-007', problemItemId: 'pi-008-1', evaluatedAt: '2026-03-22', evaluatedBy: 'ns-c',
+    id: 'ev-007', problemItemId: 'pi-008-1', evaluatedAt: '2026-07-25', evaluatedBy: 'ns-c',
     achievement: 'partial', findings: '希死念慮は出現するが、スタッフへの訴えが増えている', nextStatus: 'active',
   },
 ];
@@ -476,10 +478,10 @@ export const TEMPLATES: Template[] = [
 export const INITIAL_CHANGE_LOGS: ChangeLog[] = [
   {
     id: 'log-001', targetType: 'care_plan', targetId: 'cp-001', action: 'create',
-    actorId: 'ns-a', actorName: '田村 幸子', at: '2026-01-15T09:30:00', summary: '看護計画を立案',
+    actorId: 'ns-a', actorName: '田村 幸子', at: '2026-05-20T09:30:00', summary: '看護計画を立案',
   },
   {
     id: 'log-002', targetType: 'evaluation', targetId: 'ev-002', action: 'evaluate',
-    actorId: 'ns-a', actorName: '田村 幸子', at: '2026-03-15T14:20:00', summary: '月次評価を実施',
+    actorId: 'ns-a', actorName: '田村 幸子', at: '2026-07-18T14:20:00', summary: '月次評価を実施',
   },
 ];

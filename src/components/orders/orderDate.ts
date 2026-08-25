@@ -1,9 +1,12 @@
 /**
  * オーダ入力ダイアログの日付初期値。
- * 本アプリはモックアップのため「今日」を固定日（フローシートの表示範囲＝2026/05/19）に合わせる。
+ * 本アプリはモックアップのため「今日」を固定日に合わせる。
  * これにより、作成したオーダの開始日/実施予定日/指示日がフローシート予定オーダ欄に反映される。
+ *
+ * 基準日の単一ソースは `src/data/mockToday.ts`。本モジュールはその再エクスポート。
  */
-export const MOCK_TODAY = '2026-05-19';
+export { MOCK_TODAY } from '../../data/mockToday';
+import { MOCK_TODAY } from '../../data/mockToday';
 
 /** 日付初期値（モックの基準日）。実日付ではなく MOCK_TODAY を返す。 */
 export function todayStr(): string {

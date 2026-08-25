@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import type { Patient, Order } from '../../types';
 import { ORDERS } from '../../data/mockData';
+import { hasRecentRecords, recentRecordsOf } from '../../data/recentRecords';
 import { useAppStore } from '../../stores/useAppStore';
 import RestraintOrderLinks from '../isolation/RestraintOrderLinks';
 import type { KarteMode } from './KartePage';
@@ -36,15 +37,18 @@ interface TimelineRecord {
   cancelled?: boolean;
 }
 
+const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+
+// 実データ（RECENT_RECORDS）を持たない患者向けの共通サンプル。
 const MOCK_RECORDS: TimelineRecord[] = [
-  { id: 'kr1',  date: '2026/03/10', dayOfWeek: '月', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '定期回診。状態安定。処方継続。',                                                                          tags: [],                          timestamp: '2026/03/10 10:30' },
-  { id: 'kr2',  date: '2026/03/10', dayOfWeek: '月', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '山本 看護師',   authorRole: '',     content: '朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。',                tags: ['看護記録'],                timestamp: '2026/03/10 09:00' },
-  { id: 'kr3',  date: '2026/03/09', dayOfWeek: '日', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'リスパダール 2mg → 3mg に増量指示。経過観察継続。',                                                          tags: [],                          orderNumber: 'NO.827', timestamp: '2026/03/09 13:45' },
-  { id: 'kr4',  date: '2026/03/09', dayOfWeek: '日', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '中田 看護師',   authorRole: '',     content: '午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。',                                  tags: ['看護記録', 'クリニカルパス'], orderNumber: 'NO.827', timestamp: '2026/03/09 14:00' },
-  { id: 'kr6',  date: '2026/03/07', dayOfWeek: '金', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。',                                          tags: [],                          timestamp: '2026/03/07 15:00' },
-  { id: 'kr7',  date: '2026/03/06', dayOfWeek: '木', category: '入退院記録', categoryColor: CATEGORY_COLORS['入退院記録'], author: '田村 医師',     authorRole: '医師D', content: '【精神科】退院環境調整の指示。当院病棟・101号室・身長167.8cm・体重72.0kg。',                                tags: [],                          orderNumber: 'NO.837', timestamp: '2026/03/06 17:23' },
-  { id: 'kr8',  date: '2026/03/05', dayOfWeek: '水', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                      tags: ['カンファ'],                timestamp: '2026/03/05 16:00' },
-  { id: 'kr9',  date: '2026/03/04', dayOfWeek: '火', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '佐々木 看護師', authorRole: '',     content: '作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。',                      tags: ['看護記録'],                timestamp: '2026/03/04 14:00' },
+  { id: 'kr1',  date: '2026/08/24', dayOfWeek: '月', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '定期回診。状態安定。処方継続。',                                                                          tags: [],                          timestamp: '2026/08/24 10:30' },
+  { id: 'kr2',  date: '2026/08/24', dayOfWeek: '月', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '山本 看護師',   authorRole: '',     content: '朝の検温実施。体温36.5℃、血圧128/82。食欲あり、朝食全量摂取。表情穏やか。服薬確認済み。',                tags: ['看護記録'],                timestamp: '2026/08/24 09:00' },
+  { id: 'kr3',  date: '2026/08/23', dayOfWeek: '日', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'リスパダール 2mg → 3mg に増量指示。経過観察継続。',                                                          tags: [],                          orderNumber: 'NO.827', timestamp: '2026/08/23 13:45' },
+  { id: 'kr4',  date: '2026/08/23', dayOfWeek: '日', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '中田 看護師',   authorRole: '',     content: '午後の回診同行。主治医より薬剤変更の指示あり。患者に説明済み。理解良好。',                                  tags: ['看護記録', 'クリニカルパス'], orderNumber: 'NO.827', timestamp: '2026/08/23 14:00' },
+  { id: 'kr6',  date: '2026/08/21', dayOfWeek: '金', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: '血液検査結果確認。CRP 0.2、WBC 5800。炎症所見なし。現行治療継続。',                                          tags: [],                          timestamp: '2026/08/21 15:00' },
+  { id: 'kr7',  date: '2026/08/20', dayOfWeek: '木', category: '入退院記録', categoryColor: CATEGORY_COLORS['入退院記録'], author: '田村 医師',     authorRole: '医師D', content: '【精神科】退院環境調整の指示。当院病棟・101号室・身長167.8cm・体重72.0kg。',                                tags: [],                          orderNumber: 'NO.837', timestamp: '2026/08/20 17:23' },
+  { id: 'kr8',  date: '2026/08/19', dayOfWeek: '水', category: '医師記録',  categoryColor: CATEGORY_COLORS['医師記録'],  author: '田村 医師',     authorRole: '医師D', content: 'カンファレンス実施。退院に向けた環境調整について多職種で検討。訪問看護導入を検討中。',                      tags: ['カンファ'],                timestamp: '2026/08/19 16:00' },
+  { id: 'kr9',  date: '2026/08/18', dayOfWeek: '火', category: '看護記録',  categoryColor: CATEGORY_COLORS['看護記録'],  author: '佐々木 看護師', authorRole: '',     content: '作業療法参加。革細工に取り組む。集中力30分程度持続。本人より「楽しい」との発言あり。',                      tags: ['看護記録'],                timestamp: '2026/08/18 14:00' },
 ];
 
 // ===== オーダーをタイムラインレコードへ変換 =====
@@ -161,7 +165,28 @@ export default function MedicalRecordTab({
       timestamp: r.timestamp,
       cancelled: r.cancelled,
     }));
-    const merged = [...MOCK_RECORDS, ...ordersToTimeline(patient.id), ...dynamicRecords];
+    // 主要患者は直近 30 日の実データ（RECENT_RECORDS）を使い、それ以外は従来の共通サンプルを出す。
+    // 部門診療録は本タブに対応カテゴリが無いため取り込まない（記録サマリー帯側で表現する）。
+    const baseRecords = hasRecentRecords(patient.id)
+      ? recentRecordsOf(patient.id)
+        .filter((r) => r.category === '医師記録' || r.category === '看護記録')
+        .map<TimelineRecord>((r) => {
+          const slashDate = r.date.replace(/-/g, '/');
+          return {
+            id: r.id,
+            date: slashDate,
+            dayOfWeek: WEEKDAY_LABELS[new Date(`${r.date}T00:00:00`).getDay()],
+            category: r.category as RecordCategory,
+            categoryColor: CATEGORY_COLORS[r.category as RecordCategory],
+            author: r.author,
+            authorRole: r.authorRole,
+            content: r.content,
+            tags: r.tags,
+            timestamp: `${slashDate} ${r.time}`,
+          };
+        })
+      : MOCK_RECORDS;
+    const merged = [...baseRecords, ...ordersToTimeline(patient.id), ...dynamicRecords];
     return merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }, [patient.id, dynamicMedicalRecords]);
 
@@ -574,7 +599,7 @@ function nowAsLocalInput(): string {
 
 interface DoItemEntry {
   id: string;
-  date: string;     // 2026/05/27
+  date: string;     // 2026/11/10
   title: string;    // 看護記録 / 診療録 / 注射オーダ ...
   summary: string;  // 1行プレビュー
   body: string;     // [DO] 押下で本文末尾に追記される本文
@@ -582,24 +607,24 @@ interface DoItemEntry {
 
 // モック: 部門診療録（看護・リハビリ・栄養 etc.）
 const MOCK_DEPT_RECORDS: DoItemEntry[] = [
-  { id: 'd-1', date: '2026/05/27', title: '看護記録', summary: '日勤 鈴木 / バイタル安定、内服確認OK',
-    body: '【部門診療録 引用】2026/05/27 看護記録（鈴木）\nバイタル安定。内服確認 OK。日中傾眠傾向あり夜間睡眠時間と要対比。\n' },
-  { id: 'd-2', date: '2026/05/26', title: '看護記録', summary: '準夜 高橋 / 入眠困難、頓服使用',
-    body: '【部門診療録 引用】2026/05/26 看護記録（高橋）\n22:30 入眠困難の訴え。指示通り頓服使用。23:40 入眠確認。\n' },
-  { id: 'd-3', date: '2026/05/25', title: 'リハビリ記録', summary: 'PT 山田 / ROM 改善、歩行訓練継続',
-    body: '【部門診療録 引用】2026/05/25 リハビリ記録（PT 山田）\n肩関節 ROM 前回比 +10°。歩行訓練 50m × 3 セット。疲労なし。\n' },
-  { id: 'd-4', date: '2026/05/23', title: '栄養記録', summary: 'NST 田中 / 食事摂取 7-8 割で経過',
-    body: '【部門診療録 引用】2026/05/23 栄養記録（NST 田中）\n食事摂取 7-8 割で安定。BMI 19.8 → 20.2。経腸栄養剤追加不要と判断。\n' },
+  { id: 'd-1', date: '2026/11/10', title: '看護記録', summary: '日勤 鈴木 / バイタル安定、内服確認OK',
+    body: '【部門診療録 引用】2026/11/10 看護記録（鈴木）\nバイタル安定。内服確認 OK。日中傾眠傾向あり夜間睡眠時間と要対比。\n' },
+  { id: 'd-2', date: '2026/11/09', title: '看護記録', summary: '準夜 高橋 / 入眠困難、頓服使用',
+    body: '【部門診療録 引用】2026/11/09 看護記録（高橋）\n22:30 入眠困難の訴え。指示通り頓服使用。23:40 入眠確認。\n' },
+  { id: 'd-3', date: '2026/11/08', title: 'リハビリ記録', summary: 'PT 山田 / ROM 改善、歩行訓練継続',
+    body: '【部門診療録 引用】2026/11/08 リハビリ記録（PT 山田）\n肩関節 ROM 前回比 +10°。歩行訓練 50m × 3 セット。疲労なし。\n' },
+  { id: 'd-4', date: '2026/11/06', title: '栄養記録', summary: 'NST 田中 / 食事摂取 7-8 割で経過',
+    body: '【部門診療録 引用】2026/11/06 栄養記録（NST 田中）\n食事摂取 7-8 割で安定。BMI 19.8 → 20.2。経腸栄養剤追加不要と判断。\n' },
 ];
 
 // モック: 過去カルテ（医師記載）
 const MOCK_PAST_CHARTS: DoItemEntry[] = [
-  { id: 'p-1', date: '2026/05/22', title: '診療録（再診）', summary: 'Dr 田村 / 状態安定、薬剤継続',
-    body: '【過去カルテ 引用】2026/05/22 診療録（Dr 田村）\nS: 自覚症状なし、よく眠れている。\nO: バイタル安定、表情穏やか。\nA: 状態安定。\nP: 現行処方継続、2週間後再診。\n' },
-  { id: 'p-2', date: '2026/05/15', title: '診療録（再診）', summary: 'Dr 田村 / 睡眠改善、減薬検討',
-    body: '【過去カルテ 引用】2026/05/15 診療録（Dr 田村）\nS: 入眠改善、中途覚醒減少。\nO: バイタル安定。\nA: 睡眠改善傾向。\nP: 次回より減薬検討。\n' },
-  { id: 'p-3', date: '2026/05/08', title: '診療録（カンファ）', summary: '多職種カンファ / 退院支援検討開始',
-    body: '【過去カルテ 引用】2026/05/08 診療録（カンファレンス）\n参加: 医師・看護・PSW・PT。\n議題: 退院支援。\n結論: 6 月初旬退院を目処に MSW 介入開始。\n' },
+  { id: 'p-1', date: '2026/11/05', title: '診療録（再診）', summary: 'Dr 田村 / 状態安定、薬剤継続',
+    body: '【過去カルテ 引用】2026/11/05 診療録（Dr 田村）\nS: 自覚症状なし、よく眠れている。\nO: バイタル安定、表情穏やか。\nA: 状態安定。\nP: 現行処方継続、2週間後再診。\n' },
+  { id: 'p-2', date: '2026/10/29', title: '診療録（再診）', summary: 'Dr 田村 / 睡眠改善、減薬検討',
+    body: '【過去カルテ 引用】2026/10/29 診療録（Dr 田村）\nS: 入眠改善、中途覚醒減少。\nO: バイタル安定。\nA: 睡眠改善傾向。\nP: 次回より減薬検討。\n' },
+  { id: 'p-3', date: '2026/10/22', title: '診療録（カンファ）', summary: '多職種カンファ / 退院支援検討開始',
+    body: '【過去カルテ 引用】2026/10/22 診療録（カンファレンス）\n参加: 医師・看護・PSW・PT。\n議題: 退院支援。\n結論: 6 月初旬退院を目処に MSW 介入開始。\n' },
 ];
 
 // オーダーをモックから filter（ORDERS の型は別ファイルに定義）
@@ -747,7 +772,7 @@ export function NewRecordDialog({
   const importPrevious = () => {
     // モック: 前回カルテの本文を取り込む（実データ連携は別ストーリー）
     setBody((prev) => {
-      const stub = '【前回カルテ取り込み（mock）】\n前回記載日: 2026/05/22\n本文：状態安定、内服継続。\n\n';
+      const stub = '【前回カルテ取り込み（mock）】\n前回記載日: 2026/11/05\n本文：状態安定、内服継続。\n\n';
       return stub + prev;
     });
     setInnerSnackbar({ open: true, message: '前回カルテを取り込みました（mock）' });

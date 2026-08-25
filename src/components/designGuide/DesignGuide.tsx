@@ -389,7 +389,7 @@ const DesignGuide: React.FC = () => {
               <Grid item xs={12} sm={8}>
                 <TextField
                   label="移動日時" type="datetime-local" size="small" fullWidth
-                  defaultValue="2026-05-30T14:03" InputLabelProps={{ shrink: true }}
+                  defaultValue="2026-09-04T14:03" InputLabelProps={{ shrink: true }}
                 />
               </Grid>
               <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -399,7 +399,7 @@ const DesignGuide: React.FC = () => {
               <Grid item xs={12} sm={8}>
                 <TextField
                   label="配膳先変更日時" type="datetime-local" size="small" fullWidth
-                  defaultValue="2026-05-30T14:03" InputLabelProps={{ shrink: true }}
+                  defaultValue="2026-09-04T14:03" InputLabelProps={{ shrink: true }}
                 />
               </Grid>
             </Grid>
@@ -446,10 +446,10 @@ const DesignGuide: React.FC = () => {
             <Typography variant="subtitle2" sx={{ mb: 1 }}>日時</Typography>
             <Grid container spacing={1.5}>
               <Grid item xs={12} sm={6}>
-                <TextField label="入院日" type="date" size="small" fullWidth defaultValue="2026-05-30" InputLabelProps={{ shrink: true }} />
+                <TextField label="入院日" type="date" size="small" fullWidth defaultValue="2026-09-04" InputLabelProps={{ shrink: true }} />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField label="食事開始" type="datetime-local" size="small" fullWidth defaultValue="2026-05-30T12:00" InputLabelProps={{ shrink: true }} />
+                <TextField label="食事開始" type="datetime-local" size="small" fullWidth defaultValue="2026-09-04T12:00" InputLabelProps={{ shrink: true }} />
               </Grid>
             </Grid>
 

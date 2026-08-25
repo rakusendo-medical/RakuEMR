@@ -174,7 +174,7 @@ test.describe('フローシート', () => {
   test('隔離拘束グリッドのセルクリックで観察記録ダイアログが開く', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     // 当日(2026-05-19)の 0 時セルをクリック → 観察記録ダイアログ
-    await page.getByLabel('観察 2026-05-19 00:00').click();
+    await page.getByLabel('観察 2026-08-24 00:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     // 観察記録ダイアログが開いている（登録ボタンの存在で判定）
@@ -185,7 +185,7 @@ test.describe('フローシート', () => {
 
   test('観察記録ダイアログで観察間隔（15分/30分）を切り替えられる', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    await page.getByLabel('観察 2026-05-19 00:00').click();
+    await page.getByLabel('観察 2026-08-24 00:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     // 既定は 30 分単位 → 2 行
@@ -200,7 +200,7 @@ test.describe('フローシート', () => {
 
   test('隔離拘束グリッドの区切り線が縦横とも同色（細線）', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    const cell = page.getByLabel('観察 2026-05-19 00:00');
+    const cell = page.getByLabel('観察 2026-08-24 00:00');
     // 縦線（右ボーダー）はセル(Box)に付与・色 #cbd5e1
     await expect(cell).toHaveCSS('border-right-style', 'solid');
     await expect(cell).toHaveCSS('border-right-color', 'rgb(203, 213, 225)');
@@ -213,8 +213,8 @@ test.describe('フローシート', () => {
 
   test('隔離拘束グリッドの各時間セルの高さが揃っている', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    const c0 = page.getByLabel('観察 2026-05-19 00:00');
-    const c8 = page.getByLabel('観察 2026-05-19 08:00');
+    const c0 = page.getByLabel('観察 2026-08-24 00:00');
+    const c8 = page.getByLabel('観察 2026-08-24 08:00');
     const b0 = await c0.boundingBox();
     const b8 = await c8.boundingBox();
     expect(b0).not.toBeNull();
@@ -227,7 +227,7 @@ test.describe('フローシート', () => {
 
   test('同一時間に複数記録を入れると色が横線で上下に分割され文字は出ない', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    const cell = page.getByLabel('観察 2026-05-19 00:00');
+    const cell = page.getByLabel('観察 2026-08-24 00:00');
     await cell.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -252,7 +252,7 @@ test.describe('フローシート', () => {
   test('診察記録の[未診察]セルをクリックで診療録作成ダイアログ（リッチ版）が開く', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     // 当日(2026-05-19)の [未診察] セルをクリック
-    await page.getByLabel('診療録作成 2026-05-19').click();
+    await page.getByLabel('診療録作成 2026-08-24').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     // カルテ画面と同一のリッチな診療録作成ダイアログ
@@ -285,7 +285,7 @@ test.describe('フローシート', () => {
 
   test('既に記録があるセルに再入力しても重複せず置き換わる', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    const cell = page.getByLabel('観察 2026-05-19 01:00');
+    const cell = page.getByLabel('観察 2026-08-24 01:00');
     // 1 回目の登録（既定 2 件）
     await cell.click();
     let dialog = page.getByRole('dialog');
@@ -305,7 +305,7 @@ test.describe('フローシート', () => {
   test('15分単位で登録するとセルが4セグメントに分割される', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     // 既存記録のない時間帯（03:00）を使う
-    const cell = page.getByLabel('観察 2026-05-19 03:00');
+    const cell = page.getByLabel('観察 2026-08-24 03:00');
     await cell.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -321,7 +321,7 @@ test.describe('フローシート', () => {
   test('当日以外の日付列セルをクリックしても観察記録ダイアログが開く', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     // 7 日列の先頭日（2026-05-13・非当日）のセル
-    await page.getByLabel('観察 2026-05-13 00:00').click();
+    await page.getByLabel('観察 2026-08-18 00:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('button', { name: '登録' })).toBeVisible();
@@ -329,7 +329,7 @@ test.describe('フローシート', () => {
 
   test('観察記録の登録で成功トーストが表示される', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    await page.getByLabel('観察 2026-05-19 05:00').click();
+    await page.getByLabel('観察 2026-08-24 05:00').click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('button', { name: '登録' }).click();
     // MUI Alert（role=alert・右上 anchorOrigin）に登録メッセージ
@@ -338,7 +338,7 @@ test.describe('フローシート', () => {
 
   test('観察記録ダイアログに×ボタンが無く、キャンセルで閉じても記録は増えない', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    const cell = page.getByLabel('観察 2026-05-19 06:00');
+    const cell = page.getByLabel('観察 2026-08-24 06:00');
     await cell.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -370,7 +370,7 @@ test.describe('フローシート', () => {
 
   test('観察記録ダイアログで行を追加・削除でき、9件で追加が止まる', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    await page.getByLabel('観察 2026-05-19 07:00').click();
+    await page.getByLabel('観察 2026-08-24 07:00').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     const addBtn = dialog.getByRole('button', { name: /^追加 \(/ });
@@ -395,7 +395,7 @@ test.describe('フローシート', () => {
   test('行を増減した状態で登録するとセルにその件数が反映される', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     // 行を 1 つ追加（2→3 行）して登録 → 3 セグメント
-    const addCell = page.getByLabel('観察 2026-05-19 09:00');
+    const addCell = page.getByLabel('観察 2026-08-24 09:00');
     await addCell.click();
     let dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -405,7 +405,7 @@ test.describe('フローシート', () => {
     await expect(dialog).toBeHidden();
     await expect(addCell.locator('[data-testid="obs-segment"]')).toHaveCount(3);
     // 行を 1 つ削除（2→1 行）して登録 → 1 セグメント
-    const delCell = page.getByLabel('観察 2026-05-19 10:00');
+    const delCell = page.getByLabel('観察 2026-08-24 10:00');
     await delCell.click();
     dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -418,7 +418,7 @@ test.describe('フローシート', () => {
 
   test('最大の9行まで増やして登録すると9セグメントが反映される', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    const cell = page.getByLabel('観察 2026-05-19 11:00');
+    const cell = page.getByLabel('観察 2026-08-24 11:00');
     await cell.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -434,7 +434,7 @@ test.describe('フローシート', () => {
 
   test('既存記録のあるセルに上書きすると値が新しい状態へ正しく書き換わる', async ({ page }) => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
-    const cell = page.getByLabel('観察 2026-05-19 12:00');
+    const cell = page.getByLabel('観察 2026-08-24 12:00');
     const segs = cell.locator('[data-testid="obs-segment"]');
     // 1 回目: 既定（落ち着き×2）で登録
     await cell.click();
@@ -462,7 +462,7 @@ test.describe('フローシート', () => {
     await page.getByRole('tab', { name: '隔離拘束', exact: true }).click();
     // 夜勤に切替 → 夜勤帯（22時）のセルに入力
     await page.getByRole('button', { name: '夜勤' }).click();
-    const nightCell = page.getByLabel('観察 2026-05-19 22:00');
+    const nightCell = page.getByLabel('観察 2026-08-24 22:00');
     await expect(nightCell).toBeVisible();
     await nightCell.click();
     let dialog = page.getByRole('dialog');
@@ -473,7 +473,7 @@ test.describe('フローシート', () => {
     await expect(page.getByText('9時', { exact: true })).toBeHidden();
     // 日勤に切替 → 日勤帯（14時）のセルにも入力できて反映される
     await page.getByRole('button', { name: '日勤' }).click();
-    const dayCell = page.getByLabel('観察 2026-05-19 14:00');
+    const dayCell = page.getByLabel('観察 2026-08-24 14:00');
     await expect(dayCell).toBeVisible();
     await dayCell.click();
     dialog = page.getByRole('dialog');
@@ -500,27 +500,27 @@ test.describe('フローシート', () => {
 
   test('日付ナビ（≪ ＜ 当日 ＞ ≫）で 7 日列が移動する', async ({ page }) => {
     // 初期表示はモックデータの 7 日（2026/5/13〜5/19）
-    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/5/13(水)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/18(水)' })).toBeVisible();
 
     // ＜（1日前）: 右端が 5/18 に、左端は 5/12 になる
     await page.getByRole('button', { name: '1日前' }).click();
-    await expect(page.getByRole('cell', { name: '2026/5/18(月)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/5/12(火)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeHidden();
+    await expect(page.getByRole('cell', { name: '2026/8/23(月)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/17(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeHidden();
 
     // ＞（1日後）で戻る
     await page.getByRole('button', { name: '1日後' }).click();
-    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeVisible();
 
     // ≫（7日後）: 5/20〜5/26
     await page.getByRole('button', { name: '7日後' }).click();
-    await expect(page.getByRole('cell', { name: '2026/5/26(火)' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '2026/5/20(水)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/31(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/25(水)' })).toBeVisible();
 
     // ≪（7日前）で戻る
     await page.getByRole('button', { name: '7日前' }).click();
-    await expect(page.getByRole('cell', { name: '2026/5/19(火)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2026/8/24(火)' })).toBeVisible();
 
     // 当日: 実際の当日が右端に来る
     const now = new Date();
@@ -578,19 +578,19 @@ test.describe('フローシート', () => {
     await expect(page.getByText('観察', { exact: true })).toBeVisible();
     await expect(page.getByText('安全確認', { exact: true })).toBeVisible();
     // 既定の 精神科隔離 は 2026-05-16 適用開始 → 開始日より前（5/13）はセルなし
-    await expect(page.getByLabel('精神科隔離 観察 2026-05-13')).toHaveCount(0);
+    await expect(page.getByLabel('精神科隔離 観察 2026-08-18')).toHaveCount(0);
     // 開始日以降（5/16）はセルがあるが読み取り専用（入力欄=textbox は無い・初期は空）
-    const cell = page.getByLabel('精神科隔離 観察 2026-05-16');
+    const cell = page.getByLabel('精神科隔離 観察 2026-08-21');
     await expect(cell).toBeVisible();
     await expect(cell).toHaveText('');
-    await expect(page.getByRole('textbox', { name: '精神科隔離 観察 2026-05-16' })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: '精神科隔離 観察 2026-08-21' })).toHaveCount(0);
   });
 
   test('入力可能日付の[入力]で入力ダイアログを開き、登録するとセルに反映される', async ({ page }) => {
     // 精神科隔離 は 5/16 開始 → 開始日より前（5/13）の見出しに [入力] は無い
-    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-13' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-08-18' })).toHaveCount(0);
     // 入力可能日付（開始日以降・5/16）の見出しセルに [入力] → 入力ダイアログ
-    await page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' }).click();
+    await page.getByRole('button', { name: '精神科隔離 入力 2026-08-21' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('精神科隔離 新規作成')).toBeVisible();
@@ -602,7 +602,7 @@ test.describe('フローシート', () => {
     await dialog.getByRole('button', { name: '登録' }).click();
     await expect(dialog).toBeHidden();
     // 本体テーブルの 2026-05-16 観察セル（読み取り専用）に反映される
-    await expect(page.getByLabel('精神科隔離 観察 2026-05-16')).toHaveText('異常なし');
+    await expect(page.getByLabel('精神科隔離 観察 2026-08-21')).toHaveText('異常なし');
   });
 
   test('適用期間テーブルの既存行を変更すると確認サブダイアログ後に反映される', async ({ page }) => {
@@ -611,7 +611,7 @@ test.describe('フローシート', () => {
     await expect(dialog).toBeVisible();
     // 精神科隔離 行をクリックして編集モードに入り、開始日を 2026-05-17 に変更 → [更新] 出現
     await dialog.getByRole('row', { name: '適用パターン行 精神科隔離' }).click();
-    await dialog.getByLabel('開始日 精神科隔離').fill('2026-05-17');
+    await dialog.getByLabel('開始日 精神科隔離').fill('2026-08-22');
     const updateBtn = dialog.getByRole('button', { name: '更新' });
     await expect(updateBtn).toBeVisible();
     await updateBtn.click();
@@ -623,8 +623,8 @@ test.describe('フローシート', () => {
     // ダイアログを閉じて本体テーブルを確認
     await dialog.getByRole('button', { name: 'キャンセル' }).click();
     // 反映: 精神科隔離 見出しの [入力] が新開始日 5/17 にゲーティング（5/16 は消え、5/17 が出る）
-    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-17' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-08-21' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-08-22' })).toBeVisible();
   });
 
   test('パターンボックスの表示モードトグルで全パターン/適用パターン名を切り替えられる', async ({ page }) => {
@@ -643,7 +643,7 @@ test.describe('フローシート', () => {
 
   test('パターン削除で適用解除される（AC-6）', async ({ page }) => {
     // 精神科隔離（5/16）の [入力] があることを確認
-    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-08-21' })).toBeVisible();
     await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -657,12 +657,12 @@ test.describe('フローシート', () => {
     await expect(dialog.getByRole('row', { name: '適用パターン行 精神科隔離' })).toHaveCount(0);
     await dialog.getByRole('button', { name: 'キャンセル' }).click();
     // グリッドから 精神科隔離 の [入力] も消える
-    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-08-21' })).toHaveCount(0);
   });
 
   test('入力済みの値があるパターンは削除できない', async ({ page }) => {
     // 精神科隔離 5/16 に値を入力
-    await page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' }).click();
+    await page.getByRole('button', { name: '精神科隔離 入力 2026-08-21' }).click();
     const entry = page.getByRole('dialog');
     await entry.getByLabel('入力 観察').fill('異常なし');
     await entry.getByRole('button', { name: '登録' }).click();
@@ -683,36 +683,36 @@ test.describe('フローシート', () => {
     await expect(dialog).toBeVisible();
     // 精神科隔離（5/16開始）行を編集モードにし、終了日 2026-05-17 を設定 → [更新] → 確認 OK
     await dialog.getByRole('row', { name: '適用パターン行 精神科隔離' }).click();
-    await dialog.getByLabel('終了日 精神科隔離').fill('2026-05-17');
+    await dialog.getByLabel('終了日 精神科隔離').fill('2026-08-22');
     await dialog.getByRole('button', { name: '更新' }).click();
     const confirm = page.getByRole('dialog').filter({ hasText: 'ケアメニューデータは削除されます' });
     await confirm.getByRole('button', { name: 'OK' }).click();
     await expect(confirm).toBeHidden();
     await dialog.getByRole('button', { name: 'キャンセル' }).click();
     // 終了日まで（5/17）は [入力] 可、終了日より後（5/18）は [入力] なし
-    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-17' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-05-18' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-08-22' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '精神科隔離 入力 2026-08-23' })).toHaveCount(0);
   });
 
   test('新規適用は確認サブダイアログを挟み、適用日以降のケアメニューデータが削除される（AC-1/AC-3）', async ({ page }) => {
     // 精神科隔離 5/16 に「観察=異常なし」を入力しておく
-    await page.getByRole('button', { name: '精神科隔離 入力 2026-05-16' }).click();
+    await page.getByRole('button', { name: '精神科隔離 入力 2026-08-21' }).click();
     const entry = page.getByRole('dialog');
     await entry.getByLabel('入力 観察').fill('異常なし');
     await entry.getByRole('button', { name: '登録' }).click();
     await expect(entry).toBeHidden();
-    await expect(page.getByLabel('精神科隔離 観察 2026-05-16')).toHaveText('異常なし');
+    await expect(page.getByLabel('精神科隔離 観察 2026-08-21')).toHaveText('異常なし');
     // パターン変更で 5/16 開始の新規適用 → 確認 → OK
     await page.getByRole('button', { name: 'パターン変更', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('開始日', { exact: true }).fill('2026-05-16');
+    await dialog.getByLabel('開始日', { exact: true }).fill('2026-08-21');
     await dialog.getByRole('button', { name: '登録' }).click();
     const applyConfirm = page.getByRole('dialog').filter({ hasText: 'ケアメニューデータは削除されます' });
     await expect(applyConfirm).toBeVisible();
     await applyConfirm.getByRole('button', { name: 'OK' }).click();
     await dialog.getByRole('button', { name: 'キャンセル' }).click();
     // 5/16 以降のケアメニューデータが削除される → 観察 5/16 セルは空
-    await expect(page.getByLabel('精神科隔離 観察 2026-05-16')).toHaveText('');
+    await expect(page.getByLabel('精神科隔離 観察 2026-08-21')).toHaveText('');
   });
 
   test('新規適用の確認をキャンセルすると何も適用されない（AC-8）', async ({ page }) => {
@@ -731,7 +731,7 @@ test.describe('フローシート', () => {
 
   test('日付のフローシートアイコンで、その日の適用パターンの項目のみ編集できる（AC-4）', async ({ page }) => {
     // 5/16 は 精神科隔離 適用 → フローシートアイコンで 精神科隔離 の項目のみのダイアログが開く
-    await page.getByRole('button', { name: 'フローシート編集 2026-05-16' }).click();
+    await page.getByRole('button', { name: 'フローシート編集 2026-08-21' }).click();
     const entry = page.getByRole('dialog');
     await expect(entry.getByText('精神科隔離 新規作成')).toBeVisible();
     await expect(entry.getByLabel('入力 観察')).toBeVisible();

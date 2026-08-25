@@ -17,8 +17,10 @@ import type {
   VitalEntry,
   CareRecord,
 } from './types';
+import { MOCK_TODAY } from '../../data/mockToday';
 
-export const TODAY = '2026-05-02';
+// 基準日の単一ソースは src/data/mockToday.ts（全 feature で同じ「当日」を使う）
+export const TODAY = MOCK_TODAY;
 
 // ---- スタッフ ----
 export const FLOWSHEET_STAFFS: FlowsheetStaff[] = [
@@ -141,25 +143,25 @@ export const INITIAL_PATTERN_APPLICATIONS: FlowsheetPatternApplication[] = [
   {
     id: 'fpa-001',
     patientId: 'P001',
-    startDate: '2026-04-01',
+    startDate: '2026-07-24',
     patternId: 'fp-psy-basic',
-    appliedAt: '2026-04-01T09:00:00',
+    appliedAt: '2026-07-24T09:00:00',
     appliedBy: 'st-tanaka',
   },
   {
     id: 'fpa-002',
     patientId: 'P003',
-    startDate: '2026-04-15',
+    startDate: '2026-08-07',
     patternId: 'fp-psy-isolation',
-    appliedAt: '2026-04-15T10:00:00',
+    appliedAt: '2026-08-07T10:00:00',
     appliedBy: 'st-tanaka',
   },
   {
     id: 'fpa-003',
     patientId: 'P004',
-    startDate: '2026-04-20',
+    startDate: '2026-08-12',
     patternId: 'fp-psy-isolation',
-    appliedAt: '2026-04-20T08:30:00',
+    appliedAt: '2026-08-12T08:30:00',
     appliedBy: 'st-tanaka',
   },
 ];
@@ -174,59 +176,59 @@ const v = (
   recordedBy: 'st-yamamoto', registeredAt: `${date}T${time}:00`,
 });
 export const INITIAL_VITALS: VitalEntry[] = [
-  v('vt-001', '2026-04-30', '08:00', 124, 78, 36.5, 72, 16, 98),
-  v('vt-002', '2026-04-30', '14:00', 130, 82, 36.8, 78, 18, 97),
-  v('vt-003', '2026-04-30', '20:00', 122, 76, 36.6, 70, 16, 98),
-  v('vt-004', '2026-05-01', '08:00', 126, 80, 36.4, 70, 16, 98),
-  v('vt-005', '2026-05-01', '14:00', 128, 82, 36.7, 74, 17, 98),
-  v('vt-006', '2026-05-02', '08:00', 122, 78, 36.5, 68, 16, 98),
+  v('vt-001', '2026-08-22', '08:00', 124, 78, 36.5, 72, 16, 98),
+  v('vt-002', '2026-08-22', '14:00', 130, 82, 36.8, 78, 18, 97),
+  v('vt-003', '2026-08-22', '20:00', 122, 76, 36.6, 70, 16, 98),
+  v('vt-004', '2026-08-23', '08:00', 126, 80, 36.4, 70, 16, 98),
+  v('vt-005', '2026-08-23', '14:00', 128, 82, 36.7, 74, 17, 98),
+  v('vt-006', '2026-08-24', '08:00', 122, 78, 36.5, 68, 16, 98),
 ];
 
 // ---- ケア記録サンプル ----
 export const INITIAL_CARE_RECORDS: CareRecord[] = [
   {
-    id: 'cr-001', patientId: 'P001', date: '2026-05-01', careItemId: 'ci-meal-breakfast',
-    value: '全量', registeredAt: '2026-05-01T08:30:00', registeredBy: 'st-yamamoto',
+    id: 'cr-001', patientId: 'P001', date: '2026-08-23', careItemId: 'ci-meal-breakfast',
+    value: '全量', registeredAt: '2026-08-23T08:30:00', registeredBy: 'st-yamamoto',
   },
   {
-    id: 'cr-002', patientId: 'P001', date: '2026-05-01', careItemId: 'ci-medication-morning',
+    id: 'cr-002', patientId: 'P001', date: '2026-08-23', careItemId: 'ci-medication-morning',
     value: true, administeredBy: 'st-yamamoto',
-    registeredAt: '2026-05-01T08:35:00', registeredBy: 'st-yamamoto',
+    registeredAt: '2026-08-23T08:35:00', registeredBy: 'st-yamamoto',
   },
   {
-    id: 'cr-003', patientId: 'P001', date: '2026-05-01', careItemId: 'ci-mood',
-    value: '良好', registeredAt: '2026-05-01T10:00:00', registeredBy: 'st-yamamoto',
+    id: 'cr-003', patientId: 'P001', date: '2026-08-23', careItemId: 'ci-mood',
+    value: '良好', registeredAt: '2026-08-23T10:00:00', registeredBy: 'st-yamamoto',
   },
   {
-    id: 'cr-004', patientId: 'P001', date: '2026-05-02', careItemId: 'ci-meal-breakfast',
-    value: '8割', registeredAt: '2026-05-02T08:30:00', registeredBy: 'st-yamamoto',
+    id: 'cr-004', patientId: 'P001', date: '2026-08-24', careItemId: 'ci-meal-breakfast',
+    value: '8割', registeredAt: '2026-08-24T08:30:00', registeredBy: 'st-yamamoto',
   },
 ];
 
 // ---- サインサンプル ----
 export const INITIAL_SIGNS: SignEntry[] = [
-  { id: 'sg-001', patientId: 'P001', date: '2026-05-01', shift: 'night',   signerId: 'st-sasaki',   registeredAt: '2026-05-01T08:30:00' },
-  { id: 'sg-002', patientId: 'P001', date: '2026-05-01', shift: 'day',     signerId: 'st-yamamoto', registeredAt: '2026-05-01T17:00:00' },
-  { id: 'sg-003', patientId: 'P001', date: '2026-05-01', shift: 'evening', signerId: 'st-nakata',   registeredAt: '2026-05-02T00:30:00' },
-  { id: 'sg-004', patientId: 'P001', date: '2026-05-02', shift: 'night',   signerId: 'st-sasaki',   registeredAt: '2026-05-02T08:30:00' },
+  { id: 'sg-001', patientId: 'P001', date: '2026-08-23', shift: 'night',   signerId: 'st-sasaki',   registeredAt: '2026-08-23T08:30:00' },
+  { id: 'sg-002', patientId: 'P001', date: '2026-08-23', shift: 'day',     signerId: 'st-yamamoto', registeredAt: '2026-08-23T17:00:00' },
+  { id: 'sg-003', patientId: 'P001', date: '2026-08-23', shift: 'evening', signerId: 'st-nakata',   registeredAt: '2026-08-24T00:30:00' },
+  { id: 'sg-004', patientId: 'P001', date: '2026-08-24', shift: 'night',   signerId: 'st-sasaki',   registeredAt: '2026-08-24T08:30:00' },
 ];
 
 // ---- 予定オーダ ----
 export const INITIAL_SCHEDULED_ORDERS: ScheduledOrder[] = [
-  { id: 'so-001', patientId: 'P001', date: '2026-04-30', kind: '薬', name: 'リスパダール 1mg 朝',  status: 'done' },
-  { id: 'so-002', patientId: 'P001', date: '2026-04-30', kind: '薬', name: 'リスパダール 1mg 夕',  status: 'done' },
-  { id: 'so-003', patientId: 'P001', date: '2026-05-01', kind: '薬', name: 'リスパダール 1mg 朝',  status: 'done' },
-  { id: 'so-004', patientId: 'P001', date: '2026-05-01', kind: '薬', name: 'リスパダール 1mg 夕',  status: 'done' },
-  { id: 'so-005', patientId: 'P001', date: '2026-05-02', kind: '薬', name: 'リスパダール 1mg 朝',  status: 'done' },
-  { id: 'so-006', patientId: 'P001', date: '2026-05-02', kind: '薬', name: 'リスパダール 1mg 夕',  status: 'pending' },
-  { id: 'so-007', patientId: 'P001', date: '2026-05-02', kind: '検', name: '血液検査（生化学）',  status: 'pending' },
-  { id: 'so-008', patientId: 'P001', date: '2026-05-01', kind: '処', name: '採血',                status: 'done' },
+  { id: 'so-001', patientId: 'P001', date: '2026-08-22', kind: '薬', name: 'リスパダール 1mg 朝',  status: 'done' },
+  { id: 'so-002', patientId: 'P001', date: '2026-08-22', kind: '薬', name: 'リスパダール 1mg 夕',  status: 'done' },
+  { id: 'so-003', patientId: 'P001', date: '2026-08-23', kind: '薬', name: 'リスパダール 1mg 朝',  status: 'done' },
+  { id: 'so-004', patientId: 'P001', date: '2026-08-23', kind: '薬', name: 'リスパダール 1mg 夕',  status: 'done' },
+  { id: 'so-005', patientId: 'P001', date: '2026-08-24', kind: '薬', name: 'リスパダール 1mg 朝',  status: 'done' },
+  { id: 'so-006', patientId: 'P001', date: '2026-08-24', kind: '薬', name: 'リスパダール 1mg 夕',  status: 'pending' },
+  { id: 'so-007', patientId: 'P001', date: '2026-08-24', kind: '検', name: '血液検査（生化学）',  status: 'pending' },
+  { id: 'so-008', patientId: 'P001', date: '2026-08-23', kind: '処', name: '採血',                status: 'done' },
 ];
 
 // ---- 検査結果 ----
 export const INITIAL_LAB_RESULTS: LabResultEntry[] = [
   {
-    id: 'lr-001', patientId: 'P001', date: '2026-04-15', ticketName: '血液検査（生化学）',
+    id: 'lr-001', patientId: 'P001', date: '2026-08-07', ticketName: '血液検査（生化学）',
     status: 'available',
     items: [
       { name: 'AST', value: 22, unit: 'U/L' },
@@ -235,7 +237,7 @@ export const INITIAL_LAB_RESULTS: LabResultEntry[] = [
     ],
   },
   {
-    id: 'lr-002', patientId: 'P001', date: '2026-04-30', ticketName: '血液検査（生化学）',
+    id: 'lr-002', patientId: 'P001', date: '2026-08-22', ticketName: '血液検査（生化学）',
     status: 'available',
     items: [
       { name: 'AST', value: 24, unit: 'U/L' },
@@ -244,7 +246,7 @@ export const INITIAL_LAB_RESULTS: LabResultEntry[] = [
     ],
   },
   {
-    id: 'lr-003', patientId: 'P001', date: '2026-05-02', ticketName: '血液検査（生化学）',
+    id: 'lr-003', patientId: 'P001', date: '2026-08-24', ticketName: '血液検査（生化学）',
     status: 'pending',  // 「待ち」: 表示しない
     items: [],
   },
@@ -253,20 +255,20 @@ export const INITIAL_LAB_RESULTS: LabResultEntry[] = [
 // ---- 移動状況（オレンジバー表示用） ----
 export const INITIAL_MOVEMENT_SEGMENTS: MovementSegment[] = [
   // P001 山田 — 病室在床（連続）
-  { id: 'ms-001', patientId: 'P001', kind: 'room', startAt: '2026-04-26T00:00:00', endAt: '2026-05-02T23:59:59', label: '101A' },
+  { id: 'ms-001', patientId: 'P001', kind: 'room', startAt: '2026-08-18T00:00:00', endAt: '2026-08-24T23:59:59', label: '101A' },
   // P003 鈴木 — 隔離期間
-  { id: 'ms-002', patientId: 'P003', kind: 'room',      startAt: '2026-04-26T00:00:00', endAt: '2026-05-02T23:59:59', label: '102A' },
-  { id: 'ms-003', patientId: 'P003', kind: 'isolation', startAt: '2026-04-28T15:00:00', endAt: '2026-05-02T23:59:59' },
+  { id: 'ms-002', patientId: 'P003', kind: 'room',      startAt: '2026-08-18T00:00:00', endAt: '2026-08-24T23:59:59', label: '102A' },
+  { id: 'ms-003', patientId: 'P003', kind: 'isolation', startAt: '2026-08-20T15:00:00', endAt: '2026-08-24T23:59:59' },
   // P006 伊藤 — 外出
-  { id: 'ms-004', patientId: 'P006', kind: 'room',   startAt: '2026-04-26T00:00:00', endAt: '2026-05-02T23:59:59', label: '104A' },
-  { id: 'ms-005', patientId: 'P006', kind: 'outing', startAt: '2026-05-02T10:00:00', endAt: '2026-05-02T17:00:00' },
+  { id: 'ms-004', patientId: 'P006', kind: 'room',   startAt: '2026-08-18T00:00:00', endAt: '2026-08-24T23:59:59', label: '104A' },
+  { id: 'ms-005', patientId: 'P006', kind: 'outing', startAt: '2026-08-24T10:00:00', endAt: '2026-08-24T17:00:00' },
 ];
 
 // ---- 看護記録サンプル ----
 export const INITIAL_NURSING_RECORDS: NursingRecord[] = [
   {
     id: 'nr-001', patientId: 'P001', title: '気分変動',
-    recordedAt: '2026-05-01T10:30:00', shift: 'day', formType: 'soap',
+    recordedAt: '2026-08-23T10:30:00', shift: 'day', formType: 'soap',
     body: {
       formType: 'soap',
       body: {
@@ -279,11 +281,11 @@ export const INITIAL_NURSING_RECORDS: NursingRecord[] = [
     connections: ['flowsheet', 'handover'],
     reportTargets: [{ staffId: 'st-tamura', role: '確' }],
     tags: ['看護記録'],
-    recordedBy: 'st-yamamoto', registeredAt: '2026-05-01T10:32:00',
+    recordedBy: 'st-yamamoto', registeredAt: '2026-08-23T10:32:00',
   },
   {
     id: 'nr-002', patientId: 'P001', title: '転倒リスク',
-    recordedAt: '2026-05-02T14:00:00', shift: 'day', formType: 'chronological',
+    recordedAt: '2026-08-24T14:00:00', shift: 'day', formType: 'chronological',
     body: {
       formType: 'chronological',
       body: {
@@ -293,7 +295,7 @@ export const INITIAL_NURSING_RECORDS: NursingRecord[] = [
     connections: ['flowsheet'],
     reportTargets: [],
     tags: ['看護記録', 'リスク管理'],
-    recordedBy: 'st-sasaki', registeredAt: '2026-05-02T14:05:00',
+    recordedBy: 'st-sasaki', registeredAt: '2026-08-24T14:05:00',
   },
 ];
 
@@ -301,13 +303,13 @@ export const INITIAL_NURSING_RECORDS: NursingRecord[] = [
 export const INITIAL_SLEEP_LOGS: SleepLog[] = [
   {
     id: 'sl-001', patientId: 'P001',
-    startAt: '2026-05-01T22:00:00', endAt: '2026-05-02T05:30:00',
-    state: '入眠', registeredAt: '2026-05-02T06:00:00', registeredBy: 'st-sasaki',
+    startAt: '2026-08-23T22:00:00', endAt: '2026-08-24T05:30:00',
+    state: '入眠', registeredAt: '2026-08-24T06:00:00', registeredBy: 'st-sasaki',
   },
   {
     id: 'sl-002', patientId: 'P001',
-    startAt: '2026-05-02T02:00:00', endAt: '2026-05-02T02:30:00',
-    state: '中途覚醒', registeredAt: '2026-05-02T06:00:00', registeredBy: 'st-sasaki',
+    startAt: '2026-08-24T02:00:00', endAt: '2026-08-24T02:30:00',
+    state: '中途覚醒', registeredAt: '2026-08-24T06:00:00', registeredBy: 'st-sasaki',
   },
 ];
 

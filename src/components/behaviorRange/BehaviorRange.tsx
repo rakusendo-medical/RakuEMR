@@ -86,7 +86,7 @@ const BehaviorRange: React.FC = () => {
                 <MenuItem value="開放病棟">開放病棟</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={6}><TextField label="開始日" type="date" size="small" fullWidth defaultValue="2026-02-24" InputLabelProps={{ shrink: true }} /></Grid>
+            <Grid item xs={6}><TextField label="開始日" type="date" size="small" fullWidth defaultValue="2026-08-24" InputLabelProps={{ shrink: true }} /></Grid>
             <Grid item xs={12}><TextField label="備考" multiline rows={2} size="small" fullWidth /></Grid>
           </Grid>
         </DialogContent>

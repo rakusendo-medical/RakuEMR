@@ -15,7 +15,7 @@ test.describe('指示簿 臨時オーダの確認・変更', () => {
     const send = page.getByRole('dialog').filter({ hasText: 'オーダ送信' });
     await send.getByRole('button', { name: '検査', exact: true }).click();
     const testDlg = page.getByRole('dialog').filter({ hasText: '検査セット' });
-    await testDlg.getByLabel('実施予定日').fill('2026-05-19');
+    await testDlg.getByLabel('実施予定日').fill('2026-08-24');
     await testDlg.getByRole('button', { name: '院内セット1' }).click();
     await testDlg.getByRole('button', { name: '登録' }).click();
     await send.getByRole('button', { name: '指示', exact: true }).click();
@@ -34,13 +34,13 @@ test.describe('指示簿 臨時オーダの確認・変更', () => {
     const edit = page.getByRole('dialog').filter({ hasText: '（編集）' });
     await expect(edit).toBeVisible();
     // 予定日・備考を変更
-    await edit.getByLabel('予定日 検査', { exact: true }).fill('2026-05-25');
+    await edit.getByLabel('予定日 検査', { exact: true }).fill('2026-08-30');
     await edit.getByLabel('備考 検査', { exact: true }).fill('至急対応');
     await edit.getByRole('button', { name: '保存' }).click();
     await expect(edit).not.toBeVisible();
 
     // 一覧の該当行の期間（予定日）が 2026-05-25 に更新される
-    await expect(page.getByRole('row', { name: /総蛋白/ })).toContainText('2026-05-25');
+    await expect(page.getByRole('row', { name: /総蛋白/ })).toContainText('2026-08-30');
   });
 
   test('処方系（2行表示）を行クリック→用量コメント・日数・予定日を変更→一覧に反映', async ({ page }) => {
@@ -80,14 +80,14 @@ test.describe('指示簿 臨時オーダの確認・変更', () => {
     // 用量コメント・日数・予定日を変更して保存
     await edit.getByLabel('用量コメント 処方 アキネトン錠1mg', { exact: true }).fill('朝のみ');
     await edit.getByLabel('日数 処方 Rp1', { exact: true }).fill('14');
-    await edit.getByLabel('予定日 処方', { exact: true }).fill('2026-05-26');
+    await edit.getByLabel('予定日 処方', { exact: true }).fill('2026-08-31');
     await edit.getByRole('button', { name: '保存' }).click();
     await expect(edit).not.toBeVisible();
 
     // 一覧の該当行に、用量コメント（《用量:朝のみ》）・日数(14日)・予定日(2026-05-26)が反映される
     const updated = page.getByRole('row', { name: /アキネトン錠1mg/ });
     await expect(updated).toContainText('朝のみ');
-    await expect(updated).toContainText('2026-05-26');
+    await expect(updated).toContainText('2026-08-31');
     await expect(updated).toContainText('14');
   });
 });
