@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   AdmissionHistory, IsolationConfirmSignKind, IsolationHistoryAudit, IsolationOrder,
   MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, Patient,
-  PrescriptionDraft, PrescriptionRpRow, WardId,
+  PrescriptionDraft, PrescriptionRpRow, ReliefCategory, WardId,
 } from '../types';
 
 /**
@@ -160,6 +160,12 @@ interface AppState {
   // ep-11: 指示簿の臨時オーダ編集（オーダ id → オーバーレイ）。表示側で適用。非永続。
   orderOverrides: Record<string, OrderOverride>;
   setOrderOverride: (id: string, patch: OrderOverride) => void;
+
+  // 患者情報の属性で設定した救護区分（担送/護送/独歩/未入力）の上書き。
+  //   患者情報タブで保存 → 病棟マップのバッジに反映（seed の Patient.reliefCategory を上書き）。
+  //   モックのためセッション限定・非永続（リロードで seed 値に戻る）。
+  patientReliefCategories: Record<string, ReliefCategory>;
+  setReliefCategory: (patientId: string, category: ReliefCategory) => void;
 
   // ep-11 us-54: 「前回どおり（DO）」。処方種別（入院定時／処方）ごとに直近作成した処方内容を記憶し、
   //   次に同じ種別ボタンで処方ダイアログを開いたとき初期値としてセットする。セッション限定・非永続化。
@@ -371,6 +377,10 @@ export const useAppStore = create<AppState>()(
       orderOverrides: {},
       setOrderOverride: (id, patch) =>
         set((state) => ({ orderOverrides: { ...state.orderOverrides, [id]: { ...state.orderOverrides[id], ...patch } } })),
+
+      patientReliefCategories: {},
+      setReliefCategory: (patientId, category) =>
+        set((state) => ({ patientReliefCategories: { ...state.patientReliefCategories, [patientId]: category } })),
 
       // ep-11 us-54: 前回どおり（DO）用の処方内容記憶（非永続）
       lastPrescriptionByType: {},
