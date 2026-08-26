@@ -29,6 +29,33 @@ export type Revision = {
 
 export const REVISIONS: Revision[] = [
   {
+    version: 'ver0.38',
+    date: '8/26',
+    fullDate: '2026-08-26',
+    // context はヘッダー「更新履歴」リンクの表示名になる。E2E のボタン名（例「病棟マップ」「属性」）と
+    // 部分一致すると getByRole 特定が衝突するため、これらの語を含めない（既知の制約）。
+    context: '救護区分の追加（移送区分バッジ）',
+    summary: '患者情報の属性に「救護区分」（担送/護送/独歩/未入力・初期値は未入力）を追加し、設定値を病棟マップの各患者に1文字バッジで表示するようにしました。',
+    items: [
+      {
+        title: '属性に救護区分セレクトを追加',
+        detail: '患者情報タブ 属性サブタブの個人情報に、救護区分（担送/護送/独歩/未入力の4択・初期値「未入力」）のセレクトを追加。移送時の介助度を表す。実装: src/components/karte/patientInfo/AttributesSubview.tsx。型は Patient.reliefCategory（未設定は「未入力」とみなす）。',
+      },
+      {
+        title: '病棟マップに救護区分バッジ（1文字）を表示',
+        detail: '病棟マップの各患者（占有ベッド）に救護区分バッジを表示。横幅を抑えるため表示は1文字（担/護/独/未・未入力も表示）で、ホバー/aria-label に正式名を補う。凡例に「救護区分:」を4系統目として追加。実装: src/components/common/ReliefBadge.tsx、WardMap.tsx。区分マスタ・配色・1文字は src/data/mockData.ts の RELIEF_CATEGORY_CONFIG に集約（差し替え可能）。',
+      },
+      {
+        title: '属性→病棟マップの連携（store経由）',
+        detail: '属性で保存した救護区分を store（patientReliefCategories）に保持し、病棟マップが「store上書き ＞ seedのPatient.reliefCategory ＞ 既定 未入力」の順で解決して表示。モックのためセッション限定・非永続（リロードで seed 値に戻る）。デモ用に一部患者へ初期値をシード。',
+      },
+      {
+        title: 'SPEC記載場所',
+        detail: 'ep-15 us-34（画面要素 属性サブタブ／AC-9／補足「救護区分」）、ep-01 us-01（画面要素④救護区分／凡例4系統／AC-3c／補足「④救護区分」）、ep-01 _epic（スコープ）。',
+      },
+    ],
+  },
+  {
     version: 'ver0.37',
     date: '8/24',
     fullDate: '2026-08-24',
