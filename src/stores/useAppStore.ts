@@ -238,6 +238,13 @@ interface AppState {
   editAdmissionHistory: (id: string, edit: Partial<AdmissionHistory>) => void;
   addAdmissionHistory: (record: AdmissionHistory) => void;
   removeAdmissionHistory: (id: string) => void;
+  /**
+   * ep-04 us-10: 入院取消（管理者確認 2026-09-04）。入院期間ごと物理削除するのではなく、
+   * 取消日時・削除理由分類・理由を期間 ID に紐付けて保持する（レコードは残す）。
+   * 分類が「入力誤り」（操作ミス）の取消だけは入院歴一覧に表示しない（AdmissionHistoryView 側で判定）。
+   */
+  admissionCancellations: Record<string, { cancelledAt: string; category: string; reason: string }>;
+  cancelAdmissionPeriod: (periodId: string, info: { cancelledAt: string; category: string; reason: string }) => void;
 
   // 退院確定（退院後診療区分=通院）による外来化。モックのためセッション限定（非永続化・リロードで戻る）。
   //   ① 対象患者の実効 admissionState を 'outpatient' に上書き（カルテ表示・患者一覧で参照）
@@ -513,6 +520,11 @@ export const useAppStore = create<AppState>()(
             ? state.removedAdmissionHistoryIds
             : [...state.removedAdmissionHistoryIds, id],
         })),
+      admissionCancellations: {},
+      cancelAdmissionPeriod: (periodId, info) =>
+        set((state) => ({
+          admissionCancellations: { ...state.admissionCancellations, [periodId]: info },
+        })),
 
       // ===== ep-05 隔離拘束指示 =====
       dynamicIsolationOrders: [],
@@ -682,16 +694,19 @@ export const useAppStore = create<AppState>()(
         admissionHistoryEdits: state.admissionHistoryEdits,
         addedAdmissionHistory: state.addedAdmissionHistory,
         removedAdmissionHistoryIds: state.removedAdmissionHistoryIds,
+        admissionCancellations: state.admissionCancellations,
         dynamicIsolationOrders: state.dynamicIsolationOrders,
         dynamicObservationRecords: state.dynamicObservationRecords,
         isolationHistoryAudits: state.isolationHistoryAudits,
         consultationFinishedMap: state.consultationFinishedMap,
         patientListSearchCondition: state.patientListSearchCondition,
       }),
-      version: 3,
+      version: 4,
       // v2: scheduledMoves を永続化対象から除外（移動はセッション限定）。既存 localStorage から掃除する。
       // v3: ep-07 観察記録の未来日入力不可を常時適用に固定（optionalFeatures.observationFutureBlock を掃除）。
       //     あわせて dynamicMedicalRecords を永続化対象から除外（オーダ記事はセッション限定・既存永続分も掃除）。
+      // v4: ep-04 入院取消を論理削除（admissionCancellations）に変更。取消情報を伴わない
+      //     status:'キャンセル' の編集差分が残っていると入院取消ボタンが出ないため掃除する。
       migrate: (persisted: unknown, version: number) => {
         if (persisted && typeof persisted === 'object') {
           const p = persisted as Record<string, unknown>;
@@ -700,6 +715,16 @@ export const useAppStore = create<AppState>()(
             delete (p.optionalFeatures as Record<string, unknown>).observationFutureBlock;
           }
           if (version < 3) delete p.dynamicMedicalRecords;
+          if (version < 4 && p.admissionHistoryEdits && typeof p.admissionHistoryEdits === 'object') {
+            const edits = p.admissionHistoryEdits as Record<string, Record<string, unknown>>;
+            for (const [id, edit] of Object.entries(edits)) {
+              if (edit && edit.status === 'キャンセル') {
+                const { status: _dropped, ...rest } = edit;
+                if (Object.keys(rest).length === 0) delete edits[id];
+                else edits[id] = rest;
+              }
+            }
+          }
         }
         return persisted as AppState;
       },
