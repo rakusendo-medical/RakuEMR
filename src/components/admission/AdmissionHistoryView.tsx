@@ -67,7 +67,12 @@ const AdmissionHistoryView: React.FC = () => {
         }
         return merged;
       });
-    const added = addedAdmissionHistory.filter((r) => !removedAdmissionHistoryIds.includes(r.id));
+    // 追加レコード（過去の形態変更で作成した形態レコード）にも編集差分を適用する。
+    // これが無いと、2回目以降の形態変更で旧形態レコード（＝追加レコード）に設定した
+    // dischargeDate（形態終了日時）が反映されず、複数の形態に「現在」が付いてしまう。
+    const added = addedAdmissionHistory
+      .filter((r) => !removedAdmissionHistoryIds.includes(r.id))
+      .map((r) => ({ ...r, ...admissionHistoryEdits[r.id] } as AdmissionHistory));
     return [...base, ...added];
   }, [admissionHistoryEdits, addedAdmissionHistory, removedAdmissionHistoryIds, outpatientDischarges]);
 
@@ -155,12 +160,26 @@ const AdmissionHistoryView: React.FC = () => {
   const isLatestPeriodRecord = !!selectedRecord && selectedRecord.periodId === latestPeriod?.periodId;
   const isCurrentForm = !!selectedRecord && !selectedRecord.dischargeDate; // 退院日 or 形態変更日が未設定 = 現形態
   const isFormChange = !!selectedRecord?.isAdmitFormChange;
+  // 「その退院日（dischargeDate）が形態変更で閉じられたものか」＝期間内で最後でない dischargeDate 付きレコード。
+  // 初期入院レコードでも、後続の形態変更で閉じられていれば「退院」ではなく「形態終了」となる（issue #486）。
+  const formChangeEndedIds = React.useMemo(() => {
+    const s = new Set<string>();
+    for (const period of periods) {
+      period.items.forEach((it, i) => {
+        if (it.dischargeDate && i < period.items.length - 1) s.add(it.id);
+      });
+    }
+    return s;
+  }, [periods]);
+  const selectedEndedByFormChange = !!selectedRecord && formChangeEndedIds.has(selectedRecord.id);
   const hasIsDischargedPeriod = latestPeriod?.items.some((r) => r.status === '退院済') ?? false;
-  // 入院取消可: 直近期間が現在入院中、かつ最初の形態レコード選択
+  // 入院取消可: 直近期間が現在入院中、かつ最初の形態レコード選択。
+  // ただし最初の形態が形態変更で閉じられている（dischargeDate あり＝もう現形態でない）場合は不要のため出さない（issue #486）。
   const isInitialOfLatestPeriod = !!selectedRecord
     && selectedRecord.periodId === latestPeriod?.periodId
     && selectedRecord.id === latestPeriod?.items[0]?.id;
   const canCancelAdmission = isInitialOfLatestPeriod
+    && isCurrentForm // 形態変更で閉じられていない＝まだ現形態
     && (latestPeriod?.items.some((r) => r.status === '入院中') ?? false);
   const canCancelDischarge = hasIsDischargedPeriod && isInitialOfLatestPeriod;
 
@@ -355,9 +374,12 @@ const AdmissionHistoryView: React.FC = () => {
                     期間 {pi + 1}: {fmtJP(first.admitDate)} 〜 {periodEnd}
                   </Typography>
                   <Stack spacing={0.5} sx={{ mt: 0.5, pl: 1 }}>
-                    {period.items.map((item) => {
+                    {period.items.map((item, idx) => {
                       const isSelected = item.id === selectedRecordId;
                       const isCurrent = !item.dischargeDate;
+                      // 期間内で最後以外のレコードは、次の形態への切替（形態変更）で閉じられている
+                      // ＝実際の退院ではないため「に形態変更」と明示する（issue #486）。
+                      const endedByFormChange = !!item.dischargeDate && idx < period.items.length - 1;
                       return (
                         <Box
                           key={item.id}
@@ -384,7 +406,9 @@ const AdmissionHistoryView: React.FC = () => {
                             )}
                           </Stack>
                           <Typography variant="caption" color="text.secondary">
-                            {fmtJP(item.admitDate)} 〜 {item.dischargeDate ? fmtJP(item.dischargeDate) : '継続中'}
+                            {fmtJP(item.admitDate)} 〜 {item.dischargeDate
+                              ? `${fmtJP(item.dischargeDate)}${endedByFormChange ? ' に形態変更' : ''}`
+                              : '継続中'}
                           </Typography>
                         </Box>
                       );
@@ -462,10 +486,11 @@ const AdmissionHistoryView: React.FC = () => {
                   <Stack direction="row" spacing={1.5}>
                     <TextField
                       size="small"
-                      label="退院日"
+                      label={selectedEndedByFormChange ? '形態終了日時' : '退院日'}
                       value={fmtJP(selectedRecord.dischargeDate)}
                       InputProps={{ readOnly: true }}
                       sx={{ flex: 1 }}
+                      helperText={selectedEndedByFormChange ? '次の形態への切替日時（退院ではありません）' : undefined}
                     />
                     <TextField size="small" label="指示医" value={selectedRecord.doctorName} InputProps={{ readOnly: true }} sx={{ flex: 1 }} />
                   </Stack>
