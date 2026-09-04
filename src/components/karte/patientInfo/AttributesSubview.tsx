@@ -9,7 +9,8 @@ import {
 } from '@mui/material';
 import { useAppStore } from '../../../stores/useAppStore';
 import { WARD_LABELS } from '../../../types';
-import type { Patient } from '../../../types';
+import type { Patient, ReliefCategory } from '../../../types';
+import { RELIEF_CATEGORY_OPTIONS, DEFAULT_RELIEF_CATEGORY } from '../../../data/mockData';
 import type { KarteMode } from '../KartePage';
 import { useDirtyForm } from './useDirtyForm';
 import SubviewActionBar from './SubviewActionBar';
@@ -21,6 +22,7 @@ interface AttributesForm {
   height: string;
   weight: string;
   bloodType: string;
+  reliefCategory: ReliefCategory;
   deceased: 'no' | 'yes';
 }
 
@@ -40,6 +42,9 @@ export default function AttributesSubview({
   discardSignal,
 }: AttributesSubviewProps) {
   const showSnackbar = useAppStore((s) => s.showSnackbar);
+  const setReliefCategory = useAppStore((s) => s.setReliefCategory);
+  // 救護区分の初期値: store 上書き ＞ seed の Patient.reliefCategory ＞ 既定「未入力」。
+  const reliefOverride = useAppStore((s) => s.patientReliefCategories[patient.id]);
 
   const initial: AttributesForm = {
     nickname: '',
@@ -48,6 +53,7 @@ export default function AttributesSubview({
     height: '',
     weight: '',
     bloodType: patient.bloodType ?? '不明',
+    reliefCategory: reliefOverride ?? patient.reliefCategory ?? DEFAULT_RELIEF_CATEGORY,
     deceased: 'no',
   };
 
@@ -63,6 +69,8 @@ export default function AttributesSubview({
   };
 
   const handleSave = () => {
+    // 救護区分は病棟マップのバッジへ反映するため store へ保存（モック・セッション限定）。
+    setReliefCategory(patient.id, form.reliefCategory);
     save();
     showSnackbar('属性を保存しました（モック）', 'success');
   };
@@ -135,6 +143,23 @@ export default function AttributesSubview({
               {BLOOD_TYPES.map((b) => (
                 <MenuItem key={b} value={b}>
                   {b}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={6} md={2}>
+            <TextField
+              size="small"
+              fullWidth
+              select
+              label="救護区分"
+              value={form.reliefCategory}
+              onChange={(e) => update('reliefCategory', e.target.value as ReliefCategory)}
+              helperText="病棟マップにバッジ表示"
+            >
+              {RELIEF_CATEGORY_OPTIONS.map((c) => (
+                <MenuItem key={c} value={c}>
+                  {c}
                 </MenuItem>
               ))}
             </TextField>

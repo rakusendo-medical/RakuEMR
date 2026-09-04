@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Box, Stack, Typography, Tabs, Tab, FormControl, InputLabel, Select, MenuItem,
-  Button, TextField, Paper, Chip, Divider, IconButton, Tooltip,
+  Button, TextField, Paper, Chip, Divider, IconButton, Tooltip, Alert,
 } from '@mui/material';
 import {
   Restaurant as RestaurantIcon, Lock as LockIcon,
@@ -27,6 +27,13 @@ const fmtJP = (iso?: string) => {
   return t ? `${d.replace(/-/g, '/')} ${t}` : d.replace(/-/g, '/');
 };
 
+/** 取消日時などに使う現在時刻スタンプ（YYYY/MM/DD HH:mm） */
+const nowTimestamp = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 /**
  * ep-04 us-10: 入院歴・退院歴ビュー。
  *
@@ -42,6 +49,8 @@ const AdmissionHistoryView: React.FC = () => {
   const editAdmissionHistory = useAppStore((s) => s.editAdmissionHistory);
   const addAdmissionHistory = useAppStore((s) => s.addAdmissionHistory);
   const removeAdmissionHistory = useAppStore((s) => s.removeAdmissionHistory);
+  const admissionCancellations = useAppStore((s) => s.admissionCancellations);
+  const cancelAdmissionPeriod = useAppStore((s) => s.cancelAdmissionPeriod);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
   const storeSelectedPatient = useAppStore((s) => s.selectedPatient);
   const outpatientDischarges = useAppStore((s) => s.outpatientDischarges);
@@ -67,7 +76,12 @@ const AdmissionHistoryView: React.FC = () => {
         }
         return merged;
       });
-    const added = addedAdmissionHistory.filter((r) => !removedAdmissionHistoryIds.includes(r.id));
+    // 追加レコード（過去の形態変更で作成した形態レコード）にも編集差分を適用する。
+    // これが無いと、2回目以降の形態変更で旧形態レコード（＝追加レコード）に設定した
+    // dischargeDate（形態終了日時）が反映されず、複数の形態に「現在」が付いてしまう。
+    const added = addedAdmissionHistory
+      .filter((r) => !removedAdmissionHistoryIds.includes(r.id))
+      .map((r) => ({ ...r, ...admissionHistoryEdits[r.id] } as AdmissionHistory));
     return [...base, ...added];
   }, [admissionHistoryEdits, addedAdmissionHistory, removedAdmissionHistoryIds, outpatientDischarges]);
 
@@ -102,8 +116,13 @@ const AdmissionHistoryView: React.FC = () => {
       return { periodId, items: sorted };
     });
     result.sort((a, b) => (a.items[0].admitDate < b.items[0].admitDate ? -1 : 1));
-    return result;
-  }, [allHistories, selectedPatientId]);
+    // 入院取消のうち「入力誤り」（操作ミス）によるものは一覧に出さない。
+    //   データ自体は残す（admissionCancellations に取消情報を保持）。管理者確認 2026-09-04。
+    return result.filter((p) => admissionCancellations[p.periodId]?.category !== '入力誤り');
+  }, [allHistories, selectedPatientId, admissionCancellations]);
+
+  /** 期間の取消情報（あれば取消済） */
+  const cancellationOf = (periodId: string) => admissionCancellations[periodId];
 
   // 直近期間 = 最新期間（配列末尾）
   const latestPeriod = periods[periods.length - 1];
@@ -152,16 +171,42 @@ const AdmissionHistoryView: React.FC = () => {
   }, [selectedRecordId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 操作ボタンの表示条件
+  // 取消済の期間は履歴として参照するだけ（登録・形態変更・取消系はすべて出さない）
+  const selectedCancellation = selectedRecord ? cancellationOf(selectedRecord.periodId) : undefined;
+  const selectedPeriodCancelled = !!selectedCancellation;
   const isLatestPeriodRecord = !!selectedRecord && selectedRecord.periodId === latestPeriod?.periodId;
   const isCurrentForm = !!selectedRecord && !selectedRecord.dischargeDate; // 退院日 or 形態変更日が未設定 = 現形態
   const isFormChange = !!selectedRecord?.isAdmitFormChange;
+  // 「その退院日（dischargeDate）が形態変更で閉じられたものか」＝期間内で最後でない dischargeDate 付きレコード。
+  // 初期入院レコードでも、後続の形態変更で閉じられていれば「退院」ではなく「形態終了」となる（issue #486）。
+  const formChangeEndedIds = React.useMemo(() => {
+    const s = new Set<string>();
+    for (const period of periods) {
+      period.items.forEach((it, i) => {
+        if (it.dischargeDate && i < period.items.length - 1) s.add(it.id);
+      });
+    }
+    return s;
+  }, [periods]);
+  const selectedEndedByFormChange = !!selectedRecord && formChangeEndedIds.has(selectedRecord.id);
   const hasIsDischargedPeriod = latestPeriod?.items.some((r) => r.status === '退院済') ?? false;
-  // 入院取消可: 直近期間が現在入院中、かつ最初の形態レコード選択
+  // 入院取消可: 直近期間が現在入院中、かつ最初の形態レコード選択。
+  // ただし最初の形態が形態変更で閉じられている（dischargeDate あり＝もう現形態でない）場合は不要のため出さない（issue #486）。
   const isInitialOfLatestPeriod = !!selectedRecord
     && selectedRecord.periodId === latestPeriod?.periodId
     && selectedRecord.id === latestPeriod?.items[0]?.id;
-  const canCancelAdmission = isInitialOfLatestPeriod
-    && (latestPeriod?.items.some((r) => r.status === '入院中') ?? false);
+  // 入院取消可: 直近入院歴の「現形態（継続中）」レコードを選択しているとき。
+  //   参考システムは「現在入院中の場合のみ表示／直近の入院歴のみ取消可能」なので、
+  //   形態変更で閉じられたレコードには出さず（issue #486）、現形態のレコードに出す。
+  //   ※最初の形態レコードに限定すると、形態変更歴のある患者は最初のレコードが閉じているため
+  //     入院中でも取り消せなくなる。
+  //   取消済かどうかは admissionCancellations（取消情報）を正とする。レコードの status だけで
+  //   「入院中か」を見ると、取消情報を伴わない 'キャンセル' が残ったときに出なくなるため
+  //   「退院済でない」で判定する。
+  const canCancelAdmission = isLatestPeriodRecord
+    && isCurrentForm // 形態変更で閉じられていない＝まだ現形態
+    && !selectedPeriodCancelled
+    && !hasIsDischargedPeriod;
   const canCancelDischarge = hasIsDischargedPeriod && isInitialOfLatestPeriod;
 
   // ダイアログ
@@ -263,14 +308,24 @@ const AdmissionHistoryView: React.FC = () => {
       // 選択を前形態に
       if (prev) setSelectedRecordId(prev.id);
     } else if (action === 'cancel-admission') {
-      // 期間内の全レコードを削除
-      const ids = (latestPeriod?.items ?? []).map((r) => r.id);
-      ids.forEach((id) => removeAdmissionHistory(id));
+      // 管理者確認（2026-09-04）: 入院取消はレコードを物理削除せず、取消済として残す。
+      //   分類が「入力誤り」（操作ミス）の取消だけは入院歴一覧に表示しない。
+      (latestPeriod?.items ?? []).forEach((r) => editAdmissionHistory(r.id, { status: 'キャンセル' }));
+      cancelAdmissionPeriod(selectedRecord.periodId, {
+        cancelledAt: nowTimestamp(),
+        category: params.category,
+        reason: params.reason,
+      });
       appendMedicalRecord(selectedPatientId, buildMedicalRecord(
         `入院取消／ 分類: ${params.category}／理由: ${params.reason || '(未入力)'}／入院確定オーダ・食事療法も連動取消`,
         ['入院取消'],
       ));
-      showSnackbar('入院を取り消しました（入院確定オーダ・食事療法も連動取消）', 'success');
+      showSnackbar(
+        params.category === '入力誤り'
+          ? '入院を取り消しました（入力誤りのため入院歴一覧には表示しません）'
+          : '入院を取り消しました（入院歴一覧には取消済として残ります）',
+        'success',
+      );
     } else if (action === 'cancel-discharge') {
       // 直近期間の最後のレコードを「入院中」に戻す（dischargeDate 等を消す）
       const last = latestPeriod?.items[latestPeriod.items.length - 1];
@@ -348,19 +403,33 @@ const AdmissionHistoryView: React.FC = () => {
             {periods.map((period, pi) => {
               const first = period.items[0];
               const last = period.items[period.items.length - 1];
+              // 取消済の期間は「入院中」「退院日」ではなく取消済として見せる（管理者確認 2026-09-04）
+              const cancellation = cancellationOf(period.periodId);
               const periodEnd = last.status === '退院済' ? fmtJP(last.dischargeDate) : '入院中';
               return (
-                <Box key={period.periodId}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                    期間 {pi + 1}: {fmtJP(first.admitDate)} 〜 {periodEnd}
-                  </Typography>
+                <Box key={period.periodId} data-testid="admission-history-period">
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, flex: 1 }}>
+                      期間 {pi + 1}: {fmtJP(first.admitDate)} 〜 {cancellation ? '' : periodEnd}
+                    </Typography>
+                    {cancellation && (
+                      <Tooltip title={`${cancellation.cancelledAt} 取消／分類: ${cancellation.category}${cancellation.reason ? `／理由: ${cancellation.reason}` : ''}`}>
+                        <Chip label="取消済" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#f1f5f9', color: '#64748b' }} />
+                      </Tooltip>
+                    )}
+                  </Stack>
                   <Stack spacing={0.5} sx={{ mt: 0.5, pl: 1 }}>
-                    {period.items.map((item) => {
+                    {period.items.map((item, idx) => {
                       const isSelected = item.id === selectedRecordId;
-                      const isCurrent = !item.dischargeDate;
+                      // 取消済の期間は「現在（継続中）」ではないので現在バッジ・継続中表記を出さない
+                      const isCurrent = !item.dischargeDate && !cancellation;
+                      // 期間内で最後以外のレコードは、次の形態への切替（形態変更）で閉じられている
+                      // ＝実際の退院ではないため「に形態変更」と明示する（issue #486）。
+                      const endedByFormChange = !!item.dischargeDate && idx < period.items.length - 1;
                       return (
                         <Box
                           key={item.id}
+                          data-testid="admission-history-record"
                           onClick={() => setSelectedRecordId(item.id)}
                           sx={{
                             p: 0.75,
@@ -382,9 +451,14 @@ const AdmissionHistoryView: React.FC = () => {
                             {isCurrent && (
                               <Chip label="現在" size="small" color="primary" sx={{ height: 18, fontSize: '0.625rem' }} />
                             )}
+                            {cancellation && (
+                              <Chip label="取消" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#f1f5f9', color: '#64748b' }} />
+                            )}
                           </Stack>
                           <Typography variant="caption" color="text.secondary">
-                            {fmtJP(item.admitDate)} 〜 {item.dischargeDate ? fmtJP(item.dischargeDate) : '継続中'}
+                            {fmtJP(item.admitDate)} 〜 {item.dischargeDate
+                              ? `${fmtJP(item.dischargeDate)}${endedByFormChange ? ' に形態変更' : ''}`
+                              : cancellation ? '取消済' : '継続中'}
                           </Typography>
                         </Box>
                       );
@@ -411,7 +485,8 @@ const AdmissionHistoryView: React.FC = () => {
                     </Typography>
                   )}
                 </Typography>
-                {isCurrentForm && <Chip label="現在の形態" size="small" color="primary" />}
+                {isCurrentForm && !selectedPeriodCancelled && <Chip label="現在の形態" size="small" color="primary" />}
+                {selectedPeriodCancelled && <Chip label="取消済" size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b' }} />}
                 {isFormChange && <Chip label="形態変更レコード" size="small" sx={{ bgcolor: '#fef3c7', color: '#a16207' }} />}
               </Stack>
 
@@ -444,6 +519,7 @@ const AdmissionHistoryView: React.FC = () => {
                     multiline rows={4}
                     value={admitReason}
                     onChange={(e) => setAdmitReason(e.target.value.slice(0, 3000))}
+                    disabled={selectedPeriodCancelled}
                     helperText={`${admitReason.length}/3000`}
                   />
                   {optionalFeatures.psychiatricLink && (
@@ -462,10 +538,11 @@ const AdmissionHistoryView: React.FC = () => {
                   <Stack direction="row" spacing={1.5}>
                     <TextField
                       size="small"
-                      label="退院日"
+                      label={selectedEndedByFormChange ? '形態終了日時' : '退院日'}
                       value={fmtJP(selectedRecord.dischargeDate)}
                       InputProps={{ readOnly: true }}
                       sx={{ flex: 1 }}
+                      helperText={selectedEndedByFormChange ? '次の形態への切替日時（退院ではありません）' : undefined}
                     />
                     <TextField size="small" label="指示医" value={selectedRecord.doctorName} InputProps={{ readOnly: true }} sx={{ flex: 1 }} />
                   </Stack>
@@ -480,7 +557,7 @@ const AdmissionHistoryView: React.FC = () => {
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 140 }}>
                       <InputLabel>転帰</InputLabel>
-                      <Select label="転帰" value={outcome} onChange={(e) => setOutcome(e.target.value)}>
+                      <Select label="転帰" value={outcome} disabled={selectedPeriodCancelled} onChange={(e) => setOutcome(e.target.value)}>
                         {['治癒', '軽快', '転院', '死亡', 'その他'].map((o) => (<MenuItem key={o} value={o}>{o}</MenuItem>))}
                       </Select>
                     </FormControl>
@@ -491,6 +568,7 @@ const AdmissionHistoryView: React.FC = () => {
                     multiline rows={3}
                     value={dischargeReason}
                     onChange={(e) => setDischargeReason(e.target.value.slice(0, 3000))}
+                    disabled={selectedPeriodCancelled}
                     helperText={`${dischargeReason.length}/3000`}
                   />
                   <TextField
@@ -499,11 +577,12 @@ const AdmissionHistoryView: React.FC = () => {
                     multiline rows={2}
                     value={postDischargeAction}
                     onChange={(e) => setPostDischargeAction(e.target.value.slice(0, 1000))}
+                    disabled={selectedPeriodCancelled}
                     helperText={`${postDischargeAction.length}/1000`}
                   />
                   <FormControl size="small" sx={{ maxWidth: 240 }}>
                     <InputLabel>帰住先</InputLabel>
-                    <Select label="帰住先" value={returnTo} onChange={(e) => setReturnTo(e.target.value)}>
+                    <Select label="帰住先" value={returnTo} disabled={selectedPeriodCancelled} onChange={(e) => setReturnTo(e.target.value)}>
                       <MenuItem value=""><em>未選択</em></MenuItem>
                       {MASTER_RESIDENCE_TYPES.map((r) => (<MenuItem key={r} value={r}>{r}</MenuItem>))}
                     </Select>
@@ -515,14 +594,35 @@ const AdmissionHistoryView: React.FC = () => {
               )}
 
               <Divider />
+              {selectedCancellation && (
+                <Alert
+                  severity="info"
+                  icon={false}
+                  data-testid="admission-cancelled-note"
+                  sx={{ py: 0.5, bgcolor: '#f1f5f9', color: '#334155' }}
+                >
+                  <Typography variant="body2" fontWeight={700} sx={{ mb: 0.25 }}>
+                    この入院は取り消されています（参照のみ）
+                  </Typography>
+                  <Typography variant="caption" component="div">
+                    取消日時: {selectedCancellation.cancelledAt} ／ 分類: {selectedCancellation.category}
+                    {selectedCancellation.reason ? ` ／ 理由: ${selectedCancellation.reason}` : ''}
+                  </Typography>
+                  <Typography variant="caption" component="div" color="text.secondary">
+                    取消済のため、登録・形態変更・取消の操作は行えません。
+                  </Typography>
+                </Alert>
+              )}
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
-                <Button variant="contained" onClick={handleRegister}>登録</Button>
-                {isCurrentForm && isLatestPeriodRecord && (
+                {!selectedPeriodCancelled && (
+                  <Button variant="contained" onClick={handleRegister}>登録</Button>
+                )}
+                {!selectedPeriodCancelled && isCurrentForm && isLatestPeriodRecord && (
                   <Button variant="outlined" color="primary" onClick={() => setFormChangeOpen(true)}>
                     形態変更
                   </Button>
                 )}
-                {isFormChange && (
+                {!selectedPeriodCancelled && isFormChange && (
                   <Button variant="outlined" color="warning" onClick={() => setDeleteReason({ open: true, action: 'cancel-form-change' })}>
                     変更取消
                   </Button>
@@ -532,7 +632,7 @@ const AdmissionHistoryView: React.FC = () => {
                     入院取消
                   </Button>
                 )}
-                {canCancelDischarge && (
+                {!selectedPeriodCancelled && canCancelDischarge && (
                   <Button variant="outlined" color="error" onClick={() => setDeleteReason({ open: true, action: 'cancel-discharge' })}>
                     退院取消
                   </Button>

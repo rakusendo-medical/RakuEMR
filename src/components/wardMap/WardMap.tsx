@@ -12,9 +12,11 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, RELIEF_CATEGORY_OPTIONS, RELIEF_CATEGORY_CONFIG, DEFAULT_RELIEF_CATEGORY, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
+import type { ReliefCategory } from '../../types';
 import StatusBadge from '../common/StatusBadge';
+import ReliefBadge from '../common/ReliefBadge';
 import { useAppStore } from '../../stores/useAppStore';
 import BedFlagIcons, { BedFlagLegend } from './BedFlagIcons';
 import RelatedFeatureDialogs from './RelatedFeatureDialogs';
@@ -37,8 +39,14 @@ const WardMap: React.FC = () => {
     cancelledMoveIds, cancelMove, moveEdits, updateMove,
     pendingOrders, confirmedAdmissionIds,
     sidebarOpen,
+    patientReliefCategories,
   } = useAppStore();
   const sidebarWidth = sidebarOpen ? 220 : 60;
+  // 患者の救護区分（バッジ用）: 属性で保存した上書き ＞ seed の Patient.reliefCategory ＞ 既定「未入力」。
+  const reliefOf = (patientId: string): ReliefCategory =>
+    patientReliefCategories[patientId]
+    ?? PATIENTS.find((p) => p.id === patientId)?.reliefCategory
+    ?? DEFAULT_RELIEF_CATEGORY;
   const [ward, setWard] = React.useState<WardId>('ward1');
   // 「時刻経過で反映」を満たすため、一定間隔で現在時刻を更新して displayedRooms／移動予定アイコンを再計算させる。
   //   （useMemo 内で new Date() を作るだけだと、他の再レンダーが起きるまで未来→現在の切替が反映されない）
@@ -367,6 +375,8 @@ const WardMap: React.FC = () => {
                             <Chip icon={<MoveDownIcon sx={{ fontSize: 12 }} />} label="移動予定" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ecfeff', color: '#0e7490' }} />
                           )}
                           <BedFlagIcons flags={bed.flags} />
+                          {/* 救護区分バッジ（担送/護送/独歩/未入力）は占有（患者あり）時のみ・全員表示 */}
+                          {bed.patientId && <ReliefBadge category={reliefOf(bed.patientId)} />}
                           {/* ① Dr観察ステータスは占有（患者あり）時のみ。空床/使用不可（③病床ステータス）は左の氏名欄に表示 */}
                           {bed.patientId && bed.status && <StatusBadge status={bed.status} />}
                         </Stack>
@@ -411,6 +421,24 @@ const WardMap: React.FC = () => {
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>バッジ:</Typography>
             <BedFlagLegend />
+          </Stack>
+          {/* 救護区分（担送/護送/独歩/未入力・患者ごとに1つ） */}
+          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5 }} alignItems="center">
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>救護区分:</Typography>
+            {RELIEF_CATEGORY_OPTIONS.map((c) => {
+              const cfg = RELIEF_CATEGORY_CONFIG[c];
+              return (
+                <Stack key={c} direction="row" spacing={0.5} alignItems="center">
+                  <Box sx={{
+                    minWidth: 16, height: 16, px: 0.25, borderRadius: 0.5,
+                    bgcolor: cfg.bgColor, color: cfg.color, border: `1px solid ${cfg.color}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.625rem', fontWeight: 700,
+                  }}>{cfg.short}</Box>
+                  <Typography variant="caption" color="text.secondary">{cfg.label}</Typography>
+                </Stack>
+              );
+            })}
           </Stack>
         </Stack>
         </Box>
