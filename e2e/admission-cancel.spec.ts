@@ -120,6 +120,27 @@ test.describe('入院取消（管理者確認ルール）', () => {
     await expect(page.getByTestId('admission-history-period').filter({ hasText: '取消済' })).toHaveCount(1);
   });
 
+  test('旧実装で消えた入院歴が保存データに残っていても、読み込み時に入院歴が元に戻る', async ({ page }) => {
+    // 旧実装（物理削除）で P001 の直近入院を取り消した状態の保存データ（永続化バージョン 4）
+    await page.addInitScript(() => {
+      window.localStorage.setItem('rakuemr-app-store', JSON.stringify({
+        state: {
+          removedAdmissionHistoryIds: ['AH002-P001-current'],
+          admissionHistoryEdits: { 'AH002-P001-current': { status: 'キャンセル' } },
+          addedAdmissionHistory: [],
+          admissionCancellations: {},
+        },
+        version: 4,
+      }));
+    });
+    await openAdmissionHistory(page);
+    await selectPatient(page, 'P001');
+    // 入院歴の差分は破棄され、P001 の直近入院（入院中）が一覧に戻る
+    await expect(page.getByTestId('admission-history-period')).toHaveCount(2);
+    await selectLatestPeriodCurrentRecord(page);
+    await expect(page.getByRole('button', { name: '入院取消' })).toBeVisible();
+  });
+
   test('取消済の入院歴は参照のみで、取消内容が表示される', async ({ page }) => {
     await openAdmissionHistory(page);
     await selectLatestPeriodCurrentRecord(page);

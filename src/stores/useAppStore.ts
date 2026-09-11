@@ -701,12 +701,15 @@ export const useAppStore = create<AppState>()(
         consultationFinishedMap: state.consultationFinishedMap,
         patientListSearchCondition: state.patientListSearchCondition,
       }),
-      version: 4,
+      version: 5,
       // v2: scheduledMoves を永続化対象から除外（移動はセッション限定）。既存 localStorage から掃除する。
       // v3: ep-07 観察記録の未来日入力不可を常時適用に固定（optionalFeatures.observationFutureBlock を掃除）。
       //     あわせて dynamicMedicalRecords を永続化対象から除外（オーダ記事はセッション限定・既存永続分も掃除）。
       // v4: ep-04 入院取消を論理削除（admissionCancellations）に変更。取消情報を伴わない
       //     status:'キャンセル' の編集差分が残っていると入院取消ボタンが出ないため掃除する。
+      // v5: 旧実装の入院取消は入院期間のレコードを物理削除（removedAdmissionHistoryIds）していた。
+      //     削除 ID からは取消理由を復元できず、形態変更取消による削除とも区別できないため、
+      //     入院歴の差分（編集・追加・削除・取消情報）をまとめて破棄して seed に戻す（モックのため）。
       migrate: (persisted: unknown, version: number) => {
         if (persisted && typeof persisted === 'object') {
           const p = persisted as Record<string, unknown>;
@@ -715,15 +718,12 @@ export const useAppStore = create<AppState>()(
             delete (p.optionalFeatures as Record<string, unknown>).observationFutureBlock;
           }
           if (version < 3) delete p.dynamicMedicalRecords;
-          if (version < 4 && p.admissionHistoryEdits && typeof p.admissionHistoryEdits === 'object') {
-            const edits = p.admissionHistoryEdits as Record<string, Record<string, unknown>>;
-            for (const [id, edit] of Object.entries(edits)) {
-              if (edit && edit.status === 'キャンセル') {
-                const { status: _dropped, ...rest } = edit;
-                if (Object.keys(rest).length === 0) delete edits[id];
-                else edits[id] = rest;
-              }
-            }
+          // v4 の「取消情報を伴わない status:'キャンセル' の掃除」は v5 の全破棄に含まれる
+          if (version < 5) {
+            delete p.admissionHistoryEdits;
+            delete p.addedAdmissionHistory;
+            delete p.removedAdmissionHistoryIds;
+            delete p.admissionCancellations;
           }
         }
         return persisted as AppState;
