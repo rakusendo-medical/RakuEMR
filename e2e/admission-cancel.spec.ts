@@ -48,19 +48,53 @@ test.describe('入院取消（管理者確認ルール）', () => {
     await expect(page.getByRole('button', { name: '入院取消' })).toBeVisible();
   });
 
-  test('形態変更歴のある患者でも、入院中なら現形態のレコードで入院取消ができる', async ({ page }) => {
+  test('形態変更している入院では、どのレコードでも入院取消を出さない', async ({ page }) => {
     await openAdmissionHistory(page);
     // P003: 任意入院 → 医療保護入院 → 措置入院（現形態）の形態変更チェーン
     await selectPatient(page, 'P003');
-    await expect(page.getByTestId('admission-history-record')).toHaveCount(3);
+    const records = page.getByTestId('admission-history-record');
+    await expect(records).toHaveCount(3);
 
-    // 形態変更で閉じられたレコードでは出さない（issue #486）
-    await page.getByTestId('admission-history-record').first().click();
-    await expect(page.getByRole('button', { name: '入院取消' })).toHaveCount(0);
+    // 入院取消は「最初の形態レコードが現在」のときだけ。形態変更していればどれを選んでも出さない
+    for (let i = 0; i < 3; i++) {
+      await records.nth(i).click();
+      await expect(page.getByRole('button', { name: '入院取消' })).toHaveCount(0);
+    }
+  });
 
-    // 現形態（継続中）のレコードでは出す
-    await selectLatestPeriodCurrentRecord(page);
+  test('変更取消で最初の形態まで戻すと、入院取消が出る', async ({ page }) => {
+    await openAdmissionHistory(page);
+    await selectPatient(page, 'P003');
+    const records = page.getByTestId('admission-history-record');
+
+    // 現在の形態変更を 2 回取り消して、最初の形態（任意入院）を現在に戻す
+    for (const expected of [2, 1]) {
+      await selectLatestPeriodCurrentRecord(page);
+      await page.getByRole('button', { name: '変更取消' }).click();
+      const reasonDialog = page.getByRole('dialog').filter({ hasText: '削除理由' });
+      await reasonDialog.getByRole('combobox').click();
+      await page.getByRole('option', { name: '入力誤り' }).click();
+      await page.getByRole('button', { name: '中止する' }).click();
+      await expect(records).toHaveCount(expected);
+    }
+
+    // 最初の形態が現在になったので入院取消が出る
+    await records.first().click();
     await expect(page.getByRole('button', { name: '入院取消' })).toBeVisible();
+  });
+
+  test('変更取消は現在の形態変更レコードにだけ出し、古い形態変更レコードには出さない', async ({ page }) => {
+    await openAdmissionHistory(page);
+    await selectPatient(page, 'P003');
+    const records = page.getByTestId('admission-history-record');
+
+    // 医療保護入院（形態変更で閉じた古い形態変更レコード）
+    await records.nth(1).click();
+    await expect(page.getByRole('button', { name: '変更取消' })).toHaveCount(0);
+
+    // 措置入院（現在の形態変更レコード）
+    await records.nth(2).click();
+    await expect(page.getByRole('button', { name: '変更取消' })).toBeVisible();
   });
 
   test('操作ミス（入力誤り）で取り消した入院歴は一覧に表示されない', async ({ page }) => {

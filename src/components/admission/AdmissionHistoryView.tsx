@@ -215,18 +215,22 @@ const AdmissionHistoryView: React.FC = () => {
   const isInitialOfLatestPeriod = !!selectedRecord
     && selectedRecord.periodId === latestPeriod?.periodId
     && selectedRecord.id === latestPeriod?.items[0]?.id;
-  // 入院取消可: 直近入院歴の「現形態（継続中）」レコードを選択しているとき。
-  //   参考システムは「現在入院中の場合のみ表示／直近の入院歴のみ取消可能」なので、
-  //   形態変更で閉じられたレコードには出さず（issue #486）、現形態のレコードに出す。
-  //   ※最初の形態レコードに限定すると、形態変更歴のある患者は最初のレコードが閉じているため
-  //     入院中でも取り消せなくなる。
+  // 入院取消可: 直近入院歴の「最初の形態レコード」が現在（継続中）のときだけ。
+  //   ＝その入院で形態変更をしていないとき。形態変更が残っている入院は、先に [変更取消] で
+  //   最初の形態まで戻してから入院取消する（PM 指示 2026-09-11）。
   //   取消済かどうかは admissionCancellations（取消情報）を正とする。レコードの status だけで
   //   「入院中か」を見ると、取消情報を伴わない 'キャンセル' が残ったときに出なくなるため
   //   「退院済でない」で判定する。
-  const canCancelAdmission = isLatestPeriodRecord
-    && isCurrentForm // 形態変更で閉じられていない＝まだ現形態
+  const canCancelAdmission = isInitialOfLatestPeriod
+    && isCurrentForm // 最初の形態が形態変更で閉じられていない＝形態変更していない
     && !selectedPeriodCancelled
     && !hasIsDischargedPeriod;
+  // 変更取消可: 直近入院歴の「現在の」形態変更レコードだけ。形態変更で閉じた古い形態変更レコードに
+  //   出すと、途中の形態だけを消して前後の形態がつながらなくなるため出さない（PM 指示 2026-09-11）。
+  const canCancelFormChange = isFormChange
+    && isLatestPeriodRecord
+    && isCurrentForm
+    && !selectedPeriodCancelled;
   const canCancelDischarge = hasIsDischargedPeriod && isInitialOfLatestPeriod;
 
   // ダイアログ
@@ -654,7 +658,7 @@ const AdmissionHistoryView: React.FC = () => {
                     形態変更
                   </Button>
                 )}
-                {!selectedPeriodCancelled && isFormChange && (
+                {canCancelFormChange && (
                   <Button variant="outlined" color="warning" onClick={() => setDeleteReason({ open: true, action: 'cancel-form-change' })}>
                     変更取消
                   </Button>
