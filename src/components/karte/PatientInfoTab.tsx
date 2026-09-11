@@ -126,7 +126,10 @@ export default function PatientInfoTab({
         />
       </Box>
       <Box sx={{ display: activeSub === 'attributes' ? 'block' : 'none' }}>
+        {/* 属性は患者ごとの値（救護区分）を持つ。useDirtyForm は初回マウント時の値しか取り込まないため、
+            カルテを開いたまま別の患者へ移っても前の患者の値が残らないよう、患者 ID で作り直す */}
         <AttributesSubview
+          key={patient.id}
           patient={patient}
           mode={mode}
           onDirtyChange={dirtyHandlers.attributes}

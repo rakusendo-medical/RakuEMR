@@ -18,6 +18,7 @@ import {
   Document, NursingDiaryEntry, WardDiaryEntry, StatusConfig, PatientStatus,
   OutpatientVisit, NursingPlan, PeriodicEvaluationRecord,
   BedFlag, BedFlagConfig, BedStatus, BedStatusConfig, UnassignedPatient,
+  ReliefCategory, ReliefCategoryConfig,
 } from '../types';
 import type { ScheduledMove } from '../stores/useAppStore';
 
@@ -276,6 +277,18 @@ export const BED_STATUS_CONFIG: Record<BedStatus, BedStatusConfig> = {
   unavailable: { label: '使用不可', color: '#64748b', bgColor: '#e2e8f0' },
 };
 
+// 救護区分（移送区分）バッジの配色。担送＝要ストレッチャー(赤)／護送＝要介助(橙)／
+// 独歩＝自立(緑)／未入力＝未設定(グレー)。色覚に依存しないよう 2 文字ラベルを併記する。
+export const RELIEF_CATEGORY_CONFIG: Record<ReliefCategory, ReliefCategoryConfig> = {
+  担送:   { label: '担送',   short: '担', color: '#b91c1c', bgColor: '#fef2f2' },
+  護送:   { label: '護送',   short: '護', color: '#b45309', bgColor: '#fffbeb' },
+  独歩:   { label: '独歩',   short: '独', color: '#15803d', bgColor: '#f0fdf4' },
+  未入力: { label: '未入力', short: '未', color: '#64748b', bgColor: '#f1f5f9' },
+};
+// 選択リストの並び順（初期値は「未入力」）。
+export const RELIEF_CATEGORY_OPTIONS: ReliefCategory[] = ['担送', '護送', '独歩', '未入力'];
+export const DEFAULT_RELIEF_CATEGORY: ReliefCategory = '未入力';
+
 // ===== ベッド運用フラグ（病棟マップ凡例・アイコン用） =====
 export const BED_FLAG_CONFIG: Record<BedFlag, BedFlagConfig> = {
   isolation:      { key: 'isolation',      label: '隔離',   short: '隔', color: '#b91c1c' },
@@ -510,10 +523,10 @@ export const UNASSIGNED_PATIENTS: UnassignedPatient[] = [
 // ===== 患者マスタ =====
 export const PATIENTS: Patient[] = [
   // 第１病棟（女性のみ）
-  { id: 'P002', patientNumber: '00010001', name: '佐藤 花子', age: 67, gender: 'F', wardId: 'ward1', roomNumber: '100', bedLabel: '1', status: 'observation', admitDate: '2026-01-15', doctorName: '岸本 医師', diagnosis: 'うつ病', height: 158.0, weight: 52.0 },
-  { id: 'P021', patientNumber: '00010002', name: '後藤 幸子', age: 46, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '1', status: 'stable', admitDate: '2026-01-18', doctorName: '岸本 医師', diagnosis: 'うつ病' },
-  { id: 'P024', patientNumber: '00010003', name: '宮田 典子', age: 34, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '2', status: 'stable', admitDate: '2026-01-30', doctorName: '岸本 医師', diagnosis: '双極性障害' },
-  { id: 'P004', patientNumber: '00010004', name: '高橋 美咲', age: 35, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '3', status: 'critical', admitDate: '2026-02-05', doctorName: '田村 医師', diagnosis: '統合失調症' },
+  { id: 'P002', patientNumber: '00010001', name: '佐藤 花子', age: 67, gender: 'F', wardId: 'ward1', roomNumber: '100', bedLabel: '1', status: 'observation', reliefCategory: '担送', admitDate: '2026-01-15', doctorName: '岸本 医師', diagnosis: 'うつ病', height: 158.0, weight: 52.0 },
+  { id: 'P021', patientNumber: '00010002', name: '後藤 幸子', age: 46, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '1', status: 'stable', reliefCategory: '護送', admitDate: '2026-01-18', doctorName: '岸本 医師', diagnosis: 'うつ病' },
+  { id: 'P024', patientNumber: '00010003', name: '宮田 典子', age: 34, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '2', status: 'stable', reliefCategory: '独歩', admitDate: '2026-01-30', doctorName: '岸本 医師', diagnosis: '双極性障害' },
+  { id: 'P004', patientNumber: '00010004', name: '高橋 美咲', age: 35, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '3', status: 'critical', reliefCategory: '担送', admitDate: '2026-02-05', doctorName: '田村 医師', diagnosis: '統合失調症' },
   { id: 'P026', patientNumber: '00010005', name: '原 由美子', age: 53, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '5', status: 'stable', admitDate: '2026-01-12', doctorName: '森田 医師', diagnosis: 'うつ病' },
   { id: 'P006', patientNumber: '00010006', name: '伊藤 幸子', age: 58, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '6', status: 'stable', admitDate: '2026-01-08', doctorName: '森田 医師', diagnosis: 'うつ病' },
   { id: 'P027', patientNumber: '00010007', name: '内田 道子', age: 55, gender: 'F', wardId: 'ward1', roomNumber: '101', bedLabel: '7', status: 'stable', admitDate: '2025-12-22', doctorName: '岸本 医師', diagnosis: '認知症' },

@@ -32,6 +32,16 @@ export interface BedStatusConfig {
   bgColor: string;
 }
 
+// 救護区分（移送区分）。患者の移動時の介助度。未設定は「未入力」とみなす。
+export type ReliefCategory = "担送" | "護送" | "独歩" | "未入力";
+
+export interface ReliefCategoryConfig {
+  label: string;   // 表示名（= 値と同じ 2 文字。属性セレクト・凡例で使う）
+  short: string;   // 病棟マップバッジ用の 1 文字（担/護/独/未）
+  color: string;   // 文字色
+  bgColor: string; // 背景色
+}
+
 /** ベッド/患者付与の運用フラグ（複数同時付与可） */
 export type BedFlag =
   | "isolation"      // 隔離
@@ -113,6 +123,8 @@ export interface Patient {
   bedLabel: string;
   /** ① Dr 観察ステータス（安定/観察中/不安定/重症） */
   status: PatientStatus;
+  /** 救護区分（担送/護送/独歩/未入力）。未設定は「未入力」とみなす。病棟マップでバッジ表示。 */
+  reliefCategory?: ReliefCategory;
   admitDate: string;
   doctorName: string;
   diagnosis?: string;
