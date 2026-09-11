@@ -20,6 +20,16 @@ type DetailTab = 'admit' | 'discharge';
 
 type CancelAction = 'cancel-form-change' | 'cancel-admission' | 'cancel-discharge';
 
+/** [登録] で保存する編集項目と表示名（issue #489: 変更の有無判定・入退院記録への記載に使う） */
+const EDITABLE_FIELDS = {
+  admitReason: '入院決定理由',
+  dischargeReason: '退院決定理由',
+  outcome: '転帰',
+  postDischargeAction: '退院後処置',
+  returnTo: '帰住先',
+} as const;
+type EditableField = keyof typeof EDITABLE_FIELDS;
+
 const fmtJP = (iso?: string) => {
   if (!iso) return '';
   const [d, t] = iso.split('T');
@@ -170,6 +180,16 @@ const AdmissionHistoryView: React.FC = () => {
     setReturnTo(selectedRecord.returnTo ?? '');
   }, [selectedRecordId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 入力値と保存値の差分（issue #489: 変更がなければ登録させず、入退院記録も作らない）
+  const changedFields = React.useMemo<EditableField[]>(() => {
+    if (!selectedRecord) return [];
+    const edited: Record<EditableField, string> = {
+      admitReason, dischargeReason, outcome, postDischargeAction, returnTo,
+    };
+    return (Object.keys(EDITABLE_FIELDS) as EditableField[])
+      .filter((k) => (selectedRecord[k] ?? '') !== edited[k]);
+  }, [selectedRecord, admitReason, dischargeReason, outcome, postDischargeAction, returnTo]);
+
   // 操作ボタンの表示条件
   // 取消済の期間は履歴として参照するだけ（登録・形態変更・取消系はすべて出さない）
   const selectedCancellation = selectedRecord ? cancellationOf(selectedRecord.periodId) : undefined;
@@ -236,7 +256,7 @@ const AdmissionHistoryView: React.FC = () => {
   };
 
   const handleRegister = () => {
-    if (!selectedRecord) return;
+    if (!selectedRecord || changedFields.length === 0) return;
     editAdmissionHistory(selectedRecord.id, {
       admitReason: admitReason || undefined,
       dischargeReason: dischargeReason || undefined,
@@ -244,11 +264,13 @@ const AdmissionHistoryView: React.FC = () => {
       postDischargeAction: postDischargeAction || undefined,
       returnTo: returnTo || undefined,
     });
+    // 入退院記録には「どのタブから押したか」ではなく「実際に変更した項目」を残す（issue #489）
+    const changedLabels = changedFields.map((k) => EDITABLE_FIELDS[k]).join('・');
     appendMedicalRecord(selectedPatientId, buildMedicalRecord(
-      `入院歴を更新（${tab === 'admit' ? '入院時' : '退院時'}）／ 形態: ${selectedRecord.admitForm ?? ''}`,
+      `入院歴を更新／ 形態: ${selectedRecord.admitForm ?? ''}／ 変更項目: ${changedLabels}`,
       ['入院歴更新'],
     ));
-    showSnackbar('入院歴を登録しました（変更日時・操作者を記録）', 'success');
+    showSnackbar(`入院歴を登録しました（変更項目: ${changedLabels}）`, 'success');
   };
 
   const handleAdmitFormChange = (params: { newAdmitForm: string; changedAt: string }) => {
@@ -615,7 +637,17 @@ const AdmissionHistoryView: React.FC = () => {
               )}
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
                 {!selectedPeriodCancelled && (
-                  <Button variant="contained" onClick={handleRegister}>登録</Button>
+                  <Tooltip title={changedFields.length === 0 ? '変更がありません' : `変更項目: ${changedFields.map((k) => EDITABLE_FIELDS[k]).join('・')}`}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        onClick={handleRegister}
+                        disabled={changedFields.length === 0}
+                      >
+                        登録
+                      </Button>
+                    </span>
+                  </Tooltip>
                 )}
                 {!selectedPeriodCancelled && isCurrentForm && isLatestPeriodRecord && (
                   <Button variant="outlined" color="primary" onClick={() => setFormChangeOpen(true)}>
