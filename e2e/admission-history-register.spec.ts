@@ -69,3 +69,75 @@ test.describe('入院歴の登録ボタン（issue #489）', () => {
     await expect(page.getByText(/入院歴を更新（入院時）|入院歴を更新（退院時）/)).toHaveCount(0);
   });
 });
+
+test.describe('入院時／退院時タブごとの登録（issue #489 ③）', () => {
+  const postDischargeField = (page: Page) => page.getByLabel(/退院後処置/);
+  const openTab = (page: Page, name: '入院時' | '退院時') => page.getByRole('tab', { name, exact: true }).click();
+
+  test('別のタブで変更しても、表示中のタブに変更がなければ登録ボタンは押せない', async ({ page }) => {
+    await openAdmissionHistory(page);
+    await admitReasonField(page).fill('入院時タブだけ変更');
+    await expect(page.getByRole('button', { name: '登録' })).toBeEnabled();
+
+    // 退院時タブでは何も変えていないので押せない
+    await openTab(page, '退院時');
+    await expect(page.getByRole('button', { name: '登録' })).toBeDisabled();
+
+    // 退院時タブで変更すると押せる
+    await postDischargeField(page).fill('外来通院を継続');
+    await expect(page.getByRole('button', { name: '登録' })).toBeEnabled();
+
+    // 入院時タブに戻ると、入院時タブの変更で押せる（入力は残っている）
+    await openTab(page, '入院時');
+    await expect(admitReasonField(page)).toHaveValue('入院時タブだけ変更');
+    await expect(page.getByRole('button', { name: '登録' })).toBeEnabled();
+  });
+
+  test('登録すると表示中のタブの項目だけが保存され、もう一方のタブは保存されない', async ({ page }) => {
+    await openAdmissionHistory(page);
+    await admitReasonField(page).fill('入院時タブの未登録の入力');
+    await openTab(page, '退院時');
+    await postDischargeField(page).fill('外来通院を継続');
+
+    // 退院時タブで登録 → 退院時タブの項目だけ保存される
+    await page.getByRole('button', { name: '登録' }).click();
+    await expect(page.getByText(/入院歴を登録しました（変更項目: 退院後処置）/)).toBeVisible();
+    await expect(page.getByRole('button', { name: '登録' })).toBeDisabled();
+
+    // 入院時タブは保存されていないので、まだ登録できる
+    await openTab(page, '入院時');
+    await expect(page.getByRole('button', { name: '登録' })).toBeEnabled();
+
+    // 入院時タブで登録すると、入院決定理由だけが保存される
+    await page.getByRole('button', { name: '登録' }).click();
+    await expect(page.getByRole('button', { name: '登録' })).toBeDisabled();
+
+    // 入退院記録はタブごとに 1 件ずつ、それぞれのタブの項目だけが残る
+    await openKarteInApp(page);
+    await expect(page.getByText(/変更項目: 退院後処置$/)).toHaveCount(1);
+    await expect(page.getByText(/変更項目: 入院決定理由$/)).toHaveCount(1);
+    await expect(page.getByText(/変更項目: 入院決定理由・|・退院後処置/)).toHaveCount(0);
+  });
+
+  test('退院時タブで登録したあと開き直すと、入院時タブの未登録の入力は保存前の値に戻る', async ({ page }) => {
+    await openAdmissionHistory(page);
+    const original = await admitReasonField(page).inputValue();
+    await admitReasonField(page).fill('保存されないはずの入力');
+    await openTab(page, '退院時');
+    await postDischargeField(page).fill('外来通院を継続');
+    await page.getByRole('button', { name: '登録' }).click();
+    await expect(page.getByRole('button', { name: '登録' })).toBeDisabled();
+
+    // 別の患者を選んでから P001 に戻る（入力欄を保存値から読み直す）
+    await page.getByRole('combobox').first().click();
+    await page.getByRole('option').filter({ hasNotText: 'P001' }).first().click();
+    await expect(page.getByRole('combobox').first()).not.toHaveText(/P001/);
+    await page.getByRole('combobox').first().click();
+    await page.getByRole('option', { name: /P001/ }).click();
+
+    await openTab(page, '入院時');
+    await expect(admitReasonField(page)).toHaveValue(original);
+    await openTab(page, '退院時');
+    await expect(postDischargeField(page)).toHaveValue('外来通院を継続');
+  });
+});
