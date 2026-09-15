@@ -8,11 +8,11 @@ import {
   Lock as RestraintIcon,
   NoMeals as DysphagiaIcon,
   Psychology as DementiaIcon,
-  Warning as WatchIcon,
 } from '@mui/icons-material';
 import type { BedFlag, Patient } from '../../types';
 import { WARD_LABELS } from '../../types';
-import { ROOMS } from '../../data/mockData';
+import { ISOLATION_ORDERS, activeIsolationFlags } from '../../data/mockData';
+import { useAppStore } from '../../stores/useAppStore';
 import type { KarteMode } from './KartePage';
 
 interface KartePatientHeaderProps {
@@ -44,17 +44,7 @@ function modeTheme(mode: KarteMode, admissionState: Patient['admissionState']): 
   return { accent: '#dc2626', badgeBg: '#dc2626', badgeColor: '#fff', badgeLabel: '入院' };
 }
 
-// ===== ベッドフラグ取得 =====
-
-function getBedFlags(patient: Patient): BedFlag[] {
-  const room = ROOMS.find(
-    (r) => r.roomNumber === patient.roomNumber && r.wardId === patient.wardId,
-  );
-  const bed = room?.beds.find((b) => b.patientId === patient.id);
-  return bed?.flags ?? [];
-}
-
-// ===== 8 ピクトグラム判定 =====
+// ===== 7 ピクトグラム判定 =====
 
 function strHash(s: string): number {
   let h = 0;
@@ -76,10 +66,8 @@ interface PictogramState extends PictogramDef {
   active: boolean;
 }
 
-function buildPictograms(patient: Patient): PictogramState[] {
-  const flags = getBedFlags(patient);
+function buildPictograms(patient: Patient, flags: BedFlag[]): PictogramState[] {
   const isIsolated = flags.includes('isolation') || flags.includes('restraint');
-  const reportRequired = flags.includes('reportRequired');
   const idHash = strHash(patient.id);
 
   // 段階 2 mock: 該当判定の一部は patient.id ハッシュで擬似的に振る
@@ -105,7 +93,7 @@ function buildPictograms(patient: Patient): PictogramState[] {
     { key: 'restraint', label: '隔離・拘束',         Icon: RestraintIcon,  activeColor: '#dc2626', activeDetail: '隔離 / 拘束指示中', active: isIsolated },
     { key: 'dysphagia', label: '嚥下障害 / 食事制限', Icon: DysphagiaIcon, activeColor: '#2563eb', activeDetail: '嚥下障害 / 食事制限あり', active: dysphagiaActive },
     { key: 'dementia',  label: '認知機能低下',       Icon: DementiaIcon,   activeColor: '#7c3aed', activeDetail: '認知症 / 認知機能低下あり', active: dementiaActive },
-    { key: 'watch',     label: '要報告 / 観察事項',  Icon: WatchIcon,      activeColor: '#dc2626', activeDetail: '要報告フラグあり', active: reportRequired },
+    // 「要報告 / 観察事項」は要報告バッジを設けないため削除（issue #399・2026-09-14）
   ];
 }
 
@@ -114,10 +102,12 @@ function buildPictograms(patient: Patient): PictogramState[] {
 export default function KartePatientHeader({ patient, mode, onBack }: KartePatientHeaderProps) {
   const theme = modeTheme(mode, patient.admissionState);
   const isInpatient = mode === 'inpatient' && patient.admissionState !== 'discharged';
-  const flags = getBedFlags(patient);
+  // 隔離・拘束は病棟マップの隔／拘バッジと同じく、継続中の隔離拘束指示（seed＋動的分）から判定する
+  const dynamicIsolationOrders = useAppStore((s) => s.dynamicIsolationOrders);
+  const flags = activeIsolationFlags(patient.id, [...ISOLATION_ORDERS, ...dynamicIsolationOrders]);
   const isIsolated = flags.includes('isolation');
   const isRestrained = flags.includes('restraint');
-  const pictograms = buildPictograms(patient);
+  const pictograms = buildPictograms(patient, flags);
 
   const wardLabel = patient.wardName ?? WARD_LABELS[patient.wardId] ?? '';
   const roomBed = isInpatient
@@ -203,7 +193,7 @@ export default function KartePatientHeader({ patient, mode, onBack }: KartePatie
         )}
       </Stack>
 
-      {/* === Row 2: 主治医 / 入院日 / 診断 + 右端: 8 ピクトグラム === */}
+      {/* === Row 2: 主治医 / 入院日 / 診断 + 右端: 7 ピクトグラム === */}
       <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
         {patient.doctorName && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -239,7 +229,7 @@ export default function KartePatientHeader({ patient, mode, onBack }: KartePatie
 
         <Box sx={{ flex: 1 }} />
 
-        {/* 8 ピクトグラム */}
+        {/* 7 ピクトグラム */}
         <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0 }}>
           {pictograms.map((p) => {
             const IconComp = p.Icon;

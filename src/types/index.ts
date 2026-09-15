@@ -42,14 +42,15 @@ export interface ReliefCategoryConfig {
   bgColor: string; // 背景色
 }
 
-/** ベッド/患者付与の運用フラグ（複数同時付与可） */
+/**
+ * 運用バッジ（複数同時付与可）。起点データ（隔離拘束指示・外出外泊）から導出する。
+ * 要報告・預り金のバッジは設けない（issue #399・2026-09-14）。
+ */
 export type BedFlag =
   | "isolation"      // 隔離
   | "restraint"      // 拘束
   | "outing"         // 外出
-  | "overnight"      // 外泊
-  | "reportRequired" // 要報告
-  | "deposit";       // 預り金
+  | "overnight";     // 外泊
 
 export interface BedFlagConfig {
   key: BedFlag;
@@ -80,8 +81,7 @@ export interface Bed {
   bedStatus?: BedStatus;
   gender: Gender | null;
   age: number | null;
-  /** ② 運用フラグ／バッジ（隔離・拘束・外出・外泊・要報告・預り金 など、複数付与可・各 on/off） */
-  flags?: BedFlag[];
+  // ② 運用バッジ（隔離・拘束・外出・外泊）はベッドに持たせず、起点データ（隔離拘束指示・外出外泊）から導出する
   /** 移動予定が登録されている場合 */
   hasScheduledMove?: boolean;
 }

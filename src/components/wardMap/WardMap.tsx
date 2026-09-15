@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, RELIEF_CATEGORY_OPTIONS, RELIEF_CATEGORY_CONFIG, DEFAULT_RELIEF_CATEGORY, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, RELIEF_CATEGORY_OPTIONS, RELIEF_CATEGORY_CONFIG, DEFAULT_RELIEF_CATEGORY, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves, effectiveBedFlags, mergeOutings, ISOLATION_ORDERS } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import type { ReliefCategory } from '../../types';
 import StatusBadge from '../common/StatusBadge';
@@ -40,6 +40,7 @@ const WardMap: React.FC = () => {
     pendingOrders, confirmedAdmissionIds,
     sidebarOpen,
     patientReliefCategories,
+    dynamicIsolationOrders, dynamicOutings, outingReturns,
   } = useAppStore();
   const sidebarWidth = sidebarOpen ? 220 : 60;
   // 患者の救護区分（バッジ用）: 属性で保存した上書き ＞ seed の Patient.reliefCategory ＞ 既定「未入力」。
@@ -47,6 +48,22 @@ const WardMap: React.FC = () => {
     patientReliefCategories[patientId]
     ?? PATIENTS.find((p) => p.id === patientId)?.reliefCategory
     ?? DEFAULT_RELIEF_CATEGORY;
+  // 運用バッジ（隔離/拘束/外出/外泊）の起点データ（seed＋操作で追加した動的分）。
+  //   隔離拘束: seed ISOLATION_ORDERS ＋ 隔離拘束指示で追加した dynamicIsolationOrders。
+  //   外出外泊: seed OUTING_RECORDS ＋ 新規申請で追加した dynamicOutings。帰院は outingReturns で上書き。
+  const allIsolationOrders = React.useMemo(
+    () => [...ISOLATION_ORDERS, ...dynamicIsolationOrders],
+    [dynamicIsolationOrders],
+  );
+  const allOutings = React.useMemo(
+    () => mergeOutings(dynamicOutings, outingReturns),
+    [dynamicOutings, outingReturns],
+  );
+  // ベッドの有効な運用バッジ（起点導出の隔離/拘束/外出/外泊）。空床・使用不可には付かない。
+  const bedBadgeFlags = (bed: Bed) =>
+    bed.patientId
+      ? effectiveBedFlags(bed.patientId, { isolationOrders: allIsolationOrders, outings: allOutings })
+      : [];
   const [ward, setWard] = React.useState<WardId>('ward1');
   // 「時刻経過で反映」を満たすため、一定間隔で現在時刻を更新して displayedRooms／移動予定アイコンを再計算させる。
   //   （useMemo 内で new Date() を作るだけだと、他の再レンダーが起きるまで未来→現在の切替が反映されない）
@@ -374,7 +391,7 @@ const WardMap: React.FC = () => {
                           {bed.patientId && hasScheduledMoveFor(bed.patientId) && (
                             <Chip icon={<MoveDownIcon sx={{ fontSize: 12 }} />} label="移動予定" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ecfeff', color: '#0e7490' }} />
                           )}
-                          <BedFlagIcons flags={bed.flags} />
+                          <BedFlagIcons flags={bedBadgeFlags(bed)} />
                           {/* 救護区分バッジ（担送/護送/独歩/未入力）は占有（患者あり）時のみ・全員表示 */}
                           {bed.patientId && <ReliefBadge category={reliefOf(bed.patientId)} />}
                           {/* ① Dr観察ステータスは占有（患者あり）時のみ。空床/使用不可（③病床ステータス）は左の氏名欄に表示 */}
@@ -417,7 +434,7 @@ const WardMap: React.FC = () => {
               <Typography variant="caption" color="text.secondary">{BED_STATUS_CONFIG.unavailable.label}</Typography>
             </Stack>
           </Stack>
-          {/* ② バッジ（隔離/拘束/外出/外泊/要報告/預り金・各on/off） */}
+          {/* ② バッジ（隔離/拘束/外出/外泊・各on/off） */}
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>バッジ:</Typography>
             <BedFlagLegend />

@@ -5,7 +5,7 @@ import {
   FormControlLabel, Checkbox, Divider, Alert, Chip,
 } from '@mui/material';
 import type { AdmissionOrder } from '../../types';
-import { PENDING_ORDERS_SAMPLES, patientNumberOf, PATIENTS, bedFlagsOf, absenceLabel, isAbsent } from '../../data/mockData';
+import { PENDING_ORDERS_SAMPLES, patientNumberOf, PATIENTS, absenceLabel, isAbsent, activeOutingFlags, mergeOutings } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import OrderConfirmDialog from './OrderConfirmDialog';
 import ProxyAuthDialog from './ProxyAuthDialog';
@@ -43,6 +43,8 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   const confirmDischarge = useAppStore((s) => s.confirmDischarge);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
   const appendMedicalRecordContent = useAppStore((s) => s.appendMedicalRecordContent);
+  const dynamicOutings = useAppStore((s) => s.dynamicOutings);
+  const outingReturns = useAppStore((s) => s.outingReturns);
 
   const initialDischarge = order?.scheduledDate ? formatDateTime(order.scheduledDate, '10') : formatDateTimeNow();
   const [dischargeAt, setDischargeAt] = React.useState<string>(initialDischarge);
@@ -94,10 +96,10 @@ const DischargeConfirmDialog: React.FC<Props> = ({ open, order, onClose, onConfi
   if (!order) return null;
 
   const futureDate = new Date(dischargeAt) > new Date();
-  // 不在（外出／外泊）中は退院確定不可。判定は②バッジ＝ベッド由来 flags（isAbsent(bedFlagsOf)）。
+  // 不在（外出／外泊）中は退院確定不可。判定は許可中の外出外泊（seed＋動的登録＋帰院上書き）から。
   // 退院指示ダイアログ（DischargeOrderDialog）と同じガードを、病棟マップ操作メニュー起点のこちらにも適用する。
   const patient = PATIENTS.find((p) => p.id === order.patientId);
-  const bedFlags = patient ? bedFlagsOf(patient) : [];
+  const bedFlags = patient ? activeOutingFlags(patient.id, mergeOutings(dynamicOutings, outingReturns)) : [];
   const isOuting = isAbsent(bedFlags);
   const absLabel = absenceLabel(bedFlags);
   const mealChanged = mealEndAt !== originalMealEndAt;

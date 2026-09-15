@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   AdmissionHistory, IsolationConfirmSignKind, IsolationHistoryAudit, IsolationOrder,
-  MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, Patient,
+  MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, OutingRecord, Patient,
   PrescriptionDraft, PrescriptionRpRow, ReliefCategory, WardId,
 } from '../types';
 
@@ -257,6 +257,15 @@ interface AppState {
   // 既存の ISOLATION_ORDERS（マスタサンプル）と合成して表示する想定。
   dynamicIsolationOrders: IsolationOrder[];
   addIsolationOrder: (order: IsolationOrder) => void;
+
+  // 外出外泊の登録（外出外泊管理の新規申請で追加）と帰院（帰院入力）。
+  //   病棟マップの外出/外泊バッジは「許可中かつ未帰院の外出外泊」から導出するため、ここに反映すると
+  //   バッジが付く/外れる。outingReturns は seed(OUTING_RECORDS) の帰院上書き（id→帰院日時）。
+  //   モックのためセッション限定・非永続（リロードで seed に戻る）。
+  dynamicOutings: OutingRecord[];
+  outingReturns: Record<string, string>;
+  addOuting: (outing: OutingRecord) => void;
+  returnOuting: (id: string, returnedAt: string) => void;
   updateIsolationOrder: (id: string, patch: Partial<IsolationOrder>) => void;
   releaseIsolationOrder: (id: string, endDatetime: string) => void;
 
@@ -530,6 +539,13 @@ export const useAppStore = create<AppState>()(
       dynamicIsolationOrders: [],
       addIsolationOrder: (order) =>
         set((state) => ({ dynamicIsolationOrders: [...state.dynamicIsolationOrders, order] })),
+
+      dynamicOutings: [],
+      outingReturns: {},
+      addOuting: (outing) =>
+        set((state) => ({ dynamicOutings: [...state.dynamicOutings, outing] })),
+      returnOuting: (id, returnedAt) =>
+        set((state) => ({ outingReturns: { ...state.outingReturns, [id]: returnedAt } })),
       updateIsolationOrder: (id, patch) =>
         set((state) => ({
           dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>

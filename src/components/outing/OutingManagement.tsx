@@ -1,20 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Paper, Chip, Typography, Button, Stack, Card, CardContent,
-  Grid, TextField, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions,
-  FormControl, FormLabel, RadioGroup, FormControlLabel, Radio,
+  Grid, TextField, MenuItem, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio,
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
-import { OUTING_RECORDS, patientNumberOf } from '../../data/mockData';
+import { OUTING_RECORDS, PATIENTS, patientNumberOf } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
+import type { OutingRecord } from '../../types';
+
+// 'YYYY-MM-DDTHH:mm'（datetime-local）→ 'YYYY-MM-DD HH:mm'（OutingRecord 形式）
+const toRecordDt = (v: string) => v.replace('T', ' ');
+const nowRecordDt = () => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 const OutingManagement: React.FC = () => {
   const [tab, setTab] = useState(0);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const { showSnackbar } = useAppStore();
+  const { showSnackbar, dynamicOutings, outingReturns, addOuting, returnOuting } = useAppStore();
 
-  const activeOutings = OUTING_RECORDS.filter((o) => o.status === '許可' && !o.returnedAt);
+  // seed + 動的登録分に、帰院上書き（outingReturns）を適用した実効一覧。
+  const outings = useMemo<OutingRecord[]>(
+    () => [...OUTING_RECORDS, ...dynamicOutings].map((o) =>
+      outingReturns[o.id] ? { ...o, returnedAt: outingReturns[o.id] } : o),
+    [dynamicOutings, outingReturns],
+  );
+  const activeOutings = outings.filter((o) => o.status === '許可' && !o.returnedAt);
+
+  // ===== 新規申請フォーム（制御） =====
+  const [patientNumber, setPatientNumber] = useState('');
+  const [method, setMethod] = useState<'application' | 'direct'>('application');
+  const [type, setType] = useState<'外出' | '外泊'>('外出');
+  const [startAt, setStartAt] = useState('');
+  const [endAt, setEndAt] = useState('');
+  const matched = PATIENTS.find((p) => p.patientNumber === patientNumber.trim());
+
+  const resetForm = () => {
+    setPatientNumber(''); setMethod('application'); setType('外出'); setStartAt(''); setEndAt('');
+  };
+  const handleApply = () => {
+    if (!matched) { showSnackbar('患者番号に一致する患者が見つかりません', 'warning'); return; }
+    if (!startAt || !endAt) { showSnackbar('開始日時・終了日時を入力してください', 'warning'); return; }
+    const rec: OutingRecord = {
+      id: `OUT-${Date.now()}`,
+      patientId: matched.id,
+      patientName: matched.name,
+      type,
+      status: '許可',
+      startDatetime: toRecordDt(startAt),
+      endDatetime: toRecordDt(endAt),
+      wardId: matched.wardId,
+      method,
+      approvedBy: '（申請登録）',
+    };
+    addOuting(rec);
+    showSnackbar(`${matched.name}の${type}を登録しました（病棟マップに${type === '外泊' ? '外泊' : '外出'}バッジが付きます）`, 'success');
+    resetForm();
+    setTab(0);
+  };
 
   return (
     <Box>
@@ -41,7 +85,7 @@ const OutingManagement: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {OUTING_RECORDS.map((o) => (
+              {outings.map((o) => (
                 <TableRow key={o.id} hover>
                   <TableCell sx={{ fontWeight: 600 }}>{o.patientName}</TableCell>
                   <TableCell>{patientNumberOf(o.patientId)}</TableCell>
@@ -85,7 +129,10 @@ const OutingManagement: React.FC = () => {
                         {o.type} | {o.startDatetime} ～ {o.endDatetime}
                       </Typography>
                     </Box>
-                    <Button variant="contained" color="secondary" onClick={() => showSnackbar(`${o.patientName}の帰院を記録しました`, 'success')}>
+                    <Button
+                      variant="contained" color="secondary"
+                      onClick={() => { returnOuting(o.id, nowRecordDt()); showSnackbar(`${o.patientName}の帰院を記録しました（${o.type}バッジが外れます）`, 'success'); }}
+                    >
                       帰院入力
                     </Button>
                   </CardContent>
@@ -100,30 +147,33 @@ const OutingManagement: React.FC = () => {
         <Paper variant="outlined" sx={{ p: 3, maxWidth: 600 }}>
           <Typography variant="subtitle1" gutterBottom>外出外泊申請</Typography>
           <Grid container spacing={2} sx={{ mt: 0 }}>
-            <Grid item xs={6}><TextField label="患者番号" fullWidth /></Grid>
-            <Grid item xs={6}><TextField label="患者氏名" fullWidth InputProps={{ readOnly: true }} /></Grid>
+            <Grid item xs={6}>
+              <TextField label="患者番号" fullWidth value={patientNumber} onChange={(e) => setPatientNumber(e.target.value)} placeholder="例: 00010001" />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField label="患者氏名" fullWidth value={matched?.name ?? ''} InputProps={{ readOnly: true }} helperText={patientNumber && !matched ? '該当患者なし' : ' '} />
+            </Grid>
             <Grid item xs={12}>
               <FormControl>
                 <FormLabel sx={{ fontSize: '0.8125rem' }}>申請方法</FormLabel>
-                <RadioGroup row defaultValue="application">
+                <RadioGroup row value={method} onChange={(e) => setMethod(e.target.value as 'application' | 'direct')}>
                   <FormControlLabel value="application" control={<Radio size="small" />} label="申請・許可" />
                   <FormControlLabel value="direct" control={<Radio size="small" />} label="医師直接許可" />
                 </RadioGroup>
               </FormControl>
             </Grid>
             <Grid item xs={6}>
-              <TextField label="種別" select fullWidth defaultValue="外出">
+              <TextField label="種別" select fullWidth value={type} onChange={(e) => setType(e.target.value as '外出' | '外泊')}>
                 <MenuItem value="外出">外出</MenuItem>
                 <MenuItem value="外泊">外泊</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={6}><TextField label="開始日時" type="datetime-local" fullWidth InputLabelProps={{ shrink: true }} /></Grid>
-            <Grid item xs={6}><TextField label="終了日時" type="datetime-local" fullWidth InputLabelProps={{ shrink: true }} /></Grid>
-            <Grid item xs={6}><TextField label="備考" fullWidth /></Grid>
+            <Grid item xs={6}><TextField label="開始日時" type="datetime-local" fullWidth InputLabelProps={{ shrink: true }} value={startAt} onChange={(e) => setStartAt(e.target.value)} /></Grid>
+            <Grid item xs={6}><TextField label="終了日時" type="datetime-local" fullWidth InputLabelProps={{ shrink: true }} value={endAt} onChange={(e) => setEndAt(e.target.value)} /></Grid>
             <Grid item xs={12}>
               <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                <Button variant="outlined">キャンセル</Button>
-                <Button variant="contained" onClick={() => showSnackbar('外出外泊申請を登録しました', 'success')}>申請</Button>
+                <Button variant="outlined" onClick={resetForm}>キャンセル</Button>
+                <Button variant="contained" onClick={handleApply}>申請</Button>
               </Stack>
             </Grid>
           </Grid>
