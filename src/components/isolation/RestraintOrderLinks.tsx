@@ -6,7 +6,7 @@
 import React from 'react';
 import { Stack, Link, Tooltip } from '@mui/material';
 import type { Patient, IsolationSubtype, IsolationOperation } from '../../types';
-import { ISOLATION_ORDERS } from '../../data/mockData';
+import { mergeIsolationOrders } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 
 const SUBTYPES: IsolationSubtype[] = ['隔離', '拘束', '隔離拘束'];
@@ -26,7 +26,7 @@ const RestraintOrderLinks: React.FC<Props> = ({ patient, onRequestOrder }) => {
   // この患者の現在 active な指示を区分ごとに集約
   const activeBySubtype = React.useMemo(() => {
     if (!patient) return new Map<IsolationSubtype, string>();
-    const merged = [...ISOLATION_ORDERS, ...dynamicOrders].filter((o) => o.patientId === patient.id);
+    const merged = mergeIsolationOrders(dynamicOrders).filter((o) => o.patientId === patient.id);
     const result = new Map<IsolationSubtype, string>();
     for (const o of merged) {
       // 終了済（endDatetime あり）は除外。継続/変更は active 扱い。

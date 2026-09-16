@@ -69,6 +69,44 @@ test.describe('運用バッジ（隔/拘/外/泊）の起点操作', () => {
     await expect(page.getByText('拘束 0', { exact: true })).toBeVisible();
   });
 
+  test('初期データの隔離指示を解除すると、バッジ・人数・カルテのヘッダーから外れる', async ({ page }) => {
+    // P003 鈴木 一郎（第2病棟 202号室）は初期データで隔離中（ISO001）
+    await page.goto('/');
+    await page.getByRole('tab', { name: /第２病棟/ }).click();
+    await expect(page.getByTestId('ward-bed-P003').getByTestId('bed-flag-isolation')).toHaveCount(1);
+    await expect(page.getByText('隔離 2', { exact: true })).toBeVisible();
+
+    // カルテのアクションバーから隔離解除を登録する（指示リンクを経由しない導線）
+    await page.goto('/karte/P003');
+    await expect(page.getByLabel('隔離・拘束: 隔離 / 拘束指示中')).toBeVisible();
+    await page.getByRole('button', { name: '隔離拘束指示' }).click();
+    const dialog = page.getByRole('dialog').filter({ hasText: '隔離拘束指示' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('combobox', { name: 'タイトル' }).click();
+    await page.getByRole('option', { name: '隔離解除', exact: true }).click();
+    await dialog.getByLabel('終了日時').fill('2026-09-16T10:00');
+    // 移動先（病棟・病室・ベッド）は必須。セレクトは順に タイトル/病棟/病室/ベッド（名前が付かないため位置で指定）
+    const selects = dialog.getByRole('combobox');
+    await selects.nth(1).click();
+    await page.getByRole('option', { name: '第２病棟', exact: true }).click();
+    await selects.nth(2).click();
+    await page.getByRole('option', { name: '202号室', exact: true }).click();
+    await selects.nth(3).click();
+    await page.getByRole('option', { name: 'F', exact: true }).click();
+    await dialog.getByRole('button', { name: '作成' }).click();
+    await expect(dialog).not.toBeVisible();
+
+    // カルテのヘッダーから隔離・拘束が外れる
+    await expect(page.getByLabel('隔離・拘束: 隔離 / 拘束指示中')).toHaveCount(0);
+
+    // 病棟マップのバッジと入院者情報の人数からも外れる
+    await page.getByRole('button', { name: '病棟マップ' }).click();
+    await page.getByRole('tab', { name: /第２病棟/ }).click();
+    await expect(page.getByTestId('ward-bed-P003').getByTestId('bed-flag-isolation')).toHaveCount(0);
+    await expect(page.getByTestId('bed-flag-isolation')).toHaveCount(1);
+    await expect(page.getByText('隔離 1', { exact: true })).toBeVisible();
+  });
+
   test('カルテの患者ヘッダーの隔離・拘束も継続中の隔離拘束指示から判定する', async ({ page }) => {
     // P003 は継続中の隔離指示あり
     await page.goto('/karte/P003');

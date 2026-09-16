@@ -16,7 +16,7 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import type { IsolationOrder, IsolationSubtype, OrderType, Order } from '../../types';
-import { PATIENTS, ISOLATION_ORDERS, MASTER_OBSERVATION_STATES, ORDERS } from '../../data/mockData';
+import { PATIENTS, mergeIsolationOrders, MASTER_OBSERVATION_STATES, ORDERS } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import ObservationRecordDialog from '../isolation/ObservationRecordDialog';
 import { isFutureSlot, useNowTick, OBSERVATION_FUTURE_BLOCK_LABEL } from '../isolation/observationFutureBlock';
@@ -604,11 +604,7 @@ const FlowsheetView: React.FC<Props> = ({ patientId }) => {
   // 患者の指示集合（マスタ + dynamic、同 id は dynamic 優先）
   const orders = useMemo<IsolationOrder[]>(() => {
     if (!patientId) return [];
-    const merged = new Map<string, IsolationOrder>();
-    [...ISOLATION_ORDERS, ...dynamicOrders].forEach((o) => {
-      if (o.patientId === patientId) merged.set(o.id, o);
-    });
-    return Array.from(merged.values());
+    return mergeIsolationOrders(dynamicOrders).filter((o) => o.patientId === patientId);
   }, [patientId, dynamicOrders]);
   const observations = useMemo(
     () => dynamicObservations.filter((r) => r.patientId === patientId),

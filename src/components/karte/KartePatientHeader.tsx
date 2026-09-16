@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material';
 import type { BedFlag, Patient } from '../../types';
 import { WARD_LABELS } from '../../types';
-import { ISOLATION_ORDERS, activeIsolationFlags } from '../../data/mockData';
+import { activeIsolationFlags, mergeIsolationOrders } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import type { KarteMode } from './KartePage';
 
@@ -104,7 +104,7 @@ export default function KartePatientHeader({ patient, mode, onBack }: KartePatie
   const isInpatient = mode === 'inpatient' && patient.admissionState !== 'discharged';
   // 隔離・拘束は病棟マップの隔／拘バッジと同じく、継続中の隔離拘束指示（seed＋動的分）から判定する
   const dynamicIsolationOrders = useAppStore((s) => s.dynamicIsolationOrders);
-  const flags = activeIsolationFlags(patient.id, [...ISOLATION_ORDERS, ...dynamicIsolationOrders]);
+  const flags = activeIsolationFlags(patient.id, mergeIsolationOrders(dynamicIsolationOrders));
   const isIsolated = flags.includes('isolation');
   const isRestrained = flags.includes('restraint');
   const pictograms = buildPictograms(patient, flags);

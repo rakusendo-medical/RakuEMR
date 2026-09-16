@@ -312,6 +312,17 @@ export function isAbsent(flags?: BedFlag[]): boolean {
 //   外出/外泊 ← 許可中かつ未帰院の外出外泊（OUTING_RECORDS＋動的）
 // 要報告・預り金のバッジは設けない（issue #399・2026-09-14）。
 
+/**
+ * seed の ISOLATION_ORDERS に、動的な指示（dynamicIsolationOrders）を **ID で突き合わせて**合成する。
+ * 同じ ID があれば動的側を優先する（seed の指示を解除したとき、解除前の指示が残らないようにするため）。
+ */
+export function mergeIsolationOrders(dynamicOrders: IsolationOrder[] = []): IsolationOrder[] {
+  const merged = new Map<string, IsolationOrder>();
+  for (const o of ISOLATION_ORDERS) merged.set(o.id, o);
+  for (const o of dynamicOrders) merged.set(o.id, { ...merged.get(o.id), ...o });
+  return [...merged.values()];
+}
+
 /** 継続中（終了日時なし＝解除されていない）の隔離拘束指示から隔離/拘束バッジを導出。 */
 export function activeIsolationFlags(patientId: string, orders: IsolationOrder[] = ISOLATION_ORDERS): BedFlag[] {
   const set = new Set<BedFlag>();

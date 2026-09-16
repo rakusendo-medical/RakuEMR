@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { AdmissionOrder, Bed, Patient, WardId } from '../../types';
 import type { KartePageLocationState } from '../karte/KartePage';
-import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, RELIEF_CATEGORY_OPTIONS, RELIEF_CATEGORY_CONFIG, DEFAULT_RELIEF_CATEGORY, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves, effectiveBedFlags, mergeOutings, ISOLATION_ORDERS } from '../../data/mockData';
+import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, RELIEF_CATEGORY_OPTIONS, RELIEF_CATEGORY_CONFIG, DEFAULT_RELIEF_CATEGORY, PATIENTS, ADMISSION_ORDERS, patientNumberOf, MOVE_HISTORY_SAMPLES, applyDueMoves, applyCancelledMoves, effectiveBedFlags, mergeOutings, mergeIsolationOrders } from '../../data/mockData';
 import { WARD_LABELS } from '../../types';
 import type { ReliefCategory } from '../../types';
 import StatusBadge from '../common/StatusBadge';
@@ -55,7 +55,7 @@ const WardMap: React.FC = () => {
   //   隔離拘束: seed ISOLATION_ORDERS ＋ 隔離拘束指示で追加した dynamicIsolationOrders。
   //   外出外泊: seed OUTING_RECORDS ＋ 新規申請で追加した dynamicOutings。帰院は outingReturns で上書き。
   const allIsolationOrders = React.useMemo(
-    () => [...ISOLATION_ORDERS, ...dynamicIsolationOrders],
+    () => mergeIsolationOrders(dynamicIsolationOrders),
     [dynamicIsolationOrders],
   );
   const allOutings = React.useMemo(

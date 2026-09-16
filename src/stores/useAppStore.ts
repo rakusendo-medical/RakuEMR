@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { ISOLATION_ORDERS } from '../data/mockData';
 import type {
   AdmissionHistory, IsolationConfirmSignKind, IsolationHistoryAudit, IsolationOrder,
   MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, OutingRecord, Patient,
@@ -317,6 +318,22 @@ interface AppState {
   hideSnackbar: () => void;
 }
 
+/**
+ * 隔離拘束指示に差分を当てる。dynamic に無い ID は マスタ（ISOLATION_ORDERS）から実体をコピーして積む。
+ * 画面側は mergeIsolationOrders（ID 突き合わせ・dynamic 優先）で合成して参照する。
+ */
+function patchIsolationOrder(
+  dynamicOrders: IsolationOrder[],
+  id: string,
+  patch: Partial<IsolationOrder>,
+): IsolationOrder[] {
+  if (dynamicOrders.some((o) => o.id === id)) {
+    return dynamicOrders.map((o) => (o.id === id ? { ...o, ...patch } : o));
+  }
+  const master = ISOLATION_ORDERS.find((o) => o.id === id);
+  return master ? [...dynamicOrders, { ...master, ...patch }] : dynamicOrders;
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
@@ -546,17 +563,14 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ dynamicOutings: [...state.dynamicOutings, outing] })),
       returnOuting: (id, returnedAt) =>
         set((state) => ({ outingReturns: { ...state.outingReturns, [id]: returnedAt } })),
+      // マスタ（ISOLATION_ORDERS）の指示を更新・解除する場合は、dynamic に居なければ実体をコピーしてから差分を当てる。
+      // これをしないと seed の指示（例 ISO001）を解除しても dynamic に何も積まれず、
+      // 病棟マップのバッジ・入院者情報の人数・カルテ患者ヘッダーが解除後も点いたままになる。
       updateIsolationOrder: (id, patch) =>
-        set((state) => ({
-          dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
-            o.id === id ? { ...o, ...patch } : o,
-          ),
-        })),
+        set((state) => ({ dynamicIsolationOrders: patchIsolationOrder(state.dynamicIsolationOrders, id, patch) })),
       releaseIsolationOrder: (id, endDatetime) =>
         set((state) => ({
-          dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
-            o.id === id ? { ...o, endDatetime, operation: '解除' } : o,
-          ),
+          dynamicIsolationOrders: patchIsolationOrder(state.dynamicIsolationOrders, id, { endDatetime, operation: '解除' }),
         })),
 
       // ===== ep-06 隔離拘束一覧 =====

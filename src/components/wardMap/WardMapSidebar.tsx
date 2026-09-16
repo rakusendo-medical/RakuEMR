@@ -6,7 +6,7 @@ import {
 } from '@mui/icons-material';
 import type { WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
-import { ADMISSION_ORDERS, PATIENTS, ROOMS, ISOLATION_ORDERS, isAbsent, absenceLabel, activeIsolationFlags, activeOutingFlags, mergeOutings } from '../../data/mockData';
+import { ADMISSION_ORDERS, PATIENTS, ROOMS, isAbsent, absenceLabel, activeIsolationFlags, activeOutingFlags, mergeIsolationOrders, mergeOutings } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import { usePatientStatusOf } from '../../stores/patientStatus';
 
@@ -154,7 +154,7 @@ const WardMapSidebar: React.FC<Props> = ({
   // 稼働率＝稼働ベッド/総ベッド。隔離・拘束は病棟マップの隔／拘バッジと同じく、
   // 継続中の隔離拘束指示（seed＋隔離拘束指示で追加した動的分）から数える。
   const rate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
-  const isolationOrders = [...ISOLATION_ORDERS, ...dynamicIsolationOrders];
+  const isolationOrders = mergeIsolationOrders(dynamicIsolationOrders);
   const wardIsolationFlags = wardRooms
     .flatMap((r) => r.beds)
     .flatMap((b) => (b.patientId ? [activeIsolationFlags(b.patientId, isolationOrders)] : []));
