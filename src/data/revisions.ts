@@ -30,8 +30,8 @@ export type Revision = {
 export const REVISIONS: Revision[] = [
   {
     version: 'ver0.46',
-    date: '9/15',
-    fullDate: '2026-09-15',
+    date: '9/16',
+    fullDate: '2026-09-16',
     // context はヘッダー「更新履歴」リンクの表示名になる。E2E のボタン名（例「診療録作成」「保存」「病棟マップ」）と
     // 部分一致すると getByRole 特定が衝突するため、これらの語を含めない（既知の制約）。
     context: '患者のステータスをカルテ記載で入力',
@@ -65,8 +65,8 @@ export const REVISIONS: Revision[] = [
   },
   {
     version: 'ver0.45',
-    date: '9/14',
-    fullDate: '2026-09-14',
+    date: '9/16',
+    fullDate: '2026-09-16',
     // context はヘッダー「更新履歴」リンクの表示名になる。E2E のボタン名（例「病棟マップ」「外出外泊」「申請」）と
     // 部分一致すると getByRole 特定が衝突するため、これらの語を含めない（既知の制約）。
     context: 'バッジの付き方の見直し（隔離・拘束・外出・外泊）',
@@ -91,9 +91,13 @@ export const REVISIONS: Revision[] = [
       {
         title: 'SPEC記載場所',
         detail: 'ep-01 us-01（画面要素「② バッジ」・凡例／AC-3・AC-3d・AC-3e／状態遷移／補足「3 概念の分離」「② バッジの起点操作」）、ep-01 _epic.md（範囲・依存）、ep-05 us-11（補足「病棟マップの隔離/拘束バッジの起点」・隔／拘バッジの表示）、ep-05 _epic.md（依存）、ep-16 us-44（画面要素・ピクトグラム表・判定ロジック・AC-6・AC-7・想定実装ステップ）。',
+      },
+    ],
+  },
+  {
     version: 'ver0.44',
-    date: '9/14',
-    fullDate: '2026-09-14',
+    date: '9/16',
+    fullDate: '2026-09-16',
     // context はヘッダー「更新履歴」リンクの表示名になる。E2E のボタン名（例「登録」「入院歴」）と
     // 部分一致すると getByRole 特定が衝突するため、これらの語を含めない（既知の制約）。
     context: '入退院歴の保存をタブごとに変更',
