@@ -9,11 +9,12 @@ import {
   Save, Print, AttachFile, AccountTree, Brush,
   ExitToApp, History as HistoryIcon, NoteAdd, Close as CloseIcon,
   CloudUpload, Assignment, Search as SearchIcon, ContentCopy,
-  ThumbUpAltOutlined, ChatBubbleOutline,
+  ThumbUpAltOutlined, ChatBubbleOutline, Check,
 } from '@mui/icons-material';
-import type { Patient, Order } from '../../types';
-import { ORDERS } from '../../data/mockData';
+import type { Patient, Order, PatientStatus } from '../../types';
+import { ORDERS, STATUS_CONFIG, LOGIN_DOCTOR } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
+import { usePatientStatusOf } from '../../stores/patientStatus';
 import RestraintOrderLinks from '../isolation/RestraintOrderLinks';
 import type { KarteMode } from './KartePage';
 import { CATEGORY_COLORS, type RecordCategory } from './recordCategoryColors';
@@ -34,6 +35,8 @@ interface TimelineRecord {
   timestamp: string;   // YYYY/MM/DD HH:mm
   /** us-08/us-09: 指示中止などで取消された記事（削除せず取消表示で残す） */
   cancelled?: boolean;
+  /** issue #399: 診療録作成で選んだ患者のステータス */
+  patientStatus?: PatientStatus;
 }
 
 const MOCK_RECORDS: TimelineRecord[] = [
@@ -160,6 +163,7 @@ export default function MedicalRecordTab({
       orderNumber: r.orderNumber,
       timestamp: r.timestamp,
       cancelled: r.cancelled,
+      patientStatus: r.patientStatus,
     }));
     const merged = [...MOCK_RECORDS, ...ordersToTimeline(patient.id), ...dynamicRecords];
     return merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -393,6 +397,7 @@ export default function MedicalRecordTab({
                     {records.map((record) => (
                       <Box
                         key={record.id}
+                        data-testid="medical-record-row"
                         sx={{
                           display: 'flex',
                           py: 0.8, px: 1,
@@ -417,6 +422,22 @@ export default function MedicalRecordTab({
                                 color="error"
                                 variant="outlined"
                                 sx={{ height: 18, fontSize: '0.6rem' }}
+                              />
+                            )}
+                            {/* issue #399: 診療録作成で選んだ患者のステータス（色＋文字） */}
+                            {record.patientStatus && (
+                              <Chip
+                                data-testid="record-patient-status"
+                                label={STATUS_CONFIG[record.patientStatus].label}
+                                size="small"
+                                sx={{
+                                  height: 18,
+                                  fontSize: '0.6rem',
+                                  fontWeight: 700,
+                                  bgcolor: STATUS_CONFIG[record.patientStatus].bgColor,
+                                  color: STATUS_CONFIG[record.patientStatus].color,
+                                  border: `1px solid ${STATUS_CONFIG[record.patientStatus].color}`,
+                                }}
                               />
                             )}
                             {record.tags.map((tag) => (
@@ -517,15 +538,9 @@ export default function MedicalRecordTab({
 
 // ===== 診療録作成ダイアログ（フリーテキスト形式）=====
 
-// 患者状態の 5 段階色（部門記録簿の患者状態色と整合）
-export const STATUS_COLORS = [
-  { id: 'good',      label: '良好', color: '#10b981' },
-  { id: 'stable',    label: '安定', color: '#3b82f6' },
-  { id: 'attention', label: '注意', color: '#f59e0b' },
-  { id: 'alert',     label: '警戒', color: '#f97316' },
-  { id: 'critical',  label: '重要', color: '#dc2626' },
-] as const;
-type StatusId = typeof STATUS_COLORS[number]['id'] | '';
+// 患者のステータス（issue #399・2026-09-15）: 病棟マップと同じ 4 値・色（STATUS_CONFIG）を軽い順に並べる。
+// 旧「状態」（良好／安定／注意／警戒／重要の 5 段階）は患者のステータスと無関係で保存もされていなかったため置き換えた。
+const STATUS_OPTIONS: PatientStatus[] = ['stable', 'observation', 'unstable', 'critical'];
 
 // 記載テンプレート
 const RECORD_TEMPLATES = [
@@ -628,7 +643,6 @@ type DoSectionId = typeof DO_SECTIONS[number]['id'];
 export interface NewRecordData {
   recordedAt: string;
   title: string;
-  status: string;
   interviewForm: string;
   tags: string[];
   body: string;
@@ -648,6 +662,7 @@ export function NewRecordDialog({
   hideImportPrevious = false,
   hideTemplate = false,
   hideInterviewForm = false,
+  hideStatus = false,
   titleLabel = '診療録作成',
   titleNode,
   defaultRecordedAt,
@@ -668,6 +683,8 @@ export function NewRecordDialog({
   hideTemplate?: boolean;
   /** 面接フォーム選択を隠す。 */
   hideInterviewForm?: boolean;
+  /** 患者のステータス欄を隠す（テキストオーダ等。ステータスはオーダとは別物のため。issue #399）。 */
+  hideStatus?: boolean;
   /** ダイアログ見出し（既定「診療録作成」）。 */
   titleLabel?: string;
   /** 見出し全体を差し替える（オーダ用の濃紺バー見出し等）。指定時は titleLabel・バッジ・×は出さない。 */
@@ -686,7 +703,16 @@ export function NewRecordDialog({
   const [orderDate, setOrderDate] = useState<string>((defaultRecordedAt ?? nowAsLocalInput()).slice(0, 10));
   const [continuous, setContinuous] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
-  const [status, setStatus] = useState<StatusId>('');
+  // 患者のステータス（未選択＝ステータスを変えない。issue #399）
+  const [status, setStatus] = useState<PatientStatus | ''>('');
+  const statusOf = usePatientStatusOf();
+  const currentStatus = patientId ? statusOf(patientId) : undefined;
+  // 開いたときは今のステータスを選んだ状態にする（PM 指示 2026-09-15）。変えなければ今のステータスのまま保存される
+  const initialStatus: PatientStatus | '' = hideStatus ? '' : (currentStatus ?? '');
+  useEffect(() => {
+    if (open) setStatus(initialStatus);
+  }, [open, patientId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
   const [templateId, setTemplateId] = useState<string>('');
   const [interviewForm, setInterviewForm] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
@@ -719,7 +745,7 @@ export function NewRecordDialog({
   };
 
   const isDirty =
-    title !== '' || status !== '' || templateId !== '' || interviewForm !== '' ||
+    title !== '' || status !== initialStatus || templateId !== '' || interviewForm !== '' ||
     tags.length > 0 || body !== '';
 
   const insertTemplate = useCallback(() => {
@@ -766,19 +792,45 @@ export function NewRecordDialog({
     setBody('');
   };
 
+  // 入力内容を診療録として残す（issue #399: 今のステータスを記事から判定するため。モックのためセッション限定）
+  const persistRecord = () => {
+    if (!patientId) return;
+    const parsed = new Date(recordedAt);
+    const at = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ymd = `${at.getFullYear()}/${pad(at.getMonth() + 1)}/${pad(at.getDate())}`;
+    appendMedicalRecord(patientId, {
+      id: `MR-NEW-${Date.now()}`,
+      date: ymd,
+      dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][at.getDay()],
+      category: '医師記録',
+      author: LOGIN_DOCTOR,
+      authorRole: '医師',
+      content: [title.trim() ? `【${title.trim()}】` : '', body.trim()].filter(Boolean).join('\n'),
+      tags,
+      timestamp: `${ymd} ${pad(at.getHours())}:${pad(at.getMinutes())}`,
+      likes: 0,
+      comments: 0,
+      ...(status ? { patientStatus: status } : {}),
+    });
+  };
+  const statusNote = status ? `（ステータス: ${STATUS_CONFIG[status].label}）` : '';
+
   const handleSave = () => {
     if (!isDirty) {
       setInnerSnackbar({ open: true, message: '入力内容がありません' });
       return;
     }
-    onSaved?.('カルテを保存しました（mock・実永続化は未実装）');
+    persistRecord();
+    onSaved?.(`カルテを保存しました${statusNote}`);
     reset();
     onClose();
   };
 
   const handleFinishExam = () => {
     if (isDirty) {
-      onSaved?.('保存して診察終了しました（mock）');
+      persistRecord();
+      onSaved?.(`保存して診察終了しました${statusNote}`);
       reset();
     } else {
       onSaved?.('診察終了処理（mock・別ストーリーで実装予定）');
@@ -792,7 +844,7 @@ export function NewRecordDialog({
     if (!canRegister || !onRegister) return;
     // 指示日・継続は orderFields（オーダ入力）モードのときだけ渡す（通常モードへ余計な値を漏らさない）。
     onRegister({
-      recordedAt, title, status, interviewForm, tags, body,
+      recordedAt, title, interviewForm, tags, body,
       ...(orderFields ? { orderDate, continuous } : {}),
     });
     reset();
@@ -931,31 +983,78 @@ export function NewRecordDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 sx={{ flex: 1, minWidth: 240 }}
               />
+              {!hideStatus && (
               <Box>
                 <Typography variant="caption" sx={{ display: 'block', mb: 0.25, color: 'text.secondary' }}>
-                  状態
+                  ステータス
                 </Typography>
-                <Stack direction="row" spacing={0.5}>
-                  {STATUS_COLORS.map((s) => {
-                    const selected = status === s.id;
+                {/* issue #399: 病棟マップと同じ 4 値。今のステータスだけが光る。選んだものは塗りつぶし＋チェック。
+                    もう一度押すと選択を外す（未選択で保存＝ステータスを変えない） */}
+                <Stack direction="row" spacing={0.75} alignItems="flex-start" role="group" aria-label="ステータス" data-testid="status-options">
+                  {STATUS_OPTIONS.map((s) => {
+                    const cfg = STATUS_CONFIG[s];
+                    const selected = status === s;
+                    const isCurrent = currentStatus === s;
+                    // 光らせるのは「今のステータスのまま」のときだけ。別のステータスを選んだら光る表現を消す
+                    const glowing = isCurrent && (status === '' || status === s);
                     return (
-                      <Tooltip key={s.id} title={s.label}>
-                        <IconButton
+                      <Stack key={s} alignItems="center">
+                        <Button
                           size="small"
-                          onClick={() => setStatus(selected ? '' : s.id)}
+                          variant={selected ? 'contained' : 'outlined'}
+                          aria-pressed={selected}
+                          aria-label={isCurrent ? `${cfg.label}（現在のステータス）` : cfg.label}
+                          data-current={isCurrent ? 'true' : undefined}
+                          data-glow={glowing ? 'true' : undefined}
+                          onClick={() => setStatus(selected ? '' : s)}
+                          startIcon={selected ? <Check sx={{ fontSize: '0.9rem !important' }} /> : undefined}
                           sx={{
-                            width: 28,
-                            height: 28,
-                            bgcolor: s.color,
-                            border: selected ? '2px solid #1e3a5f' : '2px solid transparent',
-                            '&:hover': { bgcolor: s.color, opacity: 0.85 },
+                            minWidth: 64,
+                            height: 30,
+                            px: 1,
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: selected ? '#fff' : cfg.color,
+                            bgcolor: selected ? cfg.color : cfg.bgColor,
+                            border: `2px solid ${cfg.color}`,
+                            // 今のステータスだけ外側に光彩を付けて目立たせる（アニメーションはしない＝常時表示）
+                            boxShadow: glowing ? `0 0 8px 2px ${cfg.color}99` : 'none',
+                            '&:hover': {
+                              bgcolor: selected ? cfg.color : cfg.bgColor,
+                              border: `2px solid ${cfg.color}`,
+                              boxShadow: glowing ? `0 0 8px 2px ${cfg.color}99` : 'none',
+                              filter: 'brightness(0.96)',
+                            },
                           }}
-                        />
-                      </Tooltip>
+                        >
+                          {cfg.label}
+                        </Button>
+                        {isCurrent && (
+                          // 色文字だと黄色（観察中）などが読みにくいため、濃い文字＋ステータス色の枠付きラベルにする
+                          <Typography
+                            data-testid="status-current"
+                            variant="caption"
+                            sx={{
+                              mt: 0.5,
+                              px: 0.75,
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              lineHeight: 1.5,
+                              color: 'text.primary',
+                              bgcolor: cfg.bgColor,
+                              border: `1px solid ${cfg.color}`,
+                              borderRadius: 1,
+                            }}
+                          >
+                            現在
+                          </Typography>
+                        )}
+                      </Stack>
                     );
                   })}
                 </Stack>
               </Box>
+              )}
             </Stack>
 
             {/* ===== テンプレート + 面接フォーム（オーダのテキストオーダ等では非表示）===== */}

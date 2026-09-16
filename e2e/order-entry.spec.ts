@@ -601,6 +601,9 @@ test.describe('オーダ送信（オーダ入力）', () => {
     await expect(rx.getByRole('button', { name: '前回カルテ取り込み' })).toHaveCount(0);
     await expect(rx.getByRole('button', { name: 'テンプレート挿入' })).toHaveCount(0);
     await expect(rx.getByText('面接フォーム')).toHaveCount(0);
+    // 状態（ステータス）はオーダとは別物のため出さない（issue #399・2026-09-15）
+    await expect(rx.getByText('状態', { exact: true })).toHaveCount(0);
+    await expect(rx.getByTestId('status-options')).toHaveCount(0);
     // フッターは キャンセル／登録 のみ（診察終了・保存なし）
     await expect(rx.getByRole('button', { name: '診察終了' })).toHaveCount(0);
 

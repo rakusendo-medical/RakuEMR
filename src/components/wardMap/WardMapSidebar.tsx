@@ -8,6 +8,7 @@ import type { WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
 import { ADMISSION_ORDERS, PATIENTS, ROOMS, ISOLATION_ORDERS, isAbsent, absenceLabel, activeIsolationFlags, activeOutingFlags, mergeOutings } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
+import { usePatientStatusOf } from '../../stores/patientStatus';
 
 interface Props {
   ward: WardId;
@@ -123,6 +124,7 @@ const WardMapSidebar: React.FC<Props> = ({
   const dynamicOutings = useAppStore((s) => s.dynamicOutings);
   const outingReturns = useAppStore((s) => s.outingReturns);
   const dynamicIsolationOrders = useAppStore((s) => s.dynamicIsolationOrders);
+  const statusOf = usePatientStatusOf();
   const outings = mergeOutings(dynamicOutings, outingReturns);
   const absentFlagsOf = (id: string) => activeOutingFlags(id, outings);
   const absent = PATIENTS.filter((p) => p.wardId === ward && isAbsent(absentFlagsOf(p.id)));
@@ -159,7 +161,8 @@ const WardMapSidebar: React.FC<Props> = ({
   const isolated = wardIsolationFlags.filter((f) => f.includes('isolation')).length;
   const restrained = wardIsolationFlags.filter((f) => f.includes('restraint')).length;
   // 外出（＝不在者）は 3 列内訳の「不在者」と重複するため状態別チップからは省く。
-  const observation = wardPatients.filter((p) => p.status === 'observation').length;
+  // 観察＝今のステータスが「観察中」の患者（診療録作成で入力したステータスを反映。issue #399）
+  const observation = wardPatients.filter((p) => statusOf(p.id, p.status) === 'observation').length;
   // 稼働率の基準日（当日）。短縮形 M/D で併記する。
   const now = new Date();
   const asOf = `${now.getMonth() + 1}/${now.getDate()}`;

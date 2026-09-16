@@ -691,6 +691,8 @@ export interface MedicalRecord {
   comments: number;
   /** us-08/us-09: 指示中止などで取消された記事。削除せず取消表示で残す */
   cancelled?: boolean;
+  /** issue #399: 診療録作成で選んだ患者のステータス。最新（取消を除く）の値が患者の今のステータスになる */
+  patientStatus?: PatientStatus;
 }
 
 export interface LifeEvent {

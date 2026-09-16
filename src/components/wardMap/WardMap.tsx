@@ -16,6 +16,7 @@ import { ROOMS, STATUS_CONFIG, BED_STATUS_CONFIG, RELIEF_CATEGORY_OPTIONS, RELIE
 import { WARD_LABELS } from '../../types';
 import type { ReliefCategory } from '../../types';
 import StatusBadge from '../common/StatusBadge';
+import { usePatientStatusOf } from '../../stores/patientStatus';
 import ReliefBadge from '../common/ReliefBadge';
 import { useAppStore } from '../../stores/useAppStore';
 import BedFlagIcons, { BedFlagLegend } from './BedFlagIcons';
@@ -42,6 +43,8 @@ const WardMap: React.FC = () => {
     patientReliefCategories,
     dynamicIsolationOrders, dynamicOutings, outingReturns,
   } = useAppStore();
+  // ① ステータスは今のステータス（診療録作成で入力した最新値、未入力は初期データ。issue #399）
+  const statusOf = usePatientStatusOf();
   const sidebarWidth = sidebarOpen ? 220 : 60;
   // 患者の救護区分（バッジ用）: 属性で保存した上書き ＞ seed の Patient.reliefCategory ＞ 既定「未入力」。
   const reliefOf = (patientId: string): ReliefCategory =>
@@ -329,6 +332,7 @@ const WardMap: React.FC = () => {
                     return (
                       <Box
                         key={bed.bed}
+                        data-testid={bed.patientId ? `ward-bed-${bed.patientId}` : undefined}
                         onClick={() => handleBedClick(bed)}
                         onDoubleClick={() => {
                           if (isUnavailable || !bed.patientId) return;
@@ -395,7 +399,8 @@ const WardMap: React.FC = () => {
                           {/* 救護区分バッジ（担送/護送/独歩/未入力）は占有（患者あり）時のみ・全員表示 */}
                           {bed.patientId && <ReliefBadge category={reliefOf(bed.patientId)} />}
                           {/* ① Dr観察ステータスは占有（患者あり）時のみ。空床/使用不可（③病床ステータス）は左の氏名欄に表示 */}
-                          {bed.patientId && bed.status && <StatusBadge status={bed.status} />}
+                          {/*   値は今のステータス（診療録作成で入力した最新値、未入力は初期データ。issue #399） */}
+                          {bed.patientId && <StatusBadge status={statusOf(bed.patientId, bed.status)} />}
                         </Stack>
                       </Box>
                     );

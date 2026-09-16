@@ -21,6 +21,7 @@ import StatusBadge from '../common/StatusBadge';
 import WardFilterTabs from '../common/WardFilterTabs';
 import StaffSelectDialog, { type StaffSelectValue } from '../common/StaffSelectDialog';
 import { useAppStore } from '../../stores/useAppStore';
+import { usePatientStatusOf } from '../../stores/patientStatus';
 
 type SortKey = 'wardRoom' | 'admitDate' | 'doctor' | null;
 type SortDir = 'asc' | 'desc';
@@ -60,6 +61,8 @@ const PatientList: React.FC = () => {
   const condition = useAppStore((s) => s.patientListSearchCondition);
   const setCondition = useAppStore((s) => s.setPatientListSearchCondition);
   const consultationFinishedMap = useAppStore((s) => s.consultationFinishedMap);
+  // 状態列は今のステータス（診療録作成で入力した最新値、未入力は初期データ。issue #399）
+  const statusOf = usePatientStatusOf();
   const toggleConsultationFinished = useAppStore((s) => s.toggleConsultationFinished);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
   const outpatientDischarges = useAppStore((s) => s.outpatientDischarges);
@@ -347,7 +350,7 @@ const PatientList: React.FC = () => {
                       </Typography>
                     </Stack>
                   </TableCell>
-                  <TableCell><StatusBadge status={p.status} /></TableCell>
+                  <TableCell><StatusBadge status={statusOf(p.id, p.status)} /></TableCell>
                   <TableCell>
                     {p.admitDate}
                     <Typography component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>
