@@ -8,7 +8,7 @@ import { Search as SearchIcon, ContentCopy as ContentCopyIcon } from '@mui/icons
 import type { Patient } from '../../types';
 import {
   MEDICAL_INSTITUTIONS, REFERRAL_ROUTES_DISCHARGE_BASE, REFERRAL_ROUTES_DISCHARGE_OPTIONAL,
-  THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES, isAbsent, bedFlagsOf, absenceLabel,
+  THERAPY_HISTORY_SAMPLES, PENDING_ORDERS_SAMPLES, isAbsent, absenceLabel, activeOutingFlags, mergeOutings,
 } from '../../data/mockData';
 import type { DischargeCategory } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
@@ -55,6 +55,8 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   const updatePendingOrder = useAppStore((s) => s.updatePendingOrder);
   const storePendingOrders = useAppStore((s) => s.pendingOrders);
   const removePendingOrder = useAppStore((s) => s.removePendingOrder);
+  const dynamicOutings = useAppStore((s) => s.dynamicOutings);
+  const outingReturns = useAppStore((s) => s.outingReturns);
   const confirmDischarge = useAppStore((s) => s.confirmDischarge);
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
   const appendMedicalRecordContent = useAppStore((s) => s.appendMedicalRecordContent);
@@ -125,9 +127,10 @@ const DischargeOrderDialog: React.FC<Props> = ({ open, patient, editingOrderId, 
   if (!patient) return null;
 
   const futureDate = new Date(dischargeAt) > new Date();
-  const bedFlags = bedFlagsOf(patient);
-  const isOuting = isAbsent(bedFlags); // 不在（外出 or 外泊）＝バッジで判定
-  const absLabel = absenceLabel(bedFlags);
+  // 不在（外出 or 外泊）＝許可中の外出外泊から判定（seed＋新規申請の動的分＋帰院上書きを反映）。
+  const outingFlags = activeOutingFlags(patient.id, mergeOutings(dynamicOutings, outingReturns));
+  const isOuting = isAbsent(outingFlags);
+  const absLabel = absenceLabel(outingFlags);
   const mealChanged = mealEndAt !== originalMealEndAt;
   const mealEditable = hasMealOnDay(dischargeAt);
   const pendingOrders = PENDING_ORDERS_SAMPLES.filter(

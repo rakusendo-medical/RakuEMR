@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { ISOLATION_ORDERS } from '../data/mockData';
 import type {
   AdmissionHistory, IsolationConfirmSignKind, IsolationHistoryAudit, IsolationOrder,
-  MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, Patient,
+  MedicalRecord, ObservationRecord, Order, OrderConfirmSign, OrderType, OutingRecord, Patient,
   PrescriptionDraft, PrescriptionRpRow, ReliefCategory, WardId,
 } from '../types';
 
@@ -257,6 +258,15 @@ interface AppState {
   // 既存の ISOLATION_ORDERS（マスタサンプル）と合成して表示する想定。
   dynamicIsolationOrders: IsolationOrder[];
   addIsolationOrder: (order: IsolationOrder) => void;
+
+  // 外出外泊の登録（外出外泊管理の新規申請で追加）と帰院（帰院入力）。
+  //   病棟マップの外出/外泊バッジは「許可中かつ未帰院の外出外泊」から導出するため、ここに反映すると
+  //   バッジが付く/外れる。outingReturns は seed(OUTING_RECORDS) の帰院上書き（id→帰院日時）。
+  //   モックのためセッション限定・非永続（リロードで seed に戻る）。
+  dynamicOutings: OutingRecord[];
+  outingReturns: Record<string, string>;
+  addOuting: (outing: OutingRecord) => void;
+  returnOuting: (id: string, returnedAt: string) => void;
   updateIsolationOrder: (id: string, patch: Partial<IsolationOrder>) => void;
   releaseIsolationOrder: (id: string, endDatetime: string) => void;
 
@@ -306,6 +316,22 @@ interface AppState {
   snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'info' | 'warning' };
   showSnackbar: (message: string, severity?: 'success' | 'error' | 'info' | 'warning') => void;
   hideSnackbar: () => void;
+}
+
+/**
+ * 隔離拘束指示に差分を当てる。dynamic に無い ID は マスタ（ISOLATION_ORDERS）から実体をコピーして積む。
+ * 画面側は mergeIsolationOrders（ID 突き合わせ・dynamic 優先）で合成して参照する。
+ */
+function patchIsolationOrder(
+  dynamicOrders: IsolationOrder[],
+  id: string,
+  patch: Partial<IsolationOrder>,
+): IsolationOrder[] {
+  if (dynamicOrders.some((o) => o.id === id)) {
+    return dynamicOrders.map((o) => (o.id === id ? { ...o, ...patch } : o));
+  }
+  const master = ISOLATION_ORDERS.find((o) => o.id === id);
+  return master ? [...dynamicOrders, { ...master, ...patch }] : dynamicOrders;
 }
 
 export const useAppStore = create<AppState>()(
@@ -530,17 +556,21 @@ export const useAppStore = create<AppState>()(
       dynamicIsolationOrders: [],
       addIsolationOrder: (order) =>
         set((state) => ({ dynamicIsolationOrders: [...state.dynamicIsolationOrders, order] })),
+
+      dynamicOutings: [],
+      outingReturns: {},
+      addOuting: (outing) =>
+        set((state) => ({ dynamicOutings: [...state.dynamicOutings, outing] })),
+      returnOuting: (id, returnedAt) =>
+        set((state) => ({ outingReturns: { ...state.outingReturns, [id]: returnedAt } })),
+      // マスタ（ISOLATION_ORDERS）の指示を更新・解除する場合は、dynamic に居なければ実体をコピーしてから差分を当てる。
+      // これをしないと seed の指示（例 ISO001）を解除しても dynamic に何も積まれず、
+      // 病棟マップのバッジ・入院者情報の人数・カルテ患者ヘッダーが解除後も点いたままになる。
       updateIsolationOrder: (id, patch) =>
-        set((state) => ({
-          dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
-            o.id === id ? { ...o, ...patch } : o,
-          ),
-        })),
+        set((state) => ({ dynamicIsolationOrders: patchIsolationOrder(state.dynamicIsolationOrders, id, patch) })),
       releaseIsolationOrder: (id, endDatetime) =>
         set((state) => ({
-          dynamicIsolationOrders: state.dynamicIsolationOrders.map((o) =>
-            o.id === id ? { ...o, endDatetime, operation: '解除' } : o,
-          ),
+          dynamicIsolationOrders: patchIsolationOrder(state.dynamicIsolationOrders, id, { endDatetime, operation: '解除' }),
         })),
 
       // ===== ep-06 隔離拘束一覧 =====

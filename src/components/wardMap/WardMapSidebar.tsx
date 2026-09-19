@@ -6,8 +6,9 @@ import {
 } from '@mui/icons-material';
 import type { WardId } from '../../types';
 import { WARD_LABELS } from '../../types';
-import { ADMISSION_ORDERS, PATIENTS, ROOMS, isAbsent, bedFlagsOf, absenceLabel } from '../../data/mockData';
+import { ADMISSION_ORDERS, PATIENTS, ROOMS, isAbsent, absenceLabel, activeIsolationFlags, activeOutingFlags, mergeIsolationOrders, mergeOutings } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
+import { usePatientStatusOf } from '../../stores/patientStatus';
 
 interface Props {
   ward: WardId;
@@ -119,7 +120,14 @@ const WardMapSidebar: React.FC<Props> = ({
   }, [ward, pendingOrders]);
 
   // 不在者
-  const absent = PATIENTS.filter((p) => p.wardId === ward && isAbsent(bedFlagsOf(p)));
+  // 不在（外出/外泊）は許可中の外出外泊から判定（seed＋新規申請の動的分＋帰院上書きを反映）。
+  const dynamicOutings = useAppStore((s) => s.dynamicOutings);
+  const outingReturns = useAppStore((s) => s.outingReturns);
+  const dynamicIsolationOrders = useAppStore((s) => s.dynamicIsolationOrders);
+  const statusOf = usePatientStatusOf();
+  const outings = mergeOutings(dynamicOutings, outingReturns);
+  const absentFlagsOf = (id: string) => activeOutingFlags(id, outings);
+  const absent = PATIENTS.filter((p) => p.wardId === ward && isAbsent(absentFlagsOf(p.id)));
 
   // 入院者情報(病棟集計)
   const wardPatients = PATIENTS.filter((p) => p.wardId === ward);
@@ -143,13 +151,18 @@ const WardMapSidebar: React.FC<Props> = ({
   const avgAgeAll = avgAge(wardPatients);
 
   // 旧「入退院情報」ダイアログ（ボタン廃止）から統合した稼働・状態別集計。
-  // 稼働率＝稼働ベッド/総ベッド。隔離・拘束はベッドの運用フラグで数える。
+  // 稼働率＝稼働ベッド/総ベッド。隔離・拘束は病棟マップの隔／拘バッジと同じく、
+  // 継続中の隔離拘束指示（seed＋隔離拘束指示で追加した動的分）から数える。
   const rate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
-  const wardBeds = wardRooms.flatMap((r) => r.beds);
-  const isolated = wardBeds.filter((b) => b.flags?.includes('isolation')).length;
-  const restrained = wardBeds.filter((b) => b.flags?.includes('restraint')).length;
+  const isolationOrders = mergeIsolationOrders(dynamicIsolationOrders);
+  const wardIsolationFlags = wardRooms
+    .flatMap((r) => r.beds)
+    .flatMap((b) => (b.patientId ? [activeIsolationFlags(b.patientId, isolationOrders)] : []));
+  const isolated = wardIsolationFlags.filter((f) => f.includes('isolation')).length;
+  const restrained = wardIsolationFlags.filter((f) => f.includes('restraint')).length;
   // 外出（＝不在者）は 3 列内訳の「不在者」と重複するため状態別チップからは省く。
-  const observation = wardPatients.filter((p) => p.status === 'observation').length;
+  // 観察＝今のステータスが「観察中」の患者（診療録作成で入力したステータスを反映。issue #399）
+  const observation = wardPatients.filter((p) => statusOf(p.id, p.status) === 'observation').length;
   // 稼働率の基準日（当日）。短縮形 M/D で併記する。
   const now = new Date();
   const asOf = `${now.getMonth() + 1}/${now.getDate()}`;
@@ -222,7 +235,7 @@ const WardMapSidebar: React.FC<Props> = ({
                 component="span"
                 sx={{ bgcolor: '#e9f2fd', color: '#2f6fd6', fontSize: '0.68rem', fontWeight: 700, borderRadius: 999, px: 1, py: 0.25 }}
               >
-                {absenceLabel(bedFlagsOf(p))}
+                {absenceLabel(absentFlagsOf(p.id))}
               </Box>
             </Box>
             <PillButton label="詳細" onClick={onOpenAbsent} />

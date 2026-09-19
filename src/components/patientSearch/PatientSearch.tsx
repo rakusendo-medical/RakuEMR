@@ -7,6 +7,7 @@ import {
 import { Search } from '@mui/icons-material';
 import { PATIENTS, OUTPATIENT_VISITS, STATUS_CONFIG } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
+import { usePatientStatusOf } from '../../stores/patientStatus';
 import type { KartePageLocationState } from '../karte/KartePage';
 import type { OutpatientVisit } from '../../types';
 
@@ -15,6 +16,8 @@ type VisitType = 'all' | 'inpatient' | 'outpatient';
 const PatientSearch: React.FC = () => {
   const navigate = useNavigate();
   const { setSelectedPatient } = useAppStore();
+  // 状態列は今のステータス（診療録作成で入力した最新値、未入力は初期データ。issue #399）
+  const statusOf = usePatientStatusOf();
   const [query, setQuery] = useState('');
   const [visitType, setVisitType] = useState<VisitType>('all');
 
@@ -132,7 +135,7 @@ const PatientSearch: React.FC = () => {
               </TableHead>
               <TableBody>
                 {inpatientResults.map((p) => {
-                  const cfg = STATUS_CONFIG[p.status];
+                  const cfg = STATUS_CONFIG[statusOf(p.id, p.status)];
                   return (
                     <TableRow
                       key={p.id}

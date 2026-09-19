@@ -30,6 +30,12 @@ const EDITABLE_FIELDS = {
 } as const;
 type EditableField = keyof typeof EDITABLE_FIELDS;
 
+/** タブごとの編集項目（issue #489 ③: [登録] は表示中のタブの項目だけを判定・保存する） */
+const TAB_FIELDS: Record<DetailTab, EditableField[]> = {
+  admit: ['admitReason'],
+  discharge: ['dischargeReason', 'outcome', 'postDischargeAction', 'returnTo'],
+};
+
 const fmtJP = (iso?: string) => {
   if (!iso) return '';
   const [d, t] = iso.split('T');
@@ -180,15 +186,17 @@ const AdmissionHistoryView: React.FC = () => {
     setReturnTo(selectedRecord.returnTo ?? '');
   }, [selectedRecordId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 入力値と保存値の差分（issue #489: 変更がなければ登録させず、入退院記録も作らない）
+  const editedValues = React.useMemo<Record<EditableField, string>>(
+    () => ({ admitReason, dischargeReason, outcome, postDischargeAction, returnTo }),
+    [admitReason, dischargeReason, outcome, postDischargeAction, returnTo],
+  );
+
+  // 表示中のタブの入力値と保存値の差分（issue #489: 変更がなければ登録させず、入退院記録も作らない。
+  //   ③ 別のタブの変更は含めない＝画面に出ていない項目を保存しない）
   const changedFields = React.useMemo<EditableField[]>(() => {
     if (!selectedRecord) return [];
-    const edited: Record<EditableField, string> = {
-      admitReason, dischargeReason, outcome, postDischargeAction, returnTo,
-    };
-    return (Object.keys(EDITABLE_FIELDS) as EditableField[])
-      .filter((k) => (selectedRecord[k] ?? '') !== edited[k]);
-  }, [selectedRecord, admitReason, dischargeReason, outcome, postDischargeAction, returnTo]);
+    return TAB_FIELDS[tab].filter((k) => (selectedRecord[k] ?? '') !== editedValues[k]);
+  }, [selectedRecord, tab, editedValues]);
 
   // 操作ボタンの表示条件
   // 取消済の期間は履歴として参照するだけ（登録・形態変更・取消系はすべて出さない）
@@ -261,13 +269,10 @@ const AdmissionHistoryView: React.FC = () => {
 
   const handleRegister = () => {
     if (!selectedRecord || changedFields.length === 0) return;
-    editAdmissionHistory(selectedRecord.id, {
-      admitReason: admitReason || undefined,
-      dischargeReason: dischargeReason || undefined,
-      outcome: outcome || undefined,
-      postDischargeAction: postDischargeAction || undefined,
-      returnTo: returnTo || undefined,
-    });
+    // 表示中のタブで変更した項目だけを保存する（issue #489 ③）。別のタブの未登録の入力は保存しない
+    editAdmissionHistory(selectedRecord.id, Object.fromEntries(
+      changedFields.map((k) => [k, editedValues[k] || undefined]),
+    ) as Partial<AdmissionHistory>);
     // 入退院記録には「どのタブから押したか」ではなく「実際に変更した項目」を残す（issue #489）
     const changedLabels = changedFields.map((k) => EDITABLE_FIELDS[k]).join('・');
     appendMedicalRecord(selectedPatientId, buildMedicalRecord(

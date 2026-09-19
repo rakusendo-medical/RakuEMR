@@ -295,12 +295,10 @@ export const BED_FLAG_CONFIG: Record<BedFlag, BedFlagConfig> = {
   restraint:      { key: 'restraint',      label: '拘束',   short: '拘', color: '#7c2d12' },
   outing:         { key: 'outing',         label: '外出',   short: '外', color: '#6366f1' },
   overnight:      { key: 'overnight',      label: '外泊',   short: '泊', color: '#4338ca' },
-  reportRequired: { key: 'reportRequired', label: '要報告', short: '報', color: '#d97706' },
-  deposit:        { key: 'deposit',        label: '預り金', short: '金', color: '#0f766e' },
 };
 
 export const BED_FLAG_ORDER: BedFlag[] = [
-  'isolation', 'restraint', 'outing', 'overnight', 'reportRequired', 'deposit',
+  'isolation', 'restraint', 'outing', 'overnight',
 ];
 
 // 不在（外出 or 外泊）判定。旧 status:'outing' の代替。バッジ（flags）を正とする。
@@ -308,13 +306,64 @@ export function isAbsent(flags?: BedFlag[]): boolean {
   return !!flags && (flags.includes('outing') || flags.includes('overnight'));
 }
 
+// ===== 運用バッジの起点導出（隔離/拘束/外出/外泊）=====
+// バッジは「操作の結果」から導出する（ベッドには持たせない）:
+//   隔離/拘束 ← 継続中（終了日時なし）の隔離拘束指示（ISOLATION_ORDERS＋動的）
+//   外出/外泊 ← 許可中かつ未帰院の外出外泊（OUTING_RECORDS＋動的）
+// 要報告・預り金のバッジは設けない（issue #399・2026-09-14）。
+
 /**
- * 患者の現在ベッドに付いたバッジ（Bed.flags）を返す。
- * バッジの実データはベッド側（ROOMS）を単一ソースとする（Patient 側には持たせない）。
+ * seed の ISOLATION_ORDERS に、動的な指示（dynamicIsolationOrders）を **ID で突き合わせて**合成する。
+ * 同じ ID があれば動的側を優先する（seed の指示を解除したとき、解除前の指示が残らないようにするため）。
  */
-export function bedFlagsOf(patient: Pick<Patient, 'id' | 'roomNumber' | 'wardId'>): BedFlag[] {
-  const room = ROOMS.find((r) => r.roomNumber === patient.roomNumber && r.wardId === patient.wardId);
-  return room?.beds.find((b) => b.patientId === patient.id)?.flags ?? [];
+export function mergeIsolationOrders(dynamicOrders: IsolationOrder[] = []): IsolationOrder[] {
+  const merged = new Map<string, IsolationOrder>();
+  for (const o of ISOLATION_ORDERS) merged.set(o.id, o);
+  for (const o of dynamicOrders) merged.set(o.id, { ...merged.get(o.id), ...o });
+  return [...merged.values()];
+}
+
+/** 継続中（終了日時なし＝解除されていない）の隔離拘束指示から隔離/拘束バッジを導出。 */
+export function activeIsolationFlags(patientId: string, orders: IsolationOrder[] = ISOLATION_ORDERS): BedFlag[] {
+  const set = new Set<BedFlag>();
+  for (const o of orders) {
+    if (o.patientId !== patientId || o.endDatetime) continue; // 終了日時あり＝解除済み
+    const sub = o.subtype ?? (o.type === '隔離' ? '隔離' : '拘束');
+    if (sub === '隔離' || sub === '隔離拘束') set.add('isolation');
+    if (sub === '拘束' || sub === '隔離拘束') set.add('restraint');
+  }
+  return [...set];
+}
+
+/** seed の OUTING_RECORDS に、動的登録（dynamicOutings）と帰院上書き（outingReturns）を合成した実効一覧。 */
+export function mergeOutings(dynamicOutings: OutingRecord[] = [], outingReturns: Record<string, string> = {}): OutingRecord[] {
+  return [...OUTING_RECORDS, ...dynamicOutings].map((o) =>
+    outingReturns[o.id] ? { ...o, returnedAt: outingReturns[o.id] } : o);
+}
+
+/** 許可中かつ未帰院の外出外泊から外出/外泊バッジを導出。 */
+export function activeOutingFlags(patientId: string, outings: OutingRecord[] = OUTING_RECORDS): BedFlag[] {
+  const set = new Set<BedFlag>();
+  for (const o of outings) {
+    if (o.patientId !== patientId || o.status !== '許可' || o.returnedAt) continue;
+    set.add(o.type === '外泊' ? 'overnight' : 'outing');
+  }
+  return [...set];
+}
+
+/**
+ * 患者の有効な運用バッジ。起点導出した隔離/拘束/外出/外泊を凡例順（BED_FLAG_ORDER）で返す。
+ * 動的な指示・外出登録を反映したい呼び出し側は opts で渡す（省略時は seed のみ）。
+ */
+export function effectiveBedFlags(
+  patientId: string,
+  opts?: { isolationOrders?: IsolationOrder[]; outings?: OutingRecord[] },
+): BedFlag[] {
+  const merged = new Set<BedFlag>([
+    ...activeIsolationFlags(patientId, opts?.isolationOrders),
+    ...activeOutingFlags(patientId, opts?.outings),
+  ]);
+  return BED_FLAG_ORDER.filter((f) => merged.has(f));
 }
 
 /** 不在者チップ等のラベル。外泊優先で「外泊中／外出中」、不在フラグ無しは「不在中」。 */
@@ -333,10 +382,10 @@ export const ROOMS: Room[] = [
   ]},
   { roomNumber: '101', wardId: 'ward1', beds: [
     { bed: '1', patientId: 'P021', patientName: '後藤 幸子', status: 'stable', gender: 'F', age: 46 },
-    { bed: '2', patientId: 'P024', patientName: '宮田 典子', status: 'stable', gender: 'F', age: 34, flags: ['deposit'] },
-    { bed: '3', patientId: 'P004', patientName: '高橋 美咲', status: 'critical', gender: 'F', age: 35, flags: ['restraint', 'reportRequired'] },
+    { bed: '2', patientId: 'P024', patientName: '宮田 典子', status: 'stable', gender: 'F', age: 34 },
+    { bed: '3', patientId: 'P004', patientName: '高橋 美咲', status: 'critical', gender: 'F', age: 35 },
     { bed: '5', patientId: 'P026', patientName: '原 由美子', status: 'stable', gender: 'F', age: 53 },
-    { bed: '6', patientId: 'P006', patientName: '伊藤 幸子', status: 'stable', gender: 'F', age: 58, flags: ['outing', 'deposit'] },
+    { bed: '6', patientId: 'P006', patientName: '伊藤 幸子', status: 'stable', gender: 'F', age: 58 },
     { bed: '7', patientId: 'P027', patientName: '内田 道子', status: 'stable', gender: 'F', age: 55 },
     { bed: '8', patientId: 'P008', patientName: '中村 裕子', status: 'observation', gender: 'F', age: 73 },
   ]},
@@ -399,14 +448,14 @@ export const ROOMS: Room[] = [
   { roomNumber: '202', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P001', patientName: '山田 太郎', status: 'stable', gender: 'M', age: 52 },
     { bed: 'B', patientId: 'P022', patientName: '小川 浩', status: 'stable', gender: 'M', age: 39 },
-    { bed: 'C', patientId: 'P003', patientName: '鈴木 一郎', status: 'unstable', gender: 'M', age: 41, flags: ['isolation', 'reportRequired'] },
+    { bed: 'C', patientId: 'P003', patientName: '鈴木 一郎', status: 'unstable', gender: 'M', age: 41 },
     { bed: 'D', patientId: 'P023', patientName: '中山 誠一', status: 'stable', gender: 'M', age: 62 },
     { bed: 'E', patientId: 'P005', patientName: '田中 健太', status: 'stable', gender: 'M', age: 29 },
     { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '203', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P025', patientName: '石川 裕二', status: 'stable', gender: 'M', age: 28 },
-    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔', status: 'stable', gender: 'M', age: 44, flags: ['overnight'] },
+    { bed: 'B', patientId: 'P007', patientName: '渡辺 大輔', status: 'stable', gender: 'M', age: 44 },
     { bed: 'C', patientId: 'P028', patientName: '西川 雅之', status: 'stable', gender: 'M', age: 51 },
     { bed: 'D', patientId: 'P009', patientName: '小林 誠', status: 'stable', gender: 'M', age: 38 },
     { bed: 'E', patientId: 'P030', patientName: '安田 正人', status: 'stable', gender: 'M', age: 57 },
@@ -436,15 +485,15 @@ export const ROOMS: Room[] = [
   ]},
   { roomNumber: '210', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P011', patientName: '吉田 浩二', status: 'stable', gender: 'M', age: 47 },
-    { bed: 'B', patientId: 'P013', patientName: '松本 拓也', status: 'unstable', gender: 'M', age: 33, flags: ['restraint'] },
-    { bed: 'C', patientId: 'P015', patientName: '木村 正樹', status: 'stable', gender: 'M', age: 50, flags: ['overnight'] },
-    { bed: 'D', patientId: 'P017', patientName: '清水 翔太', status: 'critical', gender: 'M', age: 36, flags: ['isolation', 'restraint'] },
+    { bed: 'B', patientId: 'P013', patientName: '松本 拓也', status: 'unstable', gender: 'M', age: 33 },
+    { bed: 'C', patientId: 'P015', patientName: '木村 正樹', status: 'stable', gender: 'M', age: 50 },
+    { bed: 'D', patientId: 'P017', patientName: '清水 翔太', status: 'critical', gender: 'M', age: 36 },
     { bed: 'E', patientId: 'P045', patientName: '岡崎 悠人', status: 'stable', gender: 'M', age: 26 },
     { bed: 'F', patientId: null,   patientName: null,            bedStatus: 'empty',        gender: null, age: null },
   ]},
   { roomNumber: '211', wardId: 'ward2', beds: [
     { bed: 'A', patientId: 'P047', patientName: '大村 徹', status: 'stable', gender: 'M', age: 40 },
-    { bed: 'B', patientId: 'P050', patientName: '長田 直樹', status: 'unstable', gender: 'M', age: 37, flags: ['isolation'] },
+    { bed: 'B', patientId: 'P050', patientName: '長田 直樹', status: 'unstable', gender: 'M', age: 37 },
     { bed: 'C', patientId: 'P052', patientName: '中田 博之', status: 'stable', gender: 'M', age: 31 },
     { bed: 'D', patientId: 'P054', patientName: '小野 剛', status: 'stable', gender: 'M', age: 45 },
     { bed: 'E', patientId: 'P056', patientName: '山崎 悟', status: 'stable', gender: 'M', age: 53 },
@@ -656,7 +705,7 @@ export const ORDERS: Order[] = [
   { id: 'ORD207',  patientId: 'P002', patientName: '佐藤 花子',   type: 'IF',       content: '転倒予防指導',                  schedule: '—',               status: '実施中', startDate: '2026-02-19', days: 0,  doctorName: '岸本 医師' },
   { id: 'ORD208',  patientId: 'P002', patientName: '佐藤 花子',   type: '文字',     content: '排便管理（毎日記録）',          schedule: '毎日',            status: '実施中', startDate: '2026-02-18', days: 0,  doctorName: '岸本 医師' },
 
-  // ===== P003 鈴木 一郎（41 歳 男・森田 医師・隔離・要報告）=====
+  // ===== P003 鈴木 一郎（41 歳 男・森田 医師・隔離）=====
   { id: 'ORD002',  patientId: 'P003', patientName: '鈴木 一郎',   type: '注射',     content: 'デカン酸フルフェナジン 25mg',   schedule: '隔週',            status: '指示済', startDate: '2026-02-24', days: 1,  doctorName: '森田 医師' },
   { id: 'ORD301',  patientId: 'P003', patientName: '鈴木 一郎',   type: '入院定時',   content: 'リスパダール 3mg（増量後）',    schedule: '朝・夕',          status: '実施中', startDate: '2026-03-09', days: 14, doctorName: '森田 医師' },
   { id: 'ORD302',  patientId: 'P003', patientName: '鈴木 一郎',   type: '入院定時',   content: 'バルプロ酸 400mg',              schedule: '朝・夕',          status: '実施中', startDate: '2026-02-10', days: 28, doctorName: '森田 医師' },
@@ -1189,14 +1238,13 @@ const relocatePatient = (rooms: Room[], patientId: string, toWardId: WardId, toR
   destBed.age = cur.age;
   destBed.status = cur.status;
   destBed.bedStatus = undefined; // 占有化（患者ありのため病床ステータスは持たない）
-  destBed.flags = cur.flags ? [...cur.flags] : undefined;
+  // 運用バッジはベッドに持たせず起点データ（隔離拘束指示・外出外泊）から導出するため、移動で引き継ぐものは無い
   cur.patientId = null;
   cur.patientName = null;
   cur.gender = null;
   cur.age = null;
   cur.status = undefined;
   cur.bedStatus = 'empty'; // 空床化
-  cur.flags = undefined;
 };
 
 /**

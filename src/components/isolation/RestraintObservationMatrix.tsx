@@ -16,7 +16,7 @@ import {
 } from '@mui/icons-material';
 import type { IsolationOrder, IsolationSubtype, ObservationRecord, Patient } from '../../types';
 import {
-  ISOLATION_ORDERS, MASTER_OBSERVATION_STATES, MASTER_OBSERVATION_FREQUENCY, PATIENTS,
+  mergeIsolationOrders, MASTER_OBSERVATION_STATES, MASTER_OBSERVATION_FREQUENCY, PATIENTS,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
 import ObservationRecordDialog from './ObservationRecordDialog';
@@ -68,11 +68,7 @@ const RestraintObservationMatrix: React.FC<Props> = ({ patientId, dates }) => {
 
   // 患者の指示集合（マスタ + dynamic マージ、同 id は dynamic 優先）
   const orders = React.useMemo<IsolationOrder[]>(() => {
-    const merged = new Map<string, IsolationOrder>();
-    [...ISOLATION_ORDERS, ...dynamicOrders].forEach((o) => {
-      if (o.patientId === patientId) merged.set(o.id, o);
-    });
-    return Array.from(merged.values());
+    return mergeIsolationOrders(dynamicOrders).filter((o) => o.patientId === patientId);
   }, [patientId, dynamicOrders]);
 
   // 患者の観察記録

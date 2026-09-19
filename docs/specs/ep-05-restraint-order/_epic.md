@@ -97,7 +97,7 @@
 - 患者基本情報、カルテ記事
 - 拘束部位マスタ、隔離拘束時文書マスタ（期限管理）、開放時間テンプレートマスタ
 - 表示ラベルマスタ、帳票定義情報マスタ、面接書式マスタ
-- `Bed.flags`（既存：'isolation' / 'restraint' を活用）／`BedFlagIcons` 凡例
+- 病棟マップの隔／拘バッジ（継続中の隔離拘束指示から導出。ver0.45 で `Bed.flags` を廃止）／`BedFlagIcons` 凡例
 - `IsolationOrder` 型（既存、フィールド拡張が必要）
 - `useAppStore.dynamicMedicalRecords`（カルテ記事の動的追加）
 

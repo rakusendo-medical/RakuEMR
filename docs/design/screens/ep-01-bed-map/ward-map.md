@@ -134,7 +134,7 @@ stateDiagram-v2
 | 入院予定者パネル | 入院オーダー済・手続き前の患者 | `ADMISSION_ORDERS`＋`pendingOrders`（`type='入院'`、`status` 手続き前、`wardId === ward`） | 選択中病棟 | 常時（0 件は「なし」） |
 | ─ 予定日 | 入院予定日 | `scheduledDate` | | 各行 |
 | ─ 病室バッジ | 病室の決定状況 | `roomNumber`（`'—'`/未設定 → `[病室未]`、それ以外 → 病室番号） | | 各行。未/済を色＋アイコンで判別 |
-| 不在者パネル | 外出・外泊中の在床患者 | `PATIENTS.filter(wardId===ward && status==='outing')` | 選択中病棟 | 常時 |
+| 不在者パネル | 外出・外泊中の在床患者 | `PATIENTS.filter(wardId===ward && isAbsent(activeOutingFlags(id, outings)))`（`outings`＝`OUTING_RECORDS`＋動的な外出外泊・帰院を `mergeOutings` で合成。病棟マップの外／泊バッジと同じ判定） | 選択中病棟 | 常時 |
 | 入院者情報パネル | 病床稼働・性別・平均年齢の集計 | その病棟の `ROOMS`／`PATIENTS` 集計 | 選択中病棟 | 常時 |
 
 ### 削除する要素
@@ -153,7 +153,7 @@ stateDiagram-v2
 ### 派生値（useMemo）
 
 - `scheduledAdmissions`: `ADMISSION_ORDERS`＋`pendingOrders` から `type='入院'` かつ手続き前かつ `wardId === ward` を抽出。各要素に `roomDecided`（病室確定フラグ）を付与。
-- `absent`: 選択中病棟 × `status==='outing'`。
+- `absent`: 選択中病棟 × 不在（許可中かつ未帰院の外出・外泊がある＝`isAbsent(activeOutingFlags(patientId, outings))`）。旧 `status==='outing'` は ver0.45 で廃止（[us-01](../../../specs/ep-01-bed-map/us-01-bed-display.spec.md) 補足「②バッジの起点操作」）。
 - 入院者情報の集計（病床数・男女・平均年齢）は現行ロジックを踏襲。
 
 ## バリデーション
@@ -168,7 +168,7 @@ stateDiagram-v2
 | 操作 | API | 備考 |
 | --- | --- | --- |
 | 入院予定者取得 | `GET /api/admission-orders?ward={wardId}&type=admission&status=pending` | 選択中病棟スコープ |
-| 不在者取得 | `GET /api/patients?ward={wardId}&status=outing` | |
+| 不在者取得 | `GET /api/patients?ward={wardId}&absent=true` | 不在＝許可中かつ未帰院の外出・外泊がある患者（外出外泊記録から判定。患者の status は使わない） |
 | 入院者情報集計 | `GET /api/wards/{wardId}/census` | 病床・男女・平均年齢 |
 | 病室割当（看護師） | `PATCH /api/admission-orders/{id}/room` | 病室未定 → 確定 |
 
@@ -177,5 +177,11 @@ stateDiagram-v2
 - 「両病棟の入院予定を 1 画面で俯瞰する」用途は、入退院情報画面の入院予定カレンダー（`AdmissionScheduleCalendar`）が担う。病棟マップ側では持たない方針で確定。
 - `UnassignedPatient` 型・`UNASSIGNED_PATIENTS` モックには `designatedWardId: 'tentative'`（病棟未割当）の例（U003）が含まれる。本設計では該当ケースが消滅するため、モック整備時に病棟確定へ寄せるか、入院予定者へ統合する。
 - 入院オーダーダイアログの「仮病棟」チェックは「病室未定」に名称・意味を是正する（別タスク）。
+
+## 改定履歴
+
+| 日付 | 改定内容 |
+| --- | --- |
+| 2026-09-15 | 不在者の判定を spec（us-01 補足「②バッジの起点操作」・ver0.45）と実装（`WardMapSidebar.tsx`）に合わせて更新。表示要素の不在者パネル、派生値 `absent`、想定 API の不在者取得から旧 `status==='outing'` を外し、外出外泊記録から導出する判定（`isAbsent(activeOutingFlags(...))`＝病棟マップの外／泊バッジと同じ）に改めた。 |
 </content>
 </invoke>

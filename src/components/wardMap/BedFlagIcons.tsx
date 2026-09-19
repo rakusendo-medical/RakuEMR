@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * ベッドマス内に複数の運用フラグ（隔離・拘束・外出・外泊・要報告・預り金）を
+ * ベッドマス内に複数の運用バッジ（隔離・拘束・外出・外泊）を
  * 重畳表示するアイコン群。BED_FLAG_ORDER の並び順に揃える。
  */
 const BedFlagIcons: React.FC<Props> = ({ flags, size = 'sm' }) => {
@@ -24,6 +24,8 @@ const BedFlagIcons: React.FC<Props> = ({ flags, size = 'sm' }) => {
         return (
           <Tooltip key={f} title={cfg.label} arrow>
             <Box
+              data-testid={`bed-flag-${f}`}
+              aria-label={cfg.label}
               sx={{
                 width: dim,
                 height: dim,

@@ -21,7 +21,7 @@ import type {
 import { WARD_LABELS } from '../../types';
 import {
   MASTER_RESTRAINT_PARTS,
-  ISOLATION_ORDERS,
+  mergeIsolationOrders,
   ROOMS,
 } from '../../data/mockData';
 import { useAppStore } from '../../stores/useAppStore';
@@ -73,16 +73,28 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
   const appendMedicalRecord = useAppStore((s) => s.appendMedicalRecord);
   const showSnackbar = useAppStore((s) => s.showSnackbar);
 
-  const sourceOrder = React.useMemo<IsolationOrder | null>(() => {
-    if (!editOrderId) return null;
-    return (
-      dynamicOrders.find((o) => o.id === editOrderId) ??
-      ISOLATION_ORDERS.find((o) => o.id === editOrderId) ??
-      null
-    );
-  }, [editOrderId, dynamicOrders]);
+  const [title, setTitleState] = React.useState(initialTitle);
+  const dynamicOrdersRef = React.useRef(dynamicOrders);
+  dynamicOrdersRef.current = dynamicOrders;
 
-  const [title, setTitle] = React.useState(initialTitle);
+  const sourceOrder = React.useMemo<IsolationOrder | null>(() => {
+    const merged = mergeIsolationOrders(dynamicOrders);
+    if (editOrderId) return merged.find((o) => o.id === editOrderId) ?? null;
+    // 指示リンクを経由せず（カルテのアクションバー等から）開いた場合、解除/継続/変更は
+    // 対象の指示が渡ってこない。その場合は当該患者の継続中の指示から区分が一致するものを対象にする。
+    // これをしないと解除しても元の指示が終了せず、病棟マップのバッジ等が点いたままになる。
+    const parsedTitle = parseTitle(title);
+    if (!patient || !parsedTitle || parsedTitle.operation === '開始') return null;
+    return (
+      merged.find((o) => {
+        if (o.patientId !== patient.id || o.endDatetime) return false;
+        const sub = o.subtype ?? (o.type === '隔離' ? '隔離' : '拘束');
+        return sub === parsedTitle.subtype;
+      }) ?? null
+    );
+  }, [editOrderId, dynamicOrders, patient, title]);
+
+  const setTitle = setTitleState;
   const [startDatetime, setStartDatetime] = React.useState('');
   const [endDatetime, setEndDatetime] = React.useState('');
   const [restraintParts, setRestraintParts] = React.useState<string[]>([]);
@@ -103,13 +115,16 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
   const [pendingNoticePayload, setPendingNoticePayload] = React.useState<{ orderId: string; orderDate: string; startDatetime: string } | null>(null);
 
   // 初期化（open or initialTitle 変化時）
+  // ※ sourceOrder は選択中タイトルから解除対象を引くため title に依存する。依存配列に入れると
+  //   タイトル変更のたびに初期化が走って選択が戻ってしまうので、開いた時点の editOrderId だけで判定する。
   React.useEffect(() => {
     if (!open) return;
     setTitle(initialTitle);
-    if (sourceOrder) {
-      setStartDatetime(sourceOrder.startDatetime ?? '');
-      setEndDatetime(sourceOrder.endDatetime ?? '');
-      setRestraintParts(sourceOrder.restraintParts ?? []);
+    const opened = editOrderId ? mergeIsolationOrders(dynamicOrdersRef.current).find((o) => o.id === editOrderId) ?? null : null;
+    if (opened) {
+      setStartDatetime(opened.startDatetime ?? '');
+      setEndDatetime(opened.endDatetime ?? '');
+      setRestraintParts(opened.restraintParts ?? []);
     } else {
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, '0');
@@ -124,7 +139,7 @@ const RestraintOrderDialog: React.FC<Props> = ({ open, onClose, patient, initial
     setToBed('');
     setPrintNotice(false);
     setErrors([]);
-  }, [open, initialTitle, sourceOrder]);
+  }, [open, initialTitle, editOrderId]);
 
   const fields = fieldsForTitle(title);
   const parsed = parseTitle(title);
